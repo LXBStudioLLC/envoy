@@ -1,0 +1,54 @@
+{
+  "id": "workday-default",
+  "name": "Workday Application",
+  "url_match": "wd5.myworkdayjobs.com/*",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "action": "wait_for",
+      "selector": "[data-automation-id='applyNowButton']",
+      "timeout": 10000
+    },
+    {
+      "action": "click",
+      "selector": "[data-automation-id='applyNowButton']"
+    },
+    {
+      "action": "wait_for",
+      "selector": "[data-automation-id='email']",
+      "timeout": 5000
+    },
+    {
+      "action": "fill",
+      "field_id": "email",
+      "selector": "[data-automation-id='email']",
+      "fallback_selector": "input[type='email']"
+    },
+    {
+      "action": "fill",
+      "field_id": "first_name",
+      "selector": "[data-automation-id='firstName']",
+      "fallback_selector": "input[name='firstName']"
+    },
+    {
+      "action": "fill",
+      "field_id": "last_name",
+      "selector": "[data-automation-id='lastName']",
+      "fallback_selector": "input[name='lastName']"
+    },
+    {
+      "action": "upload",
+      "field_id": "resume",
+      "selector": "[data-automation-id='file-upload-input']",
+      "fallback_selector": "input[type='file']",
+      "value_from": "generated_pdf_path"
+    },
+    {
+      "action": "conditional_click",
+      "description": "Submit Workday application",
+      "selector": "[data-automation-id='submitButton']",
+      "fallback_selector": "button[type='submit']",
+      "require_confirmation": true
+    }
+  ]
+}

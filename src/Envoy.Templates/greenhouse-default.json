@@ -1,0 +1,45 @@
+{
+  "id": "greenhouse-default",
+  "name": "Greenhouse Application",
+  "url_match": "boards.greenhouse.io/*",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "action": "wait_for",
+      "selector": "#first_name",
+      "timeout": 10000
+    },
+    {
+      "action": "fill",
+      "field_id": "first_name",
+      "selector": "#first_name"
+    },
+    {
+      "action": "fill",
+      "field_id": "last_name",
+      "selector": "#last_name"
+    },
+    {
+      "action": "fill",
+      "field_id": "email",
+      "selector": "#email"
+    },
+    {
+      "action": "fill",
+      "field_id": "phone",
+      "selector": "#phone"
+    },
+    {
+      "action": "upload",
+      "field_id": "resume",
+      "selector": "input[name='resume']",
+      "value_from": "generated_pdf_path"
+    },
+    {
+      "action": "conditional_click",
+      "description": "Submit Greenhouse application",
+      "selector": "#submit_app",
+      "require_confirmation": true
+    }
+  ]
+}

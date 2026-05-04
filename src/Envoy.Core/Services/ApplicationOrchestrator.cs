@@ -1,0 +1,231 @@
+using Envoy.Core.Models;
+using Microsoft.Extensions.Logging;
+
+namespace Envoy.Core.Services;
+
+public class ApplicationOrchestrator
+{
+    private readonly ResumeParserService _parser;
+    private readonly TailoringEngine _tailoring;
+    private readonly CdpBrowserService _browser;
+    private readonly TemplateEngine _templates;
+    private readonly IResumePdfGenerator _pdfGenerator;
+    private readonly HardwareProfiler _hardware;
+    private readonly IProfileRepository _profileRepo;
+    private readonly ITailoredProfileRepository _tailoredRepo;
+    private readonly IApplicationLogRepository _logRepo;
+    private readonly IBrowserLauncher _browserLauncher;
+    private readonly ILogger<ApplicationOrchestrator> _log;
+
+    public ApplicationOrchestrator(
+        ResumeParserService parser,
+        TailoringEngine tailoring,
+        CdpBrowserService browser,
+        TemplateEngine templates,
+        IResumePdfGenerator pdfGenerator,
+        HardwareProfiler hardware,
+        IProfileRepository profileRepo,
+        ITailoredProfileRepository tailoredRepo,
+        IApplicationLogRepository logRepo,
+        IBrowserLauncher browserLauncher,
+        ILogger<ApplicationOrchestrator> log)
+    {
+        _parser = parser;
+        _tailoring = tailoring;
+        _browser = browser;
+        _templates = templates;
+        _pdfGenerator = pdfGenerator;
+        _hardware = hardware;
+        _profileRepo = profileRepo;
+        _tailoredRepo = tailoredRepo;
+        _logRepo = logRepo;
+        _browserLauncher = browserLauncher;
+        _log = log;
+    }
+
+    public async Task<MasterProfile> ImportResumeAsync(string pdfPath, CancellationToken ct = default)
+    {
+        var profile = await _parser.ParseAsync(pdfPath, ct);
+        await _profileRepo.AddAsync(profile, ct);
+        return profile;
+    }
+
+    public async Task<TailoredProfile> PrepareApplicationAsync(Guid masterProfileId, string jobUrl, CancellationToken ct = default)
+    {
+        var master = await _profileRepo.GetByIdAsync(masterProfileId, ct)
+            ?? throw new InvalidOperationException("Master profile not found");
+
+        // Ensure Chrome is running with debugging
+        if (!await _browserLauncher.IsRunningWithDebuggingAsync(_browserLauncher.GetSelectedBrowser()?.Type ?? BrowserType.Chrome))
+        {
+            var launched = await _browserLauncher.LaunchAsync(_browserLauncher.GetSelectedBrowser()?.Type ?? BrowserType.Chrome);
+            if (!launched)
+            {
+                throw new InvalidOperationException("Could not launch browser. Please ensure a supported browser is installed and try again.");
+            }
+        }
+
+        // Step 1: Extract job description via CDP
+        string jobDescription = "";
+        var connected = await _browser.ConnectAsync(ct: ct);
+
+        if (connected)
+        {
+            try
+            {
+                var targetId = await _browser.CreatePageAsync(ct);
+                if (targetId != null)
+                {
+                    await _browser.AttachToPageAsync(targetId, ct);
+                    await _browser.NavigateAsync(jobUrl, ct);
+                    jobDescription = await _browser.GetPageTextAsync(ct);
+                }
+            }
+            catch
+            {
+                // Fallback: job description will be empty
+            }
+            finally
+            {
+                await _browser.CloseAsync(ct);
+            }
+        }
+
+        // Step 2: Tailor resume
+        var tailored = await _tailoring.TailorAsync(masterProfileId, jobUrl, jobDescription, ct);
+
+        // Step 3: Generate PDF
+        if (tailored.SafetyResult.Passed)
+        {
+            var pdfBytes = _pdfGenerator.Generate(tailored);
+            var pdfPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Envoy",
+                $"{tailored.TailoredData.Name.Replace(" ", "_")}_{tailored.Company}_{tailored.JobTitle}.pdf");
+            Directory.CreateDirectory(Path.GetDirectoryName(pdfPath)!);
+            await File.WriteAllBytesAsync(pdfPath, pdfBytes, ct);
+        }
+
+        return tailored;
+    }
+
+    public async Task<ApplicationLog> SubmitApplicationAsync(
+        Guid tailoredProfileId,
+        ExecutionMode mode,
+        Func<string, Task> onConfirmationRequired,
+        CancellationToken ct = default)
+    {
+        var tailored = await _tailoredRepo.GetByIdAsync(tailoredProfileId, ct)
+            ?? throw new InvalidOperationException($"Tailored profile {tailoredProfileId} not found.");
+
+        var log = new ApplicationLog
+        {
+            TailoredProfileId = tailoredProfileId,
+            JobUrl = tailored.JobUrl,
+            JobTitle = tailored.JobTitle,
+            Company = tailored.Company,
+            Mode = mode,
+            Status = ApplicationStatus.InProgress
+        };
+
+        await _logRepo.AddAsync(log, ct);
+
+        try
+        {
+            // Ensure Chrome is running
+            if (!await _browserLauncher.IsRunningWithDebuggingAsync(_browserLauncher.GetSelectedBrowser()?.Type ?? BrowserType.Chrome))
+            {
+                var launched = await _browserLauncher.LaunchAsync(_browserLauncher.GetSelectedBrowser()?.Type ?? BrowserType.Chrome);
+                if (!launched)
+                {
+                    log.Status = ApplicationStatus.Failed;
+                    log.ErrorMessage = "Could not launch browser. Please ensure a supported browser is installed.";
+                    await _logRepo.UpdateAsync(log, ct);
+                    return log;
+                }
+            }
+
+            // Safety check: anomalies trigger Safe Mode
+            if (mode == ExecutionMode.Stealth && (tailored.SafetyResult?.Passed == false))
+            {
+                log.Mode = ExecutionMode.Safe;
+                log.Status = ApplicationStatus.SafeModeStopped;
+                await onConfirmationRequired("Safety check failed. Switching to Safe Mode. Please review the tailored resume before proceeding.");
+                await _logRepo.UpdateAsync(log, ct);
+                return log;
+            }
+
+            if (!await _browser.ConnectAsync(ct: ct))
+            {
+                log.Status = ApplicationStatus.Failed;
+                log.ErrorMessage = "Could not connect to Chrome.";
+                await _logRepo.UpdateAsync(log, ct);
+                return log;
+            }
+
+            var targetId = await _browser.CreatePageAsync(ct);
+            if (targetId != null)
+                await _browser.AttachToPageAsync(targetId, ct);
+
+            await _browser.NavigateAsync(tailored.JobUrl, ct);
+
+            // Capture before screenshot
+            log.BeforeScreenshot = await _browser.CaptureScreenshotAsync(ct);
+
+            // CAPTCHA check
+            if (await _browser.DetectCaptchaAsync(ct))
+            {
+                log.Status = ApplicationStatus.RequiresCaptcha;
+                await onConfirmationRequired("CAPTCHA detected. Please solve it manually in the browser window, then click Resume.");
+                await _logRepo.UpdateAsync(log, ct);
+                return log;
+            }
+
+            // Match template
+            var template = _templates.MatchTemplate(tailored.JobUrl);
+            if (template == null)
+            {
+                log.Status = ApplicationStatus.Failed;
+                log.ErrorMessage = "No template found for this job board.";
+                await _logRepo.UpdateAsync(log, ct);
+                return log;
+            }
+
+            log.SiteTemplateId = template.Id;
+
+            // Execute template
+            await _templates.ExecuteTemplateAsync(template, _browser, tailored, async msg =>
+            {
+                if (mode == ExecutionMode.Safe || template.Steps.Any(s => s.RequireConfirmation))
+                {
+                    log.Status = ApplicationStatus.SafeModeStopped;
+                    await onConfirmationRequired(msg);
+                    await _logRepo.UpdateAsync(log, ct);
+                }
+            }, ct);
+
+            // Final screenshot
+            log.AfterScreenshot = await _browser.CaptureScreenshotAsync(ct);
+
+            if (log.Status != ApplicationStatus.SafeModeStopped)
+            {
+                log.Status = ApplicationStatus.Completed;
+            }
+        }
+        catch (Exception ex)
+        {
+            log.Status = ApplicationStatus.Failed;
+            log.ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            log.CompletedAt = DateTime.UtcNow;
+            await _logRepo.UpdateAsync(log, ct);
+            await _browser.CloseAsync(ct);
+        }
+
+        return log;
+    }
+
+    public HardwareProfile GetHardwareProfile() => _hardware.DetectHardware();
+}

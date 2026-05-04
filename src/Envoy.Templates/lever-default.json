@@ -1,0 +1,52 @@
+{
+  "id": "lever-default",
+  "name": "Lever Application",
+  "url_match": "jobs.lever.co/*",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "action": "wait_for",
+      "selector": "input[name='name']",
+      "timeout": 10000
+    },
+    {
+      "action": "fill",
+      "field_id": "name",
+      "selector": "input[name='name']"
+    },
+    {
+      "action": "fill",
+      "field_id": "email",
+      "selector": "input[name='email']"
+    },
+    {
+      "action": "fill",
+      "field_id": "phone",
+      "selector": "input[name='phone']"
+    },
+    {
+      "action": "fill",
+      "field_id": "org",
+      "selector": "input[name='org']",
+      "fallback_selector": "input[name='company']"
+    },
+    {
+      "action": "fill",
+      "field_id": "urls[LinkedIn]",
+      "selector": "input[name='urls[LinkedIn]']",
+      "fallback_selector": "input[placeholder*='LinkedIn']"
+    },
+    {
+      "action": "upload",
+      "field_id": "resume",
+      "selector": "input[name='resume']",
+      "value_from": "generated_pdf_path"
+    },
+    {
+      "action": "conditional_click",
+      "description": "Submit Lever application",
+      "selector": "button[type='submit']",
+      "require_confirmation": true
+    }
+  ]
+}

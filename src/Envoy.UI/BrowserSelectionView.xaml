@@ -1,0 +1,132 @@
+<UserControl x:Class="Envoy.UI.BrowserSelectionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="#0A0E17">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="24">
+            <TextBlock Text="&#x25C8; BROWSER NEXUS" Style="{StaticResource CyberHeading}" Margin="0,0,0,4"/>
+            <TextBlock Text="SELECT YOUR STEALTH VECTOR &#x2014; REAL BROWSER, ZERO FINGERPRINT" Style="{StaticResource CyberSubheading}" Margin="0,0,0,20"/>
+
+            <Border Background="#111827" CornerRadius="3" BorderBrush="#1A3A4A" BorderThickness="1" Padding="16" Margin="0,0,0,16">
+                <Border.Effect>
+                    <DropShadowEffect Color="#00F0FF" BlurRadius="12" ShadowDepth="0" Opacity="0.15"/>
+                </Border.Effect>
+                <StackPanel>
+                    <TextBlock Text="&#x26A0; INTELLIGENCE BRIEF" Foreground="#00F0FF" FontSize="13" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,8"/>
+                    <TextBlock TextWrapping="Wrap" Foreground="#8892A4" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,4">
+                        Envoy connects to real browsers via Chrome DevTools Protocol. No WebDriver. No Puppeteer. No detectable automation flags.
+                    </TextBlock>
+                    <TextBlock TextWrapping="Wrap" Foreground="#39FF14" FontSize="11" FontFamily="{StaticResource CyberFontBody}">
+                        Your real browser profile (cookies, history, extensions) is used &#x2014; making you indistinguishable from a normal user.
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="DETECTED BROWSERS" Foreground="#00F0FF" FontSize="14" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,12"/>
+
+            <ItemsControl x:Name="BrowserList">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="#111827" CornerRadius="3" BorderThickness="2" Padding="16" Margin="0,0,0,10" Cursor="Hand" MouseLeftButtonUp="BrowserCard_Click" MouseEnter="BrowserCard_Enter" MouseLeave="BrowserCard_Leave">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="BorderBrush" Value="#1A3A4A"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                            <Setter Property="BorderBrush" Value="#00F0FF"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <Border.Effect>
+                                <DropShadowEffect Color="#00F0FF" BlurRadius="10" ShadowDepth="0" Opacity="0.08"/>
+                            </Border.Effect>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="48"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Viewbox Width="36" Height="36" VerticalAlignment="Center">
+                                    <TextBlock x:Name="BrowserIcon" FontSize="28" Text="{Binding IconGlyph}" Foreground="#00F0FF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Viewbox>
+
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock FontSize="15" FontWeight="Bold" Foreground="#E0E6F0" FontFamily="{StaticResource CyberFontBody}" Text="{Binding DisplayName}"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                        <TextBlock FontSize="11" Foreground="#8892A4" FontFamily="{StaticResource CyberFontBody}" Text="STEALTH: "/>
+                                        <TextBlock FontSize="11" FontWeight="Bold" FontFamily="{StaticResource CyberFontBody}" Text="{Binding StealthRating}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="#39FF14"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding StealthRating}" Value="A">
+                                                            <Setter Property="Foreground" Value="#39FF14"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding StealthRating}" Value="B+">
+                                                            <Setter Property="Foreground" Value="#FFE600"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding StealthRating}" Value="B">
+                                                            <Setter Property="Foreground" Value="#FFE600"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding StealthRating}" Value="C">
+                                                            <Setter Property="Foreground" Value="#FF073A"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock FontSize="11" Foreground="#8892A4" FontFamily="{StaticResource CyberFontBody}" Margin="12,0,0,0" Text="{Binding StealthNote}" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <TextBlock FontSize="10" Foreground="#8892A4" FontFamily="{StaticResource CyberFontBody}" Margin="0,2,0,0">
+                                        <Run Text="STATUS: "/><Run Text="{Binding StatusText}"/>
+                                    </TextBlock>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                    <Border Background="Transparent" CornerRadius="3" Padding="8,4" Margin="0,0,0,2">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="BorderBrush" Value="#1A3A4A"/>
+                                                <Setter Property="BorderThickness" Value="1"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                        <Setter Property="Background" Value="#1A3A4A"/>
+                                                        <Setter Property="BorderBrush" Value="#00F0FF"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock FontSize="11" Foreground="#8892A4" FontFamily="{StaticResource CyberFontBody}" HorizontalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="SELECT"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                            <Setter Property="Text" Value="&#x2713; ACTIVE"/>
+                                                            <Setter Property="Foreground" Value="#39FF14"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock x:Name="NoBrowsersLabel" Text="NO COMPATIBLE BROWSERS DETECTED &#x2014; Install Chrome, Edge, Brave, Opera, or Vivaldi" Foreground="#FF073A" FontSize="12" FontFamily="{StaticResource CyberFontBody}" Visibility="Collapsed" Margin="0,8"/>
+
+            <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                <Button x:Name="BtnScan" Content="&#x25C8; SCAN AGAIN" Click="BtnScan_Click" Style="{StaticResource CyberButton}" Padding="16,8" Margin="0,0,8,0"/>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,0 +1,76 @@
+﻿# === Build output ===
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+artifacts/
+dist/
+publish/
+PublishProfiles/
+*.nupkg
+*.snupkg
+
+# === Visual Studio / Rider / VSCode ===
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# === .NET ===
+*.pdb
+*.cache
+*.tmp_proj
+*.vspscc
+*.vssscc
+project.lock.json
+
+# === Code signing — NEVER commit ===
+*.pfx
+*.snk
+*.cer
+*.p12
+*.key
+
+# === Secrets / env ===
+appsettings.Local.json
+appsettings.*.Development.json
+secrets.json
+*.env
+.env.*
+
+# === Envoy-specific: user data ===
+vault/
+[Ss]amples/
+parsed/
+resumes/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# === LLM models ===
+*.gguf
+models/
+
+# === Audit / logs / screenshots ===
+audit/
+screenshots/
+logs/
+*.log
+
+# === MAUI binaries ===
+*.aab
+*.apk
+*.ipa
+
+# === User PDFs (resumes are input data, not source) ===
+*.pdf
+
+# === OS ===
+Thumbs.db
+.DS_Store
+desktop.ini

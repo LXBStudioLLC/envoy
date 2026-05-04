@@ -1,0 +1,45 @@
+{
+  "id": "indeed-apply",
+  "name": "Indeed Easy Apply",
+  "url_match": "indeed.com/viewjob*",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "action": "wait_for",
+      "selector": "button[aria-label='Apply now']",
+      "timeout": 10000
+    },
+    {
+      "action": "click",
+      "selector": "button[aria-label='Apply now']"
+    },
+    {
+      "action": "wait_for",
+      "selector": "input[type='email']",
+      "timeout": 5000
+    },
+    {
+      "action": "fill",
+      "field_id": "email",
+      "selector": "input[type='email']"
+    },
+    {
+      "action": "upload",
+      "field_id": "resume",
+      "selector": "input[type='file']",
+      "value_from": "generated_pdf_path"
+    },
+    {
+      "action": "conditional_click",
+      "description": "Continue to review",
+      "selector": "button[data-testid='continue-button']",
+      "require_confirmation": false
+    },
+    {
+      "action": "conditional_click",
+      "description": "Submit Indeed application",
+      "selector": "button[data-testid='submit-button']",
+      "require_confirmation": true
+    }
+  ]
+}

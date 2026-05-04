@@ -1,0 +1,40 @@
+{
+  "id": "linkedin-easy-apply",
+  "name": "LinkedIn Easy Apply",
+  "urlMatch": "linkedin.com/jobs/view/*",
+  "version": "1.0.0",
+  "steps": [
+    {
+      "action": "wait_for",
+      "selector": "button[data-control-name='submit_unify']",
+      "timeout": 10000
+    },
+    {
+      "action": "click",
+      "selector": "button.jobs-apply-button"
+    },
+    {
+      "action": "wait_for",
+      "selector": "input[id*='email']",
+      "timeout": 5000
+    },
+    {
+      "action": "fill",
+      "field_id": "contact_email",
+      "selector": "input[id*='email']",
+      "fallback_selector": "input[type='email']"
+    },
+    {
+      "action": "upload",
+      "field_id": "resume_file",
+      "selector": "input[type='file']",
+      "value_from": "generated_pdf_path"
+    },
+    {
+      "action": "conditional_click",
+      "description": "Review and submit application",
+      "selector": "button[aria-label='Submit application']",
+      "require_confirmation": true
+    }
+  ]
+}
