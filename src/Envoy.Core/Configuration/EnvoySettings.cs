@@ -13,4 +13,5 @@ public class EnvoySettings
     public string TemplatesPath { get; set; } = "";
     public int TypingSpeedVariance { get; set; } = 35;
     public int MousePathSteps { get; set; } = 25;
+    public double RelocationConfidenceThreshold { get; set; } = 0.75;
 }

@@ -1,3 +1,4 @@
+using Envoy.Core.Configuration;
 using Envoy.Core.Data;
 using Envoy.Core.Models;
 using Microsoft.EntityFrameworkCore;
@@ -27,8 +28,16 @@ public static class ServiceRegistration
         services.AddSingleton<HumanizationService>();
         services.AddSingleton<CdpBrowserService>();
         services.AddSingleton<IBrowserLauncher, BrowserLauncher>();
+
+        services.AddSingleton<EnvoySettings>();
+        services.AddSingleton<RelocationLogger>();
+        services.AddSingleton<IBrowserQuery>(sp => new CdpBrowserQueryAdapter(sp.GetRequiredService<CdpBrowserService>()));
+        services.AddSingleton<IElementLocator, ElementLocatorService>();
+
         services.AddSingleton<TemplateEngine>(sp =>
-            new TemplateEngine(Path.Combine(AppContext.BaseDirectory, "Templates")));
+            new TemplateEngine(
+                Path.Combine(AppContext.BaseDirectory, "Templates"),
+                sp.GetRequiredService<IElementLocator>()));
 
         services.AddScoped<ResumeParserService>();
         services.AddScoped<TailoringEngine>();

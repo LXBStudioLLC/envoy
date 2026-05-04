@@ -4,6 +4,24 @@ using System.Text.Json.Serialization;
 
 namespace Envoy.Core.Services;
 
+public class Fingerprint
+{
+    public string? Tag { get; set; }
+    public Dictionary<string, string>? Attributes { get; set; }
+    [JsonPropertyName("label_text")]
+    public string? LabelText { get; set; }
+    [JsonPropertyName("text_content")]
+    public string? TextContent { get; set; }
+    [JsonPropertyName("ancestor_chain")]
+    public List<string>? AncestorChain { get; set; }
+    [JsonPropertyName("siblings_before")]
+    public List<string>? SiblingsBefore { get; set; }
+    [JsonPropertyName("siblings_after")]
+    public List<string>? SiblingsAfter { get; set; }
+    [JsonPropertyName("position_index")]
+    public int? PositionIndex { get; set; }
+}
+
 public class TemplateStep
 {
     public string Action { get; set; } = string.Empty;
@@ -18,6 +36,7 @@ public class TemplateStep
     public bool RequireConfirmation { get; set; }
     public int Timeout { get; set; } = 5000;
     public string? Description { get; set; }
+    public Fingerprint? Fingerprint { get; set; }
 }
 
 public class SiteTemplate
@@ -34,10 +53,12 @@ public class TemplateEngine
 {
     private readonly List<SiteTemplate> _templates = new();
     private readonly string _templatesPath;
+    private readonly IElementLocator? _elementLocator;
 
-    public TemplateEngine(string templatesPath)
+    public TemplateEngine(string templatesPath, IElementLocator? elementLocator = null)
     {
         _templatesPath = templatesPath;
+        _elementLocator = elementLocator;
         LoadTemplates();
     }
 
@@ -65,13 +86,13 @@ public class TemplateEngine
                     break;
 
                 case "click":
-                    var clickNode = await FindElementAsync(browser, step, ct);
+                    var clickNode = await FindElementAsync(browser, step, template.Id, ct);
                     if (clickNode != null)
                         await browser.ClickAsync(clickNode, ct);
                     break;
 
                 case "fill":
-                    var fillNode = await FindElementAsync(browser, step, ct);
+                    var fillNode = await FindElementAsync(browser, step, template.Id, ct);
                     if (fillNode != null)
                     {
                         var value = GetValueFromProfile(profile, step.ValueFrom ?? step.FieldId ?? "");
@@ -81,13 +102,12 @@ public class TemplateEngine
                     break;
 
                 case "upload":
-                    var uploadNode = await FindElementAsync(browser, step, ct);
+                    var uploadNode = await FindElementAsync(browser, step, template.Id, ct);
                     if (uploadNode != null)
                     {
                         var filePath = GetValueFromProfile(profile, step.ValueFrom ?? "");
                         if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
                         {
-                            // CDP file upload requires DOM.setFileInputFiles
                             await UploadFileAsync(browser, uploadNode, filePath, ct);
                         }
                     }
@@ -98,7 +118,7 @@ public class TemplateEngine
                     {
                         await onConfirmationRequired(step.Description ?? "Submit application?");
                     }
-                    var submitNode = await FindElementAsync(browser, step, ct);
+                    var submitNode = await FindElementAsync(browser, step, template.Id, ct);
                     if (submitNode != null)
                         await browser.ClickAsync(submitNode, ct);
                     break;
@@ -119,8 +139,14 @@ public class TemplateEngine
         }
     }
 
-    private async Task<string?> FindElementAsync(CdpBrowserService browser, TemplateStep step, CancellationToken ct)
+    private async Task<string?> FindElementAsync(CdpBrowserService browser, TemplateStep step, string templateId, CancellationToken ct)
     {
+        if (_elementLocator != null)
+        {
+            var result = await _elementLocator.LocateAsync(step, templateId, ct);
+            return result.NodeId;
+        }
+
         if (!string.IsNullOrEmpty(step.Selector))
         {
             var node = await browser.QuerySelectorAsync(step.Selector, ct);

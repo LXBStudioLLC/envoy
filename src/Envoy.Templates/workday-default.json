@@ -11,7 +11,17 @@
     },
     {
       "action": "click",
-      "selector": "[data-automation-id='applyNowButton']"
+      "selector": "[data-automation-id='applyNowButton']",
+      "fingerprint": {
+        "tag": "button",
+        "attributes": {
+          "data-automation-id": "applyNowButton"
+        },
+        "label_text": "Apply Now",
+        "text_content": "Apply Now",
+        "ancestor_chain": ["div.css-1ww19nr"],
+        "position_index": 0
+      }
     },
     {
       "action": "wait_for",
@@ -22,33 +32,90 @@
       "action": "fill",
       "field_id": "email",
       "selector": "[data-automation-id='email']",
-      "fallback_selector": "input[type='email']"
+      "fallback_selector": "input[type='email']",
+      "fingerprint": {
+        "tag": "input",
+        "attributes": {
+          "type": "email",
+          "data-automation-id": "email"
+        },
+        "label_text": "Email Address",
+        "ancestor_chain": ["div.css-1v6ruqj", "div.css-1wiiz1n"],
+        "position_index": 0
+      }
     },
     {
       "action": "fill",
       "field_id": "first_name",
       "selector": "[data-automation-id='firstName']",
-      "fallback_selector": "input[name='firstName']"
+      "fallback_selector": "input[name='firstName']",
+      "fingerprint": {
+        "tag": "input",
+        "attributes": {
+          "type": "text",
+          "data-automation-id": "firstName",
+          "name": "firstName"
+        },
+        "label_text": "First Name",
+        "ancestor_chain": ["div.css-1v6ruqj", "div.css-1wiiz1n"],
+        "siblings_before": ["Email Address"],
+        "position_index": 1
+      }
     },
     {
       "action": "fill",
       "field_id": "last_name",
       "selector": "[data-automation-id='lastName']",
-      "fallback_selector": "input[name='lastName']"
+      "fallback_selector": "input[name='lastName']",
+      "fingerprint": {
+        "tag": "input",
+        "attributes": {
+          "type": "text",
+          "data-automation-id": "lastName",
+          "name": "lastName"
+        },
+        "label_text": "Last Name",
+        "ancestor_chain": ["div.css-1v6ruqj", "div.css-1wiiz1n"],
+        "siblings_before": ["Email Address", "First Name"],
+        "position_index": 2
+      }
     },
     {
       "action": "upload",
       "field_id": "resume",
       "selector": "[data-automation-id='file-upload-input']",
       "fallback_selector": "input[type='file']",
-      "value_from": "generated_pdf_path"
+      "value_from": "generated_pdf_path",
+      "fingerprint": {
+        "tag": "input",
+        "attributes": {
+          "type": "file",
+          "data-automation-id": "file-upload-input"
+        },
+        "label_text": "Resume",
+        "ancestor_chain": ["div.css-1v6ruqj", "div.css-1wiiz1n"],
+        "siblings_before": ["Email Address", "First Name", "Last Name"],
+        "position_index": 3
+      }
     },
     {
       "action": "conditional_click",
       "description": "Submit Workday application",
       "selector": "[data-automation-id='submitButton']",
       "fallback_selector": "button[type='submit']",
-      "require_confirmation": true
+      "require_confirmation": true,
+      "fingerprint": {
+        "tag": "button",
+        "attributes": {
+          "type": "submit",
+          "data-automation-id": "submitButton"
+        },
+        "label_text": "Submit",
+        "text_content": "Submit Application",
+        "ancestor_chain": ["div.css-1v6ruqj"],
+        "siblings_before": ["Email Address", "First Name", "Last Name", "Resume"],
+        "position_index": 4
+      }
     }
   ]
 }

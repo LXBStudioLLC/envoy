@@ -12,6 +12,7 @@ Envoy is a fully automated, privacy-first desktop application that tailors your 
 - **Human Behavior Emulation:** Randomized mouse paths, natural typing cadence, realistic scroll patterns.
 - **Safety Guardrails:** Multi-layer validation detects hallucinations, keyword stuffing, and date inconsistencies. Falls back to Safe Mode automatically.
 - **Site Templates:** Modular JSON templates for LinkedIn, Greenhouse, Workday, and more. Community updatable.
+- **Adaptive Parser:** Self-healing element locator uses structural fingerprints to recover from DOM changes before falling back to Safe Mode.
 - **Cross-Platform:** Built with .NET 10 MAUI. Windows, macOS, Linux.
 
 ## Architecture
