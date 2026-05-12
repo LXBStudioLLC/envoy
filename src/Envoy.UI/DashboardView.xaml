@@ -8,13 +8,14 @@
             <TextBlock Text="&#x25C8; DASHBOARD" Style="{StaticResource CyberHeading}" Margin="0,0,0,4"/>
             <TextBlock Text="SOVEREIGN JOB AGENT &#x2014; MISSION CONTROL" Style="{StaticResource CyberSubheading}" Margin="0,0,0,20"/>
 
-            <Border Background="#111827" CornerRadius="3" BorderBrush="#1A3A4A" BorderThickness="1" Padding="20" Margin="0,0,0,16">
+            <Border x:Name="ImportDropZone" Background="#111827" CornerRadius="3" BorderBrush="#1A3A4A" BorderThickness="1" Padding="20" Margin="0,0,0,16"
+                    AllowDrop="True" DragEnter="ImportDropZone_DragEnter" DragLeave="ImportDropZone_DragLeave" DragOver="ImportDropZone_DragOver" Drop="ImportDropZone_Drop">
                 <Border.Effect>
                     <DropShadowEffect Color="#00F0FF" BlurRadius="12" ShadowDepth="0" Opacity="0.15"/>
                 </Border.Effect>
                 <StackPanel>
                     <TextBlock Text="IMPORT RESUME" Foreground="#00F0FF" FontSize="14" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,8"/>
-                    <TextBlock Text="Select a PDF resume to initialize your profile" Foreground="#8892A4" FontSize="12" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,12"/>
+                    <TextBlock Text="Drop a PDF here or click to browse" Foreground="#8892A4" FontSize="12" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,12"/>
                     <Button x:Name="BtnImport" Content="&#x25C8; SELECT PDF FILE" Click="BtnImport_Click" Style="{StaticResource CyberButton}" HorizontalAlignment="Left" Padding="20,10"/>
                     <TextBlock x:Name="ImportStatus" Text="" Foreground="#39FF14" FontSize="12" FontFamily="{StaticResource CyberFontBody}" Margin="0,8,0,0"/>
                 </StackPanel>
