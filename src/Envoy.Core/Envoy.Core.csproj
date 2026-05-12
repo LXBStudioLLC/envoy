@@ -12,11 +12,10 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.0" />
-    <PackageReference Include="Microsoft.SemanticKernel" Version="1.15.0" />
-    <PackageReference Include="Microsoft.Extensions.AI" Version="8.0.0-preview.1.23551.1" />
-    <PackageReference Include="Microsoft.Extensions.AI.Ollama" Version="8.0.0-preview.1.23551.1" />
+    <PackageReference Include="OllamaSharp" Version="5.4.25" />
 
     <PackageReference Include="System.Net.WebSockets.Client" Version="4.3.2" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
     <PackageReference Include="PdfPig" Version="0.1.8" />
     <PackageReference Include="System.Management" Version="8.0.0" Condition="$([MSBuild]::IsOSPlatform('Windows'))" />
   </ItemGroup>
