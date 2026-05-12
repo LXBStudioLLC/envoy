@@ -1,6 +1,7 @@
 using Envoy.Core.Models;
 using Envoy.Core.Services;
 using Microsoft.Win32;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -157,6 +158,41 @@ public partial class DashboardView : UserControl
     {
         var dlg = new OpenFileDialog { Filter = "PDF files (*.pdf)|*.pdf", Title = "Select Resume PDF" };
         if (dlg.ShowDialog() != true) return;
+        await ImportPdfAsync(dlg.FileName);
+    }
+
+    private static readonly long MaxResumePdfBytes = 50 * 1024 * 1024; // 50 MB
+
+    private async Task ImportPdfAsync(string pdfPath)
+    {
+        if (!File.Exists(pdfPath))
+        {
+            ImportStatus.Text = $"✕ FILE NOT FOUND: {pdfPath}";
+            ImportStatus.Foreground = Red;
+            return;
+        }
+
+        if (!pdfPath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            ImportStatus.Text = "✕ ONLY PDF FILES ARE SUPPORTED";
+            ImportStatus.Foreground = Red;
+            return;
+        }
+
+        try
+        {
+            var size = new FileInfo(pdfPath).Length;
+            if (size > MaxResumePdfBytes)
+            {
+                ImportStatus.Text = $"✕ FILE TOO LARGE ({size / (1024 * 1024)} MB; limit 50 MB)";
+                ImportStatus.Foreground = Red;
+                return;
+            }
+        }
+        catch
+        {
+            // Size check is best-effort; if it fails we'll let the parser deal with it.
+        }
 
         BtnImport.IsEnabled = false;
         ImportStatus.Text = "INITIALIZING PARSE SEQUENCE...";
@@ -164,7 +200,7 @@ public partial class DashboardView : UserControl
 
         try
         {
-            var profile = await _orchestrator.ImportResumeAsync(dlg.FileName);
+            var profile = await _orchestrator.ImportResumeAsync(pdfPath);
             await LoadProfilesAsync();
             ImportStatus.Text = $"✓ PROFILE IMPORTED: {profile.Name}";
             ImportStatus.Foreground = Green;
@@ -178,6 +214,43 @@ public partial class DashboardView : UserControl
         {
             BtnImport.IsEnabled = true;
         }
+    }
+
+    private void ImportDropZone_DragEnter(object sender, DragEventArgs e)
+    {
+        ImportDropZone_DragOver(sender, e);
+        if (e.Effects != DragDropEffects.None)
+            ImportDropZone.BorderBrush = Cyan;
+    }
+
+    private void ImportDropZone_DragLeave(object sender, DragEventArgs e)
+    {
+        ImportDropZone.BorderBrush = new SolidColorBrush(Color.FromRgb(0x1A, 0x3A, 0x4A));
+    }
+
+    private void ImportDropZone_DragOver(object sender, DragEventArgs e)
+    {
+        var files = e.Data.GetData(DataFormats.FileDrop) as string[];
+        var ok = files?.Length == 1 && files[0].EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
+        e.Effects = ok ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private async void ImportDropZone_Drop(object sender, DragEventArgs e)
+    {
+        ImportDropZone.BorderBrush = new SolidColorBrush(Color.FromRgb(0x1A, 0x3A, 0x4A));
+
+        var files = e.Data.GetData(DataFormats.FileDrop) as string[];
+        if (files == null || files.Length == 0) return;
+
+        if (files.Length > 1)
+        {
+            ImportStatus.Text = "✕ DROP ONLY ONE PDF AT A TIME";
+            ImportStatus.Foreground = Red;
+            return;
+        }
+
+        await ImportPdfAsync(files[0]);
     }
 
     private async void BtnLaunchChrome_Click(object sender, RoutedEventArgs e)
