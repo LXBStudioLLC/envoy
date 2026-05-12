@@ -2,7 +2,7 @@
 
 **Your local, sovereign job application agent.**
 
-Envoy is a fully automated, privacy-first desktop application that tailors your resume for each job and fills out application forms using your own local AI — no cloud, no data leakage, no subscription.
+Envoy is a privacy-first Windows desktop application that tailors your resume for each job and fills out application forms using your own local AI — your data stays on your machine.
 
 ## Features
 
@@ -11,21 +11,24 @@ Envoy is a fully automated, privacy-first desktop application that tailors your 
 - **Real Browser Stealth:** Connects to your actual Chrome/Edge via CDP. No bundled browser, no detection.
 - **Human Behavior Emulation:** Randomized mouse paths, natural typing cadence, realistic scroll patterns.
 - **Safety Guardrails:** Multi-layer validation detects hallucinations, keyword stuffing, and date inconsistencies. Falls back to Safe Mode automatically.
-- **Site Templates:** Modular JSON templates for LinkedIn, Greenhouse, Workday, and more. Community updatable.
+- **Site Templates:** Modular JSON templates for LinkedIn, Greenhouse, Workday, Lever, and Indeed. Community updatable.
 - **Adaptive Parser:** Self-healing element locator uses structural fingerprints to recover from DOM changes before falling back to Safe Mode.
-- **Cross-Platform:** Built with .NET 10 MAUI. Windows, macOS, Linux.
+
+## Local by default. Cloud is opt-in.
+
+Envoy runs entirely on your machine using Ollama and a local LLM — that's the default and the recommended posture. If you'd rather use a hosted model, Envoy can talk to OpenAI, Anthropic, or Google Gemini instead. API keys you supply are encrypted with Windows DPAPI under your user account before being written to disk, and cloud calls happen only when you select a cloud provider in LLM Settings.
 
 ## Architecture
 
 | Layer | Technology |
 |-------|------------|
-| **UI** | .NET 10 MAUI Blazor Hybrid + Fluent UI |
+| **UI** | .NET 8 WPF + HandyControl |
 | **Database** | SQLite + EF Core |
-| **Local LLM** | Ollama via `Microsoft.Extensions.AI` |
-| **Orchestration** | Semantic Kernel |
-| **PDF Parsing** | PdfPig + Local LLM post-processor |
+| **Local LLM** | Ollama via [OllamaSharp](https://github.com/awaescher/OllamaSharp) |
+| **Cloud LLM (optional)** | OpenAI / Anthropic / Gemini via raw HTTP |
+| **PDF Parsing** | PdfPig + local LLM post-processor |
 | **PDF Generation** | QuestPDF |
-| **Browser** | Raw WebSocket → Chrome CDP |
+| **Browser** | Raw WebSocket → Chrome DevTools Protocol |
 | **Behavior** | Custom C# humanization engine |
 
 ## Safety First
@@ -39,21 +42,24 @@ If any layer triggers an anomaly, Envoy **falls back to Safe Mode** — the form
 
 ## Requirements
 
-- **Ollama** installed and running locally.
+- **Windows 10/11 (64-bit).** Envoy is a WPF desktop application; macOS/Linux are not supported.
+- **Ollama** installed and running locally (skip if you only intend to use a cloud provider).
 - **Google Chrome** or **Microsoft Edge** installed.
-- **GPU recommended:** 8GB+ VRAM for best experience. CPU-only mode supported with smaller models.
+- **GPU recommended:** 8GB+ VRAM for best local-LLM experience. CPU-only mode supported with smaller models.
 
 ## Quick Start (Development)
 
 1. Install Ollama and pull your chosen model:
-   ```bash
+   ```powershell
    ollama pull qwen2.5-coder:14b
    ```
-2. Run: `dotnet run --project src/Envoy.UI`
-3. Open http://localhost:5000
-4. Drop your resume PDF.
-5. Paste a job URL.
-6. Envoy handles the rest.
+2. Run the app — this opens a Windows desktop window:
+   ```powershell
+   dotnet run --project src/Envoy.UI
+   ```
+3. Drop your resume PDF on the Dashboard.
+4. Paste a job URL.
+5. Envoy handles the rest.
 
 ## Packaging & Distribution
 
@@ -61,9 +67,9 @@ If any layer triggers an anomaly, Envoy **falls back to Safe Mode** — the form
 ```powershell
 .\publish.ps1
 ```
-Output: `artifacts/Envoy-v1.0.0-win-x64.zip` (~50MB)
+Output: `artifacts/Envoy-v1.0.0-win-x64.zip`
 
-### Windows (Installer)
+### Windows (Inno Setup Installer)
 1. Install [Inno Setup](https://jrsoftware.org/isdl.php)
 2. Compile `setup.iss`
 3. Output: `artifacts/Envoy-v1.0.0-setup.exe`
@@ -74,15 +80,21 @@ Extract the ZIP and run:
 .\install.ps1
 ```
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for build instructions, branch conventions, and how to add a new job-board template. The fastest way to help out is authoring or improving site templates — see [docs/TEMPLATE_AUTHORING.md](docs/TEMPLATE_AUTHORING.md).
+
 ## License
 
-AGPLv3. Your data stays on your machine.
+[AGPLv3](LICENSE). Your data stays on your machine.
 
 ## Roadmap
 
 - [x] Windows ZIP package
-- [x] Windows installer script
-- [ ] macOS & Linux installers
-- [x] Workday, Lever, Indeed templates
+- [x] Windows installer (Inno Setup + PowerShell)
+- [x] Workday, Lever, Indeed, Greenhouse, LinkedIn templates
 - [x] Vault UI for profile history and corrections
+- [x] Adaptive parser with self-healing element locator
+- [x] Cloud LLM providers (OpenAI, Anthropic, Gemini) — opt-in, DPAPI-encrypted keys
 - [ ] Community template marketplace
+- [ ] Multi-resume / multi-profile workflows

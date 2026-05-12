@@ -3,12 +3,12 @@
 
 #define MyAppName "Envoy"
 #define MyAppVersion "1.0.0"
-#define MyAppPublisher "Envoy Project"
-#define MyAppURL "https://github.com/yourname/Envoy"
+#define MyAppPublisher "LXB Studio LLC"
+#define MyAppURL "https://github.com/LXBStudioLLC/envoy"
 #define MyAppExeName "Envoy.exe"
 
 [Setup]
-AppId={{ENVOY-APP-2026}}
+AppId={{E613459F-AA63-461E-ACDD-710C6F67FFE2}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}

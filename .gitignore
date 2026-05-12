@@ -62,11 +62,6 @@ screenshots/
 logs/
 *.log
 
-# === MAUI binaries ===
-*.aab
-*.apk
-*.ipa
-
 # === User PDFs (resumes are input data, not source) ===
 *.pdf
 

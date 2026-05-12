@@ -5,7 +5,8 @@ param(
     [string]$Configuration = "Release",
     [string]$Runtime = "win-x64",
     [switch]$SelfContained = $true,
-    [string]$OutputPath = "artifacts"
+    [string]$OutputPath = "artifacts",
+    [string]$Version = "1.0.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -62,7 +63,7 @@ Copy-Item -Path "$DocsPath/*" -Destination $DocsDest -Force -Recurse
 
 # Create start script
 Write-Host "Creating launcher script..." -ForegroundColor Yellow
-$StartScriptContent = "@echo off`nchcp 65001 >nul`necho.`necho  Envoy Job Application Agent`necho.`necho  Starting Envoy...`necho  Open your browser to: http://localhost:5000`necho.`n`n:: Check if Ollama is running`ncurl -s http://localhost:11434 >nul 2>&1`nif errorlevel 1 (`n    echo  WARNING: Ollama is not detected!`n    echo  Please ensure Ollama is installed and running.`n    echo  Download: https://ollama.com/download`n    echo.`n)`n`n:: Start Envoy`nstart /b `"`" `"%~dp0Envoy.UI.exe`" --urls `"http://localhost:5000`"`necho  Envoy started successfully!`necho.`npause"
+$StartScriptContent = "@echo off`nchcp 65001 >nul`necho.`necho  Envoy Job Application Agent`necho.`necho  Starting Envoy...`necho.`n`n:: Check if Ollama is running (optional - only needed for local models)`ncurl -s http://localhost:11434 >nul 2>&1`nif errorlevel 1 (`n    echo  Note: Ollama is not running. That's fine if you only use cloud LLM providers.`n    echo  For local LLMs install Ollama: https://ollama.com/download`n    echo.`n)`n`n:: Start Envoy`nstart `"`" `"%~dp0Envoy.UI.exe`""
 
 $StartScriptContent | Out-File -FilePath "$PublishPath/Start Envoy.bat" -Encoding UTF8
 
@@ -75,25 +76,28 @@ Envoy - Quick Start
 Requirements
 ------------
 - Windows 10/11 (64-bit)
-- Ollama (https://ollama.com/download)
+- Ollama (https://ollama.com/download) - optional, only needed for local LLMs
 - Google Chrome or Microsoft Edge
 
 Installation
 ------------
-1. Extract this folder to any location (e.g., C:\Tools\Envoy)
-2. Install Ollama and pull a model: ollama pull qwen2.5-coder:14b
-3. Run Start Envoy.bat
-4. Open http://localhost:5000 in your browser
+1. Extract this folder to any location (e.g., C:\Tools\Envoy).
+2. (Optional) Install Ollama and pull a local model: ollama pull qwen2.5-coder:14b
+3. Run "Start Envoy.bat" (or launch Envoy.UI.exe directly). The app opens as a
+   Windows desktop window - there is no browser/URL to open.
 
 First Time Setup
 ----------------
-1. Drop your resume PDF on the Dashboard
-2. Ensure Chrome is running (Envoy will prompt if not)
-3. Paste a job URL and click Initiate Sequence
+1. Open LLM Settings and pick a local Ollama model OR enter an OpenAI /
+   Anthropic / Gemini API key for a cloud provider. Cloud keys are encrypted
+   with Windows DPAPI before being saved.
+2. Drop your resume PDF on the Dashboard.
+3. Ensure Chrome is running (Envoy will prompt if not).
+4. Paste a job URL and click Initiate Sequence.
 
 Support
 -------
-- GitHub: https://github.com/yourname/Envoy
+- GitHub: https://github.com/LXBStudioLLC/envoy
 
 License
 -------
@@ -104,7 +108,7 @@ $PackageReadmeContent | Out-File -FilePath "$PublishPath/README.txt" -Encoding U
 
 # Create ZIP package
 Write-Host "Creating ZIP package..." -ForegroundColor Yellow
-$ZipPath = "$DistPath/Envoy-v1.0.0-win-x64.zip"
+$ZipPath = "$DistPath/Envoy-v$Version-win-x64.zip"
 Compress-Archive -Path "$PublishPath/*" -DestinationPath $ZipPath -Force
 
 Write-Host ""
