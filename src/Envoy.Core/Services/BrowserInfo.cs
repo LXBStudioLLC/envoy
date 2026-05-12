@@ -17,6 +17,7 @@ public class BrowserInfo
     public string? UserDataDir { get; init; }
     public bool IsInstalled { get; init; }
     public bool IsRunning { get; init; }
+    public bool IsProcessRunning { get; init; }
     public string StealthRating { get; init; } = "";
     public string StealthNote { get; init; } = "";
 }

@@ -55,10 +55,11 @@ public class ApplicationOrchestrator
         var master = await _profileRepo.GetByIdAsync(masterProfileId, ct)
             ?? throw new InvalidOperationException("Master profile not found");
 
-        // Ensure Chrome is running with debugging
-        if (!await _browserLauncher.IsRunningWithDebuggingAsync(_browserLauncher.GetSelectedBrowser()?.Type ?? BrowserType.Chrome))
+        // Ensure browser is running with debugging
+        var browserType = _browserLauncher.GetSelectedBrowserType() ?? BrowserType.Chrome;
+        if (!await _browserLauncher.IsRunningWithDebuggingAsync(browserType))
         {
-            var launched = await _browserLauncher.LaunchAsync(_browserLauncher.GetSelectedBrowser()?.Type ?? BrowserType.Chrome);
+            var launched = await _browserLauncher.LaunchAsync(browserType);
             if (!launched)
             {
                 throw new InvalidOperationException("Could not launch browser. Please ensure a supported browser is installed and try again.");
@@ -132,10 +133,11 @@ public class ApplicationOrchestrator
 
         try
         {
-            // Ensure Chrome is running
-            if (!await _browserLauncher.IsRunningWithDebuggingAsync(_browserLauncher.GetSelectedBrowser()?.Type ?? BrowserType.Chrome))
+            // Ensure browser is running
+            var browserType = _browserLauncher.GetSelectedBrowserType() ?? BrowserType.Chrome;
+            if (!await _browserLauncher.IsRunningWithDebuggingAsync(browserType))
             {
-                var launched = await _browserLauncher.LaunchAsync(_browserLauncher.GetSelectedBrowser()?.Type ?? BrowserType.Chrome);
+                var launched = await _browserLauncher.LaunchAsync(browserType);
                 if (!launched)
                 {
                     log.Status = ApplicationStatus.Failed;

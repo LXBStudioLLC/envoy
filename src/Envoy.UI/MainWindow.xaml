@@ -52,6 +52,7 @@
                     <Button x:Name="NavApply" Content="&#x25C8; APPLY" Click="NavApply_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,2,8,2" HorizontalContentAlignment="Left"/>
                     <Button x:Name="NavVault" Content="&#x25C8; VAULT" Click="NavVault_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,2,8,2" HorizontalContentAlignment="Left"/>
                     <Button x:Name="NavBrowser" Content="&#x2699; BROWSER" Click="NavBrowser_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,2,8,2" HorizontalContentAlignment="Left"/>
+                    <Button x:Name="NavLLM" Content="&#x2699; LLM NEXUS" Click="NavLLM_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,2,8,2" HorizontalContentAlignment="Left"/>
                     <Rectangle Fill="#1A3A4A" Height="1" Margin="16,8"/>
                     <StackPanel x:Name="HardwarePanel" Margin="16,8">
                         <TextBlock x:Name="GpuLabel" Text="&#x25C9; GPU: Detecting..." Style="{StaticResource CyberLabel}" Margin="0,4"/>

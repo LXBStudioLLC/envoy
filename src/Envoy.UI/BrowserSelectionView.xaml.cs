@@ -47,7 +47,11 @@ public partial class BrowserSelectionView : UserControl
 
     private async void BrowserSelectionView_Loaded(object sender, RoutedEventArgs e)
     {
-        await ScanBrowsersAsync();
+        try
+        {
+            await ScanBrowsersAsync();
+        }
+        catch { }
     }
 
     private async Task ScanBrowsersAsync()
@@ -64,7 +68,7 @@ public partial class BrowserSelectionView : UserControl
                 IconGlyph = BrowserIcons.TryGetValue(b.Type, out var icon) ? icon : "\u25C8",
                 StealthRating = b.StealthRating,
                 StealthNote = b.StealthNote,
-                StatusText = !b.IsInstalled ? "NOT FOUND" : b.IsRunning ? "DEBUG BRIDGE ACTIVE" : "INSTALLED",
+                StatusText = !b.IsInstalled ? "NOT FOUND" : b.IsRunning ? "DEBUG BRIDGE ACTIVE" : b.IsProcessRunning ? "RUNNING (NO DEBUG)" : "INSTALLED",
                 IsInstalled = b.IsInstalled,
                 IsRunning = b.IsRunning,
                 IsSelected = _browserLauncher.GetSelectedBrowser()?.Type == b.Type
@@ -129,6 +133,10 @@ public partial class BrowserSelectionView : UserControl
 
     private async void BtnScan_Click(object sender, RoutedEventArgs e)
     {
-        await ScanBrowsersAsync();
+        try
+        {
+            await ScanBrowsersAsync();
+        }
+        catch { }
     }
 }
