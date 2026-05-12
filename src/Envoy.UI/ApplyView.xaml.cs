@@ -27,15 +27,27 @@ public partial class ApplyView : UserControl
     {
         _profileId = profileId;
         _tailored = null;
+        // Clear inputs left over from the previous profile so two job apps
+        // for two different people don't accidentally cross-pollinate.
+        TxtJobUrl.Text = "";
         ResultPanel.Visibility = Visibility.Collapsed;
         StatusText.Text = "";
     }
 
     private async void BtnInitiate_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(TxtJobUrl.Text))
+        var jobUrl = TxtJobUrl.Text?.Trim() ?? "";
+        if (string.IsNullOrWhiteSpace(jobUrl))
         {
             StatusText.Text = "⚠ TARGET URL REQUIRED";
+            StatusText.Foreground = Red;
+            return;
+        }
+
+        if (!Uri.TryCreate(jobUrl, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            StatusText.Text = "⚠ TARGET URL MUST BE A FULL http:// OR https:// LINK";
             StatusText.Foreground = Red;
             return;
         }
@@ -47,7 +59,7 @@ public partial class ApplyView : UserControl
 
         try
         {
-            _tailored = await _orchestrator.PrepareApplicationAsync(_profileId, TxtJobUrl.Text);
+            _tailored = await _orchestrator.PrepareApplicationAsync(_profileId, jobUrl);
             ShowResult();
         }
         catch (Exception ex)

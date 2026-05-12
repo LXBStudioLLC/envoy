@@ -7,12 +7,16 @@ namespace Envoy.Core.Services;
 
 public class OllamaService : IDisposable
 {
+    // Reference assignment to _activeProvider is atomic on .NET. CompleteAsync
+    // snapshots the reference into a local before using it, so a concurrent
+    // SwitchProvider can't NRE the in-flight call — the worst case is an
+    // already-running completion finishes against the prior provider, which
+    // is the desired semantics anyway. No lock needed.
     private ILLMProvider _activeProvider;
     private readonly OllamaApiClient? _chatClient;
     private readonly string _modelName;
     private readonly ILogger<OllamaService> _log;
     private bool _disposed;
-    private readonly object _providerLock = new();
 
     [Obsolete("Use LLMDetectionService.CreateActiveProvider() instead. This constructor is kept for backward compatibility.")]
     public OllamaService(string modelName = "qwen2.5-coder:14b", string endpoint = "http://localhost:11434", ILogger<OllamaService>? log = null)
@@ -35,11 +39,8 @@ public class OllamaService : IDisposable
 
     public void SwitchProvider(ILLMProvider newProvider)
     {
-        lock (_providerLock)
-        {
-            _activeProvider = newProvider;
-            _log.LogInformation("Switched LLM provider to {Provider} ({ProviderId})", newProvider.DisplayName, newProvider.ProviderId);
-        }
+        _activeProvider = newProvider;
+        _log.LogInformation("Switched LLM provider to {Provider} ({ProviderId})", newProvider.DisplayName, newProvider.ProviderId);
     }
 
     public async Task<string> CompleteAsync(string prompt, string systemPrompt = "", CancellationToken ct = default)
