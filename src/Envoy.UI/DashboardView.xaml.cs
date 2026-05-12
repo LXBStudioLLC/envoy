@@ -13,6 +13,7 @@ public partial class DashboardView : UserControl
     private readonly IProfileRepository _profileRepo;
     private readonly IBrowserLauncher _browserLauncher;
     private List<MasterProfile> _profiles = new();
+    private bool _browserAutoLaunched;
 
     private static readonly SolidColorBrush Cyan = new(Color.FromRgb(0x00, 0xF0, 0xFF));
     private static readonly SolidColorBrush Green = new(Color.FromRgb(0x39, 0xFF, 0x14));
@@ -31,8 +32,12 @@ public partial class DashboardView : UserControl
 
     private async void DashboardView_Loaded(object sender, RoutedEventArgs e)
     {
-        await LoadProfilesAsync();
-        await AutoLaunchChromeAsync();
+        try
+        {
+            await LoadProfilesAsync();
+            await RefreshBrowserStatusAsync();
+        }
+        catch { }
     }
 
     private async Task LoadProfilesAsync()
@@ -50,53 +55,103 @@ public partial class DashboardView : UserControl
         }
     }
 
-    private async Task AutoLaunchChromeAsync()
+    private async Task RefreshBrowserStatusAsync()
     {
+        var browserType = _browserLauncher.GetSelectedBrowserType() ?? BrowserType.Chrome;
+        var browserName = _browserLauncher.GetSelectedBrowser()?.DisplayName ?? GetBrowserDisplayName(browserType);
+
         try
         {
-var ready = await _browserLauncher.IsRunningWithDebuggingAsync(_browserLauncher.GetSelectedBrowser()?.Type ?? BrowserType.Chrome);
-            if (ready)
+            var debugReady = await _browserLauncher.IsRunningWithDebuggingAsync(browserType);
+            if (debugReady)
             {
-                ChromeStatusLabel.Text = "◉ Chrome Ready — Debug bridge active";
+                ChromeStatusLabel.Text = $"◉ {browserName} Ready — Debug bridge active";
                 ChromeStatusLabel.Foreground = Green;
-                ChromeDetailLabel.Text = "Chrome is running with remote debugging on port 9222.";
+                ChromeDetailLabel.Text = $"{browserName} is running with remote debugging on port 9222.";
                 ChromeDetailLabel.Foreground = Gray;
-                BtnLaunchChrome.Content = "◈ RE-LAUNCH CHROME";
+                BtnLaunchChrome.Content = $"◈ RE-LAUNCH {browserName.ToUpper()}";
                 return;
             }
 
-            ChromeStatusLabel.Text = "◉ Launching Chrome with debug bridge...";
-            ChromeStatusLabel.Foreground = Cyan;
-            ChromeDetailLabel.Text = "Envoy needs Chrome with remote debugging for stealth automation.";
-            ChromeDetailLabel.Foreground = Gray;
+            var processRunning = await _browserLauncher.IsProcessRunningAsync(browserType);
+            if (processRunning)
+            {
+                if (!_browserAutoLaunched)
+                {
+                    ChromeStatusLabel.Text = $"◉ {browserName} detected (no debug bridge)";
+                    ChromeStatusLabel.Foreground = Yellow;
+                    ChromeDetailLabel.Text = $"{browserName} is running but without remote debugging. Click below to restart it with the debug bridge.";
+                    ChromeDetailLabel.Foreground = Gray;
+                    BtnLaunchChrome.Content = $"◈ RESTART {browserName.ToUpper()} WITH DEBUG";
+                }
+                else
+                {
+                    ChromeStatusLabel.Text = $"⚠ {browserName} debug bridge not responding";
+                    ChromeStatusLabel.Foreground = Yellow;
+                    ChromeDetailLabel.Text = "The browser was launched but the debug bridge is not responding. Try clicking below.";
+                    ChromeDetailLabel.Foreground = Gray;
+                    BtnLaunchChrome.Content = $"◈ RETRY {browserName.ToUpper()} LAUNCH";
+                }
+                return;
+            }
 
-            var launched = await _browserLauncher.LaunchAsync(_browserLauncher.GetSelectedBrowser()?.Type ?? BrowserType.Chrome);
-            if (launched)
+            if (!_browserAutoLaunched)
             {
-                ChromeStatusLabel.Text = "◉ Chrome Ready — Debug bridge active";
-                ChromeStatusLabel.Foreground = Green;
-                ChromeDetailLabel.Text = "Chrome launched successfully. You can now apply to job.";
+                ChromeStatusLabel.Text = $"◉ Launching {browserName} with debug bridge...";
+                ChromeStatusLabel.Foreground = Cyan;
+                ChromeDetailLabel.Text = $"Envoy needs {browserName} with remote debugging for stealth automation.";
                 ChromeDetailLabel.Foreground = Gray;
-                BtnLaunchChrome.Content = "◈ RE-LAUNCH CHROME";
+                BtnLaunchChrome.IsEnabled = false;
+
+                var launched = await _browserLauncher.LaunchAsync(browserType);
+                _browserAutoLaunched = true;
+
+                if (launched)
+                {
+                    ChromeStatusLabel.Text = $"◉ {browserName} Ready — Debug bridge active";
+                    ChromeStatusLabel.Foreground = Green;
+                    ChromeDetailLabel.Text = $"{browserName} launched successfully. You can now apply to jobs.";
+                    ChromeDetailLabel.Foreground = Gray;
+                    BtnLaunchChrome.Content = $"◈ RE-LAUNCH {browserName.ToUpper()}";
+                }
+                else
+                {
+                    ChromeStatusLabel.Text = $"⚠ Could not start {browserName}";
+                    ChromeStatusLabel.Foreground = Yellow;
+                    ChromeDetailLabel.Text = $"Install {browserName} or select a different browser, then click below to retry.";
+                    ChromeDetailLabel.Foreground = Gray;
+                    BtnLaunchChrome.Content = $"◈ LAUNCH {browserName.ToUpper()}";
+                }
+
+                BtnLaunchChrome.IsEnabled = true;
+                return;
             }
-            else
-            {
-                ChromeStatusLabel.Text = "⚠ Chrome not detected";
-                ChromeStatusLabel.Foreground = Yellow;
-                ChromeDetailLabel.Text = "Install Google Chrome or Microsoft Edge, then click below to retry.";
-                ChromeDetailLabel.Foreground = Gray;
-                BtnLaunchChrome.Content = "◈ LAUNCH CHROME";
-            }
+
+            ChromeStatusLabel.Text = $"⚠ {browserName} not detected";
+            ChromeStatusLabel.Foreground = Yellow;
+            ChromeDetailLabel.Text = $"Click below to launch {browserName} with the debug bridge.";
+            ChromeDetailLabel.Foreground = Gray;
+            BtnLaunchChrome.Content = $"◈ LAUNCH {browserName.ToUpper()}";
         }
         catch (Exception ex)
         {
-            ChromeStatusLabel.Text = $"✕ Chrome error: {ex.Message}";
+            ChromeStatusLabel.Text = $"✕ Browser error: {ex.Message}";
             ChromeStatusLabel.Foreground = Red;
-            ChromeDetailLabel.Text = "Click below to retry launching Chrome.";
+            ChromeDetailLabel.Text = "Click below to retry launching.";
             ChromeDetailLabel.Foreground = Gray;
-            BtnLaunchChrome.Content = "◈ LAUNCH CHROME";
+            BtnLaunchChrome.Content = "◈ LAUNCH BROWSER";
         }
     }
+
+    private static string GetBrowserDisplayName(BrowserType type) => type switch
+    {
+        BrowserType.Chrome => "Google Chrome",
+        BrowserType.Edge => "Microsoft Edge",
+        BrowserType.Brave => "Brave",
+        BrowserType.Opera => "Opera",
+        BrowserType.Vivaldi => "Vivaldi",
+        _ => "Browser"
+    };
 
     private async void BtnImport_Click(object sender, RoutedEventArgs e)
     {
@@ -128,38 +183,30 @@ var ready = await _browserLauncher.IsRunningWithDebuggingAsync(_browserLauncher.
     private async void BtnLaunchChrome_Click(object sender, RoutedEventArgs e)
     {
         BtnLaunchChrome.IsEnabled = false;
-        var browserType = _browserLauncher.GetSelectedBrowser()?.Type ?? BrowserType.Chrome;
-        var browserName = _browserLauncher.GetSelectedBrowser()?.DisplayName ?? "Browser";
-        var ready = await _browserLauncher.IsRunningWithDebuggingAsync(browserType);
+        var browserType = _browserLauncher.GetSelectedBrowserType() ?? BrowserType.Chrome;
+        var browserName = _browserLauncher.GetSelectedBrowser()?.DisplayName ?? GetBrowserDisplayName(browserType);
 
-        if (ready)
-        {
-            ChromeStatusLabel.Text = $"◉ {browserName} Already Running";
-            ChromeStatusLabel.Foreground = Green;
-            ChromeDetailLabel.Text = "Debug bridge is active on port 9222.";
-            BtnLaunchChrome.IsEnabled = true;
-            return;
-        }
-
-        ChromeStatusLabel.Text = $"◉ Launching {browserName}...";
+        ChromeStatusLabel.Text = $"◉ Restarting {browserName} with debug bridge...";
         ChromeStatusLabel.Foreground = Cyan;
+        ChromeDetailLabel.Text = $"Closing existing {browserName} session and restarting with debugging enabled. Your tabs will be restored.";
+        ChromeDetailLabel.Foreground = Gray;
 
         try
         {
-            var success = await _browserLauncher.LaunchAsync(browserType);
+            var success = await _browserLauncher.RestartWithDebuggingAsync(browserType);
             if (success)
             {
                 ChromeStatusLabel.Text = $"◉ {browserName} Ready — Debug bridge active";
                 ChromeStatusLabel.Foreground = Green;
-                ChromeDetailLabel.Text = $"{browserName} launched. You can now apply to jobs.";
+                ChromeDetailLabel.Text = $"{browserName} restarted with debugging. You can now apply to jobs.";
                 ChromeDetailLabel.Foreground = Gray;
                 BtnLaunchChrome.Content = $"◈ RE-LAUNCH {browserName.ToUpper()}";
             }
             else
             {
-                ChromeStatusLabel.Text = "✕ Could not launch browser";
+                ChromeStatusLabel.Text = "✕ Could not start browser";
                 ChromeStatusLabel.Foreground = Red;
-                ChromeDetailLabel.Text = "Select a browser from the list above, or install Chrome/Edge.";
+                ChromeDetailLabel.Text = "Select a browser from the list above, or install Chrome/Edge and try again.";
                 ChromeDetailLabel.Foreground = Yellow;
                 BtnLaunchChrome.Content = "◈ RETRY";
             }
@@ -168,6 +215,8 @@ var ready = await _browserLauncher.IsRunningWithDebuggingAsync(_browserLauncher.
         {
             ChromeStatusLabel.Text = $"✕ Error: {ex.Message}";
             ChromeStatusLabel.Foreground = Red;
+            ChromeDetailLabel.Text = "Click below to retry.";
+            ChromeDetailLabel.Foreground = Gray;
         }
         finally
         {
@@ -184,21 +233,36 @@ var ready = await _browserLauncher.IsRunningWithDebuggingAsync(_browserLauncher.
         }
     }
 
-    private void BtnEdit_Click(object sender, RoutedEventArgs e)
+    private async void BtnEdit_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button btn && btn.Tag is Guid id)
         {
             var mainWindow = (MainWindow)Window.GetWindow(this);
-            mainWindow.NavigateToVault(id);
+            try
+            {
+                await mainWindow.NavigateToVault(id);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"NavigateToVault failed for {id}: {ex}");
+            }
         }
     }
 
     private async void BtnDelete_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button btn && btn.Tag is Guid id)
+        try
         {
-            await _profileRepo.DeleteAsync(id);
-            await LoadProfilesAsync();
+            if (sender is Button btn && btn.Tag is Guid id)
+            {
+                await _profileRepo.DeleteAsync(id);
+                await LoadProfilesAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            ImportStatus.Text = $"✕ DELETE ERROR: {ex.Message}";
+            ImportStatus.Foreground = Red;
         }
     }
 }

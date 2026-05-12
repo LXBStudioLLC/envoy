@@ -1,4 +1,5 @@
 using Envoy.Core.Models;
+using Microsoft.Extensions.Logging;
 using UglyToad.PdfPig;
 using System.Text;
 using System.Text.Json;
@@ -10,28 +11,49 @@ public class ResumeParserService
     private readonly OllamaService _ollama;
     private readonly SafetyService _safety;
     private readonly IOcrService? _ocr;
+    private readonly ILogger<ResumeParserService> _log;
 
-    public ResumeParserService(OllamaService ollama, SafetyService safety, IOcrService? ocr = null)
+    public ResumeParserService(OllamaService ollama, SafetyService safety, IOcrService? ocr = null, ILogger<ResumeParserService>? log = null)
     {
         _ollama = ollama;
         _safety = safety;
         _ocr = ocr;
+        _log = log ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ResumeParserService>.Instance;
     }
 
     public async Task<MasterProfile> ParseAsync(string pdfPath, CancellationToken ct = default)
     {
         var rawText = ExtractRawText(pdfPath);
-        
-        // If text extraction returns very little, might be image-based PDF
+        var ocrUnsupported = false;
+
         if (rawText.Length < 100 && _ocr != null)
         {
-            rawText = await _ocr.ExtractTextFromPdfAsync(pdfPath, ct);
+            _log.LogInformation("PDF text too short ({Length} chars), attempting OCR fallback", rawText.Length);
+            try
+            {
+                rawText = await _ocr.ExtractTextFromPdfAsync(pdfPath, ct);
+            }
+            catch (NotSupportedException ex)
+            {
+                _log.LogWarning(ex, "OCR fallback not supported for {Path}", pdfPath);
+                ocrUnsupported = true;
+            }
         }
 
         var profile = await ReconstructWithLLM(rawText, ct);
 
         profile.ParseConfidence = CalculateConfidence(profile, rawText);
         profile.Anomalies = DetectAnomalies(profile);
+
+        if (ocrUnsupported)
+        {
+            profile.Anomalies.Add(new ParseAnomaly
+            {
+                Field = "Document",
+                Message = "PDF appears to be scanned or image-based. Text extraction was minimal and OCR is not yet supported. Edit the profile in the Vault to fill in details manually.",
+                Severity = AnomalySeverity.Critical
+            });
+        }
 
         return profile;
     }
@@ -47,8 +69,9 @@ public class ResumeParserService
                 sb.AppendLine(page.Text);
             }
         }
-catch
+        catch (Exception ex)
         {
+            _log.LogWarning(ex, "Failed to extract text from PDF: {Path}", pdfPath);
         }
         return sb.ToString();
     }
@@ -66,46 +89,71 @@ Rules:
 
 JSON Schema:
 {
-  ""Name"": "",
-  ""Email"": "",
-  ""Phone"": "",
-  ""Location"": "",
-  ""LinkedIn"": "",
-  ""Website"": "",
-  ""Summary"": "",
+  ""Name"": """",
+  ""Email"": """",
+  ""Phone"": """",
+  ""Location"": """",
+  ""LinkedIn"": """",
+  ""Website"": """",
+  ""Summary"": """",
   ""Skills"": [],
   ""Experience"": [
     {
-      ""JobTitle"": "",
-      ""Company"": "",
-      ""Location"": "",
-      ""StartDate"": "",
-      ""EndDate"": "",
+      ""JobTitle"": """",
+      ""Company"": """",
+      ""Location"": """",
+      ""StartDate"": """",
+      ""EndDate"": """",
       ""IsCurrent"": false,
       ""Bullets"": []
     }
   ],
   ""Education"": [
     {
-      ""Degree"": "",
-      ""Institution"": "",
-      ""GraduationDate"": "",
-      ""Location"": ""
+      ""Degree"": """",
+      ""Institution"": """",
+      ""GraduationDate"": """",
+      ""Location"": """"
     }
   ],
   ""Projects"": [
     {
-      ""Name"": "",
-      ""Description"": "",
+      ""Name"": """",
+      ""Description"": """",
       ""Technologies"": []
     }
   ]
 }";
 
-        var prompt = $"Parse the following resume text into the JSON schema. Raw text:\n\n{rawText[..Math.Min(rawText.Length, 8000)]}";
+        var truncatedText = TruncateAtSentenceBoundary(rawText, 8000);
+        var prompt = $"Parse the following resume text into the JSON schema. Raw text:\n\n{truncatedText}";
 
         var result = await _ollama.CompleteJsonAsync<MasterProfile>(prompt, systemPrompt, ct);
-        return result ?? new MasterProfile();
+
+        if (result == null || string.IsNullOrWhiteSpace(result.Name))
+        {
+            _log.LogWarning("LLM returned null or empty profile. Returning minimal profile.");
+            return new MasterProfile { ParseConfidence = 0 };
+        }
+
+        return result;
+    }
+
+    private static string TruncateAtSentenceBoundary(string text, int maxLength)
+    {
+        if (string.IsNullOrEmpty(text) || text.Length <= maxLength)
+            return text;
+
+        var truncated = text[..maxLength];
+        var lastSentenceEnd = truncated.LastIndexOfAny(new[] { '.', '!', '?', '\n' });
+        if (lastSentenceEnd > maxLength * 0.5)
+            return truncated[..(lastSentenceEnd + 1)].Trim();
+
+        var lastSpace = truncated.LastIndexOf(' ');
+        if (lastSpace > 0)
+            return truncated[..lastSpace].Trim() + "...";
+
+        return truncated + "...";
     }
 
     private double CalculateConfidence(MasterProfile profile, string rawText)
@@ -114,14 +162,20 @@ JSON Schema:
 
         if (string.IsNullOrWhiteSpace(profile.Name)) score -= 0.3;
         if (string.IsNullOrWhiteSpace(profile.Email)) score -= 0.2;
-        if (!profile.Experience.Any()) score -= 0.3;
-        if (!profile.Skills.Any()) score -= 0.1;
+        if (profile.Experience == null || !profile.Experience.Any()) score -= 0.3;
+        if (profile.Skills == null || !profile.Skills.Any()) score -= 0.1;
 
-        foreach (var exp in profile.Experience)
+        if (profile.Experience != null)
         {
-            if (string.IsNullOrWhiteSpace(exp.StartDate)) score -= 0.05;
-            if (!exp.Bullets.Any()) score -= 0.05;
+            foreach (var exp in profile.Experience)
+            {
+                if (string.IsNullOrWhiteSpace(exp.StartDate)) score -= 0.05;
+                if (exp.Bullets == null || !exp.Bullets.Any()) score -= 0.05;
+            }
         }
+
+        if (rawText.Length < 100)
+            score -= 0.2;
 
         return Math.Max(0, score);
     }
@@ -140,16 +194,19 @@ JSON Schema:
             });
         }
 
-        foreach (var exp in profile.Experience)
+        if (profile.Experience != null)
         {
-            if (string.IsNullOrWhiteSpace(exp.StartDate) && string.IsNullOrWhiteSpace(exp.EndDate))
+            foreach (var exp in profile.Experience)
             {
-                anomalies.Add(new ParseAnomaly
+                if (string.IsNullOrWhiteSpace(exp.StartDate) && string.IsNullOrWhiteSpace(exp.EndDate))
                 {
-                    Field = $"Experience.{exp.JobTitle}.Dates",
-                    Message = $"No dates found for {exp.JobTitle} at {exp.Company}",
-                    Severity = AnomalySeverity.Warning
-                });
+                    anomalies.Add(new ParseAnomaly
+                    {
+                        Field = $"Experience.{exp.JobTitle}.Dates",
+                        Message = $"No dates found for {exp.JobTitle} at {exp.Company}",
+                        Severity = AnomalySeverity.Warning
+                    });
+                }
             }
         }
 

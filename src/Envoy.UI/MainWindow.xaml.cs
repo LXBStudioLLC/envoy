@@ -10,28 +10,47 @@ namespace Envoy.UI;
 
 public partial class MainWindow : Window
 {
+    private static readonly SolidColorBrush TitleCyan = new(Color.FromRgb(0x00, 0xF0, 0xFF));
+    private static readonly SolidColorBrush TitleMagenta = new(Color.FromRgb(0xFF, 0x00, 0xFF));
+
     private readonly DashboardView _dashboard;
     private readonly ApplyView _apply;
     private readonly VaultView _vault;
     private readonly BrowserSelectionView _browser;
+    private readonly LLMSettingsView _llmSettings;
     private readonly IBrowserLauncher _browserLauncher;
     private DispatcherTimer? _glitchTimer;
+    private DispatcherTimer? _statusTimer;
+    private readonly TranslateTransform _titleTransform = new(0, 0);
     private Random _rng = new();
 
-    public MainWindow(DashboardView dashboard, ApplyView apply, VaultView vault, BrowserSelectionView browser, IBrowserLauncher browserLauncher)
+    public MainWindow(DashboardView dashboard, ApplyView apply, VaultView vault, BrowserSelectionView browser, LLMSettingsView llmSettings, IBrowserLauncher browserLauncher)
     {
         _dashboard = dashboard;
         _apply = apply;
         _vault = vault;
         _browser = browser;
+        _llmSettings = llmSettings;
         _browserLauncher = browserLauncher;
 
         InitializeComponent();
+
+        TitleCyan.Freeze();
+        TitleMagenta.Freeze();
+        TitleText.RenderTransform = _titleTransform;
+
+        Closed += MainWindow_Closed;
 
         NavigateTo(_dashboard);
         UpdateNavButtons("Dashboard");
 
         StartGlitchEffect();
+    }
+
+    private void MainWindow_Closed(object? sender, EventArgs e)
+    {
+        _glitchTimer?.Stop();
+        _statusTimer?.Stop();
     }
 
     private void StartGlitchEffect()
@@ -41,23 +60,39 @@ public partial class MainWindow : Window
         {
             if (_rng.NextDouble() < 0.3)
             {
-                TitleText.RenderTransform = new TranslateTransform(_rng.Next(-3, 4), _rng.Next(-1, 2));
-                TitleText.Foreground = new SolidColorBrush(
-                    _rng.NextDouble() < 0.5 ? Color.FromRgb(0x00, 0xF0, 0xFF) : Color.FromRgb(0xFF, 0x00, 0xFF));
+                _titleTransform.X = _rng.Next(-3, 4);
+                _titleTransform.Y = _rng.Next(-1, 2);
+                TitleText.Foreground = _rng.NextDouble() < 0.5 ? TitleCyan : TitleMagenta;
 
                 Task.Delay(80).ContinueWith(_ => Dispatcher.Invoke(() =>
                 {
-                    TitleText.RenderTransform = new TranslateTransform(0, 0);
-                    TitleText.Foreground = new SolidColorBrush(Color.FromRgb(0x00, 0xF0, 0xFF));
+                    _titleTransform.X = 0;
+                    _titleTransform.Y = 0;
+                    TitleText.Foreground = TitleCyan;
                 }));
             }
         };
         _glitchTimer.Start();
     }
 
+    private void StartStatusPolling()
+    {
+        _statusTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(10) };
+        _statusTimer.Tick += async (_, _) =>
+        {
+            try
+            {
+                await UpdateBrowserStatusAsync();
+            }
+            catch { }
+        };
+        _statusTimer.Start();
+    }
+
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
         UpdateHardwareStatus();
+        StartStatusPolling();
     }
 
     private async void UpdateHardwareStatus()
@@ -73,36 +108,58 @@ public partial class MainWindow : Window
                 : new SolidColorBrush(Color.FromRgb(0xFF, 0x07, 0x3A));
 
             ModelLabel.Text = $"◈ {hw.RecommendedModel} ({hw.RecommendedQuantization})";
-
-            var browserReady = await _browserLauncher.IsRunningWithDebuggingAsync(
-                _browserLauncher.GetSelectedBrowser()?.Type ?? BrowserType.Chrome);
-            ChromeLabel.Text = browserReady ? "◉ Browser Ready" : "⚠ Browser Offline";
-            ChromeLabel.Foreground = browserReady
-                ? new SolidColorBrush(Color.FromRgb(0x39, 0xFF, 0x14))
-                : new SolidColorBrush(Color.FromRgb(0xFF, 0x07, 0x3A));
         }
         catch
         {
             GpuLabel.Text = "◎ GPU: Detection failed";
             ModelLabel.Text = "◈ Default: qwen2.5-coder:14b";
         }
+
+        try
+        {
+            await UpdateBrowserStatusAsync();
+        }
+        catch { }
+    }
+
+    private async Task UpdateBrowserStatusAsync()
+    {
+        try
+        {
+            var browserType = _browserLauncher.GetSelectedBrowserType() ?? BrowserType.Chrome;
+            var browserName = _browserLauncher.GetSelectedBrowser()?.DisplayName ?? browserType.ToString();
+            var browserReady = await _browserLauncher.IsRunningWithDebuggingAsync(browserType);
+            var browserProcessRunning = await _browserLauncher.IsProcessRunningAsync(browserType);
+
+            if (browserReady)
+            {
+                ChromeLabel.Text = $"◉ {browserName} Ready";
+                ChromeLabel.Foreground = new SolidColorBrush(Color.FromRgb(0x39, 0xFF, 0x14));
+            }
+            else if (browserProcessRunning)
+            {
+                ChromeLabel.Text = $"⚠ {browserName} (no debug)";
+                ChromeLabel.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xE6, 0x00));
+            }
+            else
+            {
+                ChromeLabel.Text = "⚠ Browser Offline";
+                ChromeLabel.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x07, 0x3A));
+            }
+        }
+        catch { }
     }
 
     public async void UpdateBrowserStatus()
     {
         try
         {
-            var browserReady = await _browserLauncher.IsRunningWithDebuggingAsync(
-                _browserLauncher.GetSelectedBrowser()?.Type ?? BrowserType.Chrome);
-            ChromeLabel.Text = browserReady ? "◉ Browser Ready" : "⚠ Browser Offline";
-            ChromeLabel.Foreground = browserReady
-                ? new SolidColorBrush(Color.FromRgb(0x39, 0xFF, 0x14))
-                : new SolidColorBrush(Color.FromRgb(0xFF, 0x07, 0x3A));
+            await UpdateBrowserStatusAsync();
         }
         catch { }
     }
 
-    public async void NavigateTo(UserControl view)
+    public void NavigateTo(UserControl view)
     {
         var oldContent = ContentArea.Children.OfType<UserControl>().FirstOrDefault();
         if (oldContent != null)
@@ -146,6 +203,8 @@ public partial class MainWindow : Window
         NavVault.Foreground = active == "Vault" ? cyanBrush : grayBrush;
         NavBrowser.Background = active == "Browser" ? cyan : transparent;
         NavBrowser.Foreground = active == "Browser" ? cyanBrush : grayBrush;
+        NavLLM.Background = active == "LLM" ? cyan : transparent;
+        NavLLM.Foreground = active == "LLM" ? cyanBrush : grayBrush;
     }
 
     private void NavDashboard_Click(object sender, RoutedEventArgs e)
@@ -172,6 +231,12 @@ public partial class MainWindow : Window
         UpdateNavButtons("Browser");
     }
 
+    private void NavLLM_Click(object sender, RoutedEventArgs e)
+    {
+        NavigateTo(_llmSettings);
+        UpdateNavButtons("LLM");
+    }
+
     private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (e.LeftButton == MouseButtonState.Pressed)
@@ -188,11 +253,11 @@ public partial class MainWindow : Window
         UpdateNavButtons("Apply");
     }
 
-    public void NavigateToVault(Guid profileId)
+    public async Task NavigateToVault(Guid profileId)
     {
-        _vault.SetProfileId(profileId);
         NavigateTo(_vault);
         UpdateNavButtons("Vault");
+        await _vault.SetProfileId(profileId);
     }
 
     public void NavigateToDashboard()
