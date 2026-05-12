@@ -26,7 +26,7 @@ public partial class VaultView : UserControl
         InitializeComponent();
     }
 
-    public async void SetProfileId(Guid profileId)
+    public async Task SetProfileId(Guid profileId)
     {
         try
         {
@@ -37,59 +37,67 @@ public partial class VaultView : UserControl
             _profile = null;
         }
 
-        if (_profile == null)
+        try
+        {
+            if (_profile == null)
+            {
+                NoProfileLabel.Visibility = Visibility.Visible;
+                ProfilePanel.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            NoProfileLabel.Visibility = Visibility.Collapsed;
+            ProfilePanel.Visibility = Visibility.Visible;
+
+            TxtName.Text = _profile.Name;
+            TxtEmail.Text = _profile.Email;
+            TxtPhone.Text = _profile.Phone;
+            TxtLocation.Text = _profile.Location ?? "";
+            TxtLinkedIn.Text = _profile.LinkedIn ?? "";
+            TxtWebsite.Text = _profile.Website ?? "";
+            TxtSummary.Text = _profile.Summary ?? "";
+            TxtSkills.Text = string.Join(", ", _profile.Skills);
+
+            var expPanel = new StackPanel();
+            foreach (var exp in _profile.Experience)
+            {
+                var border = new Border
+                {
+                    Background = new SolidColorBrush(Color.FromRgb(0x1A, 0x22, 0x35)),
+                    CornerRadius = new CornerRadius(3),
+                    BorderBrush = new SolidColorBrush(Color.FromRgb(0x1A, 0x3A, 0x4A)),
+                    BorderThickness = new Thickness(1),
+                    Padding = new Thickness(12),
+                    Margin = new Thickness(0, 0, 0, 8),
+                    Effect = new DropShadowEffect { Color = Color.FromRgb(0x00, 0xF0, 0xFF), BlurRadius = 6, ShadowDepth = 0, Opacity = 0.08 }
+                };
+                var sp = new StackPanel();
+                sp.Children.Add(new TextBlock { Text = $"{exp.JobTitle} — {exp.Company}", Foreground = TextFg, FontWeight = FontWeights.Bold, FontSize = 13, FontFamily = BodyFont });
+                sp.Children.Add(new TextBlock { Text = $"{exp.StartDate} → {exp.EndDate ?? "Present"}", Foreground = Muted, FontSize = 11, FontFamily = BodyFont });
+                foreach (var bullet in exp.Bullets)
+                    sp.Children.Add(new TextBlock { Text = $"  • {bullet}", Foreground = Muted, FontSize = 11, FontFamily = BodyFont, TextWrapping = TextWrapping.Wrap });
+                border.Child = sp;
+                expPanel.Children.Add(border);
+            }
+            ExperienceList.ItemsSource = null;
+            ExperienceList.Items.Clear();
+            foreach (UIElement child in expPanel.Children)
+                ExperienceList.Items.Add(child);
+
+            AnomaliesText.Text = _profile.Anomalies.Any()
+                ? string.Join("\n", _profile.Anomalies.Select(a => $"⚠ {a.Field}: {a.Message} [{a.Severity}]"))
+                : "✓ NO ANOMALIES DETECTED";
+            AnomaliesText.Foreground = _profile.Anomalies.Any()
+                ? new SolidColorBrush(Color.FromRgb(0xFF, 0xE6, 0x00))
+                : Green;
+
+            SaveStatus.Text = "";
+        }
+        catch
         {
             NoProfileLabel.Visibility = Visibility.Visible;
             ProfilePanel.Visibility = Visibility.Collapsed;
-            return;
         }
-
-        NoProfileLabel.Visibility = Visibility.Collapsed;
-        ProfilePanel.Visibility = Visibility.Visible;
-
-        TxtName.Text = _profile.Name;
-        TxtEmail.Text = _profile.Email;
-        TxtPhone.Text = _profile.Phone;
-        TxtLocation.Text = _profile.Location ?? "";
-        TxtLinkedIn.Text = _profile.LinkedIn ?? "";
-        TxtWebsite.Text = _profile.Website ?? "";
-        TxtSummary.Text = _profile.Summary ?? "";
-        TxtSkills.Text = string.Join(", ", _profile.Skills);
-
-        var expPanel = new StackPanel();
-        foreach (var exp in _profile.Experience)
-        {
-            var border = new Border
-            {
-                Background = new SolidColorBrush(Color.FromRgb(0x1A, 0x22, 0x35)),
-                CornerRadius = new CornerRadius(3),
-                BorderBrush = new SolidColorBrush(Color.FromRgb(0x1A, 0x3A, 0x4A)),
-                BorderThickness = new Thickness(1),
-                Padding = new Thickness(12),
-                Margin = new Thickness(0, 0, 0, 8),
-                Effect = new DropShadowEffect { Color = Color.FromRgb(0x00, 0xF0, 0xFF), BlurRadius = 6, ShadowDepth = 0, Opacity = 0.08 }
-            };
-            var sp = new StackPanel();
-            sp.Children.Add(new TextBlock { Text = $"{exp.JobTitle} — {exp.Company}", Foreground = TextFg, FontWeight = FontWeights.Bold, FontSize = 13, FontFamily = BodyFont });
-            sp.Children.Add(new TextBlock { Text = $"{exp.StartDate} → {exp.EndDate ?? "Present"}", Foreground = Muted, FontSize = 11, FontFamily = BodyFont });
-            foreach (var bullet in exp.Bullets)
-                sp.Children.Add(new TextBlock { Text = $"  • {bullet}", Foreground = Muted, FontSize = 11, FontFamily = BodyFont, TextWrapping = TextWrapping.Wrap });
-            border.Child = sp;
-            expPanel.Children.Add(border);
-        }
-        ExperienceList.ItemsSource = null;
-        ExperienceList.Items.Clear();
-        foreach (UIElement child in expPanel.Children)
-            ExperienceList.Items.Add(child);
-
-        AnomaliesText.Text = _profile.Anomalies.Any()
-            ? string.Join("\n", _profile.Anomalies.Select(a => $"⚠ {a.Field}: {a.Message} [{a.Severity}]"))
-            : "✓ NO ANOMALIES DETECTED";
-        AnomaliesText.Foreground = _profile.Anomalies.Any()
-            ? new SolidColorBrush(Color.FromRgb(0xFF, 0xE6, 0x00))
-            : Green;
-
-        SaveStatus.Text = "";
     }
 
     private async void BtnSave_Click(object sender, RoutedEventArgs e)
