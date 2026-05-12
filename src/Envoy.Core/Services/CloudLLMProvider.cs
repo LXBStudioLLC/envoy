@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -58,6 +59,53 @@ public class CloudLLMProvider : ILLMProvider
                 req.Headers.Add("x-goog-api-key", _apiKey);
                 break;
         }
+    }
+
+    // Send with retry on 429 and 5xx. Caller supplies a factory because each
+    // attempt needs a fresh HttpRequestMessage + Content (StringContent is
+    // single-use). Honors Retry-After when the server provides it, otherwise
+    // backs off 1s → 2s → 4s, capped at 30s.
+    private async Task<HttpResponseMessage> SendWithRetryAsync(
+        Func<HttpRequestMessage> requestFactory,
+        CancellationToken ct)
+    {
+        HttpResponseMessage? response = null;
+        var delay = TimeSpan.FromSeconds(1);
+        const int maxAttempts = 3;
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            response?.Dispose();
+            var req = requestFactory();
+            ApplyAuth(req);
+            try
+            {
+                response = await Http.SendAsync(req, ct);
+            }
+            finally
+            {
+                req.Dispose();
+            }
+
+            if (response.IsSuccessStatusCode) return response;
+
+            var sc = (int)response.StatusCode;
+            var transient = response.StatusCode == HttpStatusCode.TooManyRequests
+                         || (sc >= 500 && sc < 600);
+            if (!transient || attempt == maxAttempts) return response;
+
+            var wait = response.Headers.RetryAfter?.Delta ?? delay;
+            if (wait > TimeSpan.FromSeconds(30)) wait = TimeSpan.FromSeconds(30);
+
+            _log.LogWarning(
+                "{Provider} request returned {Status}; retrying in {Wait}s (attempt {Attempt}/{Max})",
+                DisplayName, sc, wait.TotalSeconds, attempt, maxAttempts);
+
+            await Task.Delay(wait, ct);
+            delay = TimeSpan.FromTicks(delay.Ticks * 2);
+        }
+
+        return response!;
     }
 
     public async Task<bool> IsAvailableAsync()
@@ -218,13 +266,13 @@ public class CloudLLMProvider : ILLMProvider
                 ["temperature"] = 0.3
             };
 
-        using var req = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json")
-        };
-        ApplyAuth(req);
-
-        var response = await Http.SendAsync(req, cts.Token);
+        var bodyJson = JsonSerializer.Serialize(body);
+        using var response = await SendWithRetryAsync(
+            () => new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = new StringContent(bodyJson, Encoding.UTF8, "application/json")
+            },
+            cts.Token);
         response.EnsureSuccessStatusCode();
 
         var responseJson = await response.Content.ReadAsStringAsync(cts.Token);
@@ -268,13 +316,13 @@ public class CloudLLMProvider : ILLMProvider
         if (!string.IsNullOrWhiteSpace(systemPrompt))
             body["system"] = systemPrompt;
 
-        using var req = new HttpRequestMessage(HttpMethod.Post, "https://api.anthropic.com/v1/messages")
-        {
-            Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json")
-        };
-        ApplyAuth(req);
-
-        var response = await Http.SendAsync(req, cts.Token);
+        var bodyJson = JsonSerializer.Serialize(body);
+        using var response = await SendWithRetryAsync(
+            () => new HttpRequestMessage(HttpMethod.Post, "https://api.anthropic.com/v1/messages")
+            {
+                Content = new StringContent(bodyJson, Encoding.UTF8, "application/json")
+            },
+            cts.Token);
         response.EnsureSuccessStatusCode();
 
         var responseJson = await response.Content.ReadAsStringAsync(cts.Token);
