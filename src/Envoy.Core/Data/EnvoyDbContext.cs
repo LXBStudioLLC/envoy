@@ -92,7 +92,7 @@ public class EnvoyDbContext : DbContext
 
             entity.Property(e => e.Anomalies).HasConversion(
                 v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
-                v => System.Text.Json.JsonSerializer.Deserialize<List<ParseAnomaly>>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new List<ParseAnomaly>(),
+                v => DeserializeJsonOrEmpty<List<ParseAnomaly>>(v, "Anomalies") ?? new List<ParseAnomaly>(),
                 AnomalyListComparer);
         });
 
@@ -103,11 +103,11 @@ public class EnvoyDbContext : DbContext
 
             entity.Property(e => e.TailoredData).HasConversion(
                 v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
-                v => System.Text.Json.JsonSerializer.Deserialize<MasterProfile>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new MasterProfile());
+                v => DeserializeJsonOrEmpty<MasterProfile>(v, "TailoredData") ?? new MasterProfile());
 
             entity.Property(e => e.SafetyResult).HasConversion(
                 v => System.Text.Json.JsonSerializer.Serialize(v, (System.Text.Json.JsonSerializerOptions?)null),
-                v => System.Text.Json.JsonSerializer.Deserialize<SafetyResult>(v, (System.Text.Json.JsonSerializerOptions?)null) ?? new SafetyResult());
+                v => DeserializeJsonOrEmpty<SafetyResult>(v, "SafetyResult") ?? new SafetyResult());
 
             entity.Property(e => e.ChangesMade).HasConversion(
                 v => string.Join("\n", v),
@@ -120,5 +120,27 @@ public class EnvoyDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.JobUrl).IsRequired();
         });
+    }
+
+    // Helper used by ValueConverter expressions on JSON columns. If a row
+    // contains corrupted JSON we don't want to throw and break the entire
+    // load — but we also don't want to silently lose the user's data with
+    // no signal. Log the failure (to Debug — the DbContext has no ILogger
+    // in scope here) and return null so the caller's `?? new()` fallback
+    // produces an empty-but-valid value for the property.
+    private static T? DeserializeJsonOrEmpty<T>(string json, string columnName) where T : class
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<T>(json, (System.Text.Json.JsonSerializerOptions?)null);
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[EnvoyDbContext] Failed to deserialize {columnName} as {typeof(T).Name}: {ex.Message}. " +
+                $"Length={json.Length}, preview={json[..Math.Min(120, json.Length)]}");
+            return null;
+        }
     }
 }
