@@ -1,5 +1,6 @@
 using Envoy.Core.Models;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 using System.Text.RegularExpressions;
 
 namespace Envoy.Core.Services;
@@ -7,6 +8,29 @@ namespace Envoy.Core.Services;
 public class SafetyService
 {
     private readonly ILogger<SafetyService> _log;
+
+    // Stopwords excluded from overlap counting so that "the", "and", "for"
+    // don't trick the heuristic into calling two unrelated bullets similar.
+    private static readonly HashSet<string> StopWords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "a", "an", "the", "and", "or", "but", "if", "to", "of", "in", "on", "at", "by", "for",
+        "with", "from", "as", "is", "are", "was", "were", "be", "been", "being", "have", "has",
+        "had", "do", "does", "did", "will", "would", "should", "could", "may", "might", "must",
+        "i", "you", "we", "they", "he", "she", "it", "that", "this", "these", "those",
+        "my", "your", "our", "their", "his", "her", "its"
+    };
+
+    private static readonly string[] DateFormats = new[]
+    {
+        "MMM yyyy", "MMMM yyyy",
+        "MMM-yyyy", "MMMM-yyyy",
+        "MMM, yyyy", "MMMM, yyyy",
+        "yyyy-MM", "yyyy/MM",
+        "MM/yyyy", "M/yyyy",
+        "yyyy",
+        "MM/dd/yyyy", "M/d/yyyy", "M/dd/yyyy", "MM/d/yyyy",
+        "yyyy-MM-dd", "yyyy/MM/dd"
+    };
 
     public SafetyService(ILogger<SafetyService> log)
     {
@@ -162,14 +186,20 @@ public class SafetyService
         if (origNorm.Contains(candNorm, StringComparison.OrdinalIgnoreCase))
             return true;
 
-        var overlapWords = candNorm.Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            .Intersect(origNorm.Split(' ', StringSplitOptions.RemoveEmptyEntries), StringComparer.OrdinalIgnoreCase)
-            .Count();
-        var shorterWordCount = Math.Min(
-            candNorm.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length,
-            origNorm.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length);
+        var candContent = candNorm.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => !StopWords.Contains(w))
+            .ToArray();
+        var origContent = origNorm.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => !StopWords.Contains(w))
+            .ToArray();
 
-        if (shorterWordCount > 0 && (double)overlapWords / shorterWordCount >= 0.5)
+        if (candContent.Length == 0 || origContent.Length == 0)
+            return false;
+
+        var overlapWords = candContent.Intersect(origContent, StringComparer.OrdinalIgnoreCase).Count();
+        var shorterWordCount = Math.Min(candContent.Length, origContent.Length);
+
+        if ((double)overlapWords / shorterWordCount >= 0.5)
             return true;
 
         return false;
@@ -185,6 +215,12 @@ public class SafetyService
         var jdWords = ExtractKeywords(jobDescription);
         if (jdWords.Count == 0) return;
 
+        // Density is meaningless for tiny JDs — a 2-word JD like "Looking for a
+        // developer" produces a 0.5 density just from a legitimate "developer"
+        // mention. Require a real JD before the heuristic runs.
+        const int MinJdKeywords = 5;
+        if (jdWords.Count < MinJdKeywords) return;
+
         var resumeText = SerializeResume(tailored);
         var resumeWords = resumeText.Split(new[] { ' ', '\n', '\r', '.' }, StringSplitOptions.RemoveEmptyEntries);
 
@@ -193,15 +229,20 @@ public class SafetyService
         var matchCount = jdWords.Count(jd => resumeWords.Any(r => r.Contains(jd, StringComparison.OrdinalIgnoreCase)));
         var density = (double)matchCount / jdWords.Count;
 
-        if (density > 0.50)
+        // 30% threshold catches LLM-driven stuffing without flagging the natural
+        // overlap a genuinely-tailored resume should have with the JD. Tuned
+        // empirically against the templates in src/Envoy.Templates/.
+        const double KeywordStuffingThreshold = 0.30;
+
+        if (density > KeywordStuffingThreshold)
         {
             result.Violations.Add(new SafetyViolation
             {
                 Type = "KeywordDensity",
-                Description = $"Keyword density {density:P0} exceeds 50%. Risk of keyword stuffing.",
+                Description = $"Keyword density {density:P0} exceeds {KeywordStuffingThreshold:P0}. Risk of keyword stuffing.",
                 Field = "Global"
             });
-            _log.LogWarning("Keyword density {Density:P0} exceeds 50%", density);
+            _log.LogWarning("Keyword density {Density:P0} exceeds {Threshold:P0}", density, KeywordStuffingThreshold);
         }
     }
 
@@ -291,7 +332,21 @@ public class SafetyService
         date = DateTime.MinValue;
         if (string.IsNullOrWhiteSpace(dateStr)) return false;
 
-        var cleaned = Regex.Replace(dateStr, @"[^0-9/\-]", "");
-        return DateTime.TryParse(cleaned, out date);
+        var s = dateStr.Trim();
+
+        // 'Present' / 'Current' aren't dates — let the IsCurrent flag handle them
+        // upstream and report the field as un-parseable here.
+        if (s.Equals("Present", StringComparison.OrdinalIgnoreCase)
+            || s.Equals("Current", StringComparison.OrdinalIgnoreCase)
+            || s.Equals("Now", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (DateTime.TryParseExact(s, DateFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out date))
+            return true;
+
+        // Last-resort generic parse so we still catch fully-qualified
+        // ISO-ish strings, but no more regex digit-stripping (that turned
+        // "Jan 2024" into "122024" which then parsed as garbage).
+        return DateTime.TryParse(s, CultureInfo.InvariantCulture, DateTimeStyles.None, out date);
     }
 }
