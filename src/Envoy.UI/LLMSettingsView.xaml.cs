@@ -28,7 +28,7 @@ public partial class LLMSettingsView : UserControl
     private readonly OllamaService _ollamaService;
     private readonly ILogger<LLMSettingsView> _log;
     private List<LLMProviderCard> _cards = new();
-    private bool _isScanning;
+    private int _scanInFlight; // 0 = idle, 1 = scanning. Guarded with Interlocked.
 
     private static readonly SolidColorBrush Cyan = new(Color.FromRgb(0x00, 0xF0, 0xFF));
     private static readonly SolidColorBrush Green = new(Color.FromRgb(0x39, 0xFF, 0x14));
@@ -93,8 +93,7 @@ public partial class LLMSettingsView : UserControl
 
     private async Task ScanAllProvidersAsync()
     {
-        if (_isScanning) return;
-        _isScanning = true;
+        if (Interlocked.CompareExchange(ref _scanInFlight, 1, 0) != 0) return;
 
         try
         {
@@ -180,7 +179,7 @@ public partial class LLMSettingsView : UserControl
         }
         finally
         {
-            _isScanning = false;
+            Interlocked.Exchange(ref _scanInFlight, 0);
         }
     }
 
@@ -306,9 +305,27 @@ public partial class LLMSettingsView : UserControl
     {
         try
         {
-            _settings.OllamaEndpoint = OllamaEndpointBox.Text.Trim();
-            if (int.TryParse(LmStudioPortBox.Text.Trim(), out var port))
-                _settings.LmStudioPort = port;
+            var endpoint = OllamaEndpointBox.Text.Trim();
+            if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri)
+                || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            {
+                ConfigSaveStatus.Text = "Ollama endpoint must be a full http:// or https:// URL.";
+                ConfigSaveStatus.Foreground = Red;
+                ConfigSaveStatus.Visibility = Visibility.Visible;
+                return;
+            }
+
+            var portText = LmStudioPortBox.Text.Trim();
+            if (!int.TryParse(portText, out var port) || port < 1 || port > 65535)
+            {
+                ConfigSaveStatus.Text = "LM Studio port must be a number between 1 and 65535.";
+                ConfigSaveStatus.Foreground = Red;
+                ConfigSaveStatus.Visibility = Visibility.Visible;
+                return;
+            }
+
+            _settings.OllamaEndpoint = endpoint;
+            _settings.LmStudioPort = port;
             _settings.OpenAIApiKey = OpenAIKeyBox.Password;
             _settings.AnthropicApiKey = AnthropicKeyBox.Password;
             _settings.GeminiApiKey = GeminiKeyBox.Password;
