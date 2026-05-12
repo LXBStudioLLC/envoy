@@ -4,12 +4,13 @@
 param(
     [string]$InstallPath = "$env:LOCALAPPDATA\Envoy",
     [switch]$CreateDesktopShortcut = $true,
-    [switch]$CreateStartMenuShortcut = $true
+    [switch]$CreateStartMenuShortcut = $true,
+    [string]$Version = "1.0.0"
 )
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "Envoy Installer v1.0.0" -ForegroundColor Cyan
+Write-Host "Envoy Installer v$Version" -ForegroundColor Cyan
 Write-Host ""
 
 # Check if running as admin
@@ -23,7 +24,7 @@ $ScriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 $SourcePath = Join-Path $ScriptPath "publish"
 
 if (-not (Test-Path $SourcePath)) {
-    $ZipPath = Join-Path $ScriptPath "Envoy-v1.0.0-win-x64.zip"
+    $ZipPath = Join-Path $ScriptPath "Envoy-v$Version-win-x64.zip"
     if (Test-Path $ZipPath) {
         Write-Host "Extracting ZIP package..." -ForegroundColor Yellow
         $TempExtract = Join-Path $env:TEMP "EnvoyExtract_$([Guid]::NewGuid().ToString())"
@@ -84,8 +85,8 @@ if (Test-Path $UninstallRegPath) {
 }
 New-Item -Path $UninstallRegPath -Force | Out-Null
 Set-ItemProperty -Path $UninstallRegPath -Name "DisplayName" -Value "Envoy"
-Set-ItemProperty -Path $UninstallRegPath -Name "DisplayVersion" -Value "1.0.0"
-Set-ItemProperty -Path $UninstallRegPath -Name "Publisher" -Value "Envoy Project"
+Set-ItemProperty -Path $UninstallRegPath -Name "DisplayVersion" -Value $Version
+Set-ItemProperty -Path $UninstallRegPath -Name "Publisher" -Value "LXB Studio LLC"
 Set-ItemProperty -Path $UninstallRegPath -Name "InstallLocation" -Value $InstallPath
 Set-ItemProperty -Path $UninstallRegPath -Name "DisplayIcon" -Value "$InstallPath\Envoy.UI.exe,0"
 Set-ItemProperty -Path $UninstallRegPath -Name "NoModify" -Value 1 -Type DWord
@@ -102,16 +103,13 @@ Write-Host ""
 Write-Host "Envoy has been installed to: $InstallPath" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Quick Start:" -ForegroundColor Yellow
-Write-Host "  1. Install Ollama: https://ollama.com/download" -ForegroundColor White
+Write-Host "  1. Install Ollama (optional, for local models): https://ollama.com/download" -ForegroundColor White
 Write-Host "  2. Pull a model: ollama pull qwen2.5-coder:14b" -ForegroundColor White
 Write-Host "  3. Launch Envoy from your desktop or Start Menu" -ForegroundColor White
-Write-Host "  4. Open http://localhost:5000 in your browser" -ForegroundColor White
 Write-Host ""
 
 # Ask to launch
 $launch = Read-Host "Launch Envoy now? (Y/N)"
 if ($launch -eq 'Y' -or $launch -eq 'y') {
-    Start-Process -FilePath "$InstallPath\Envoy.UI.exe" -ArgumentList "--urls", "http://localhost:5000"
-    Start-Sleep 2
-    Start-Process "http://localhost:5000"
+    Start-Process -FilePath "$InstallPath\Envoy.UI.exe"
 }
