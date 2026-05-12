@@ -1,6 +1,7 @@
 using Envoy.Core.Models;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace Envoy.Core.Services;
 
@@ -64,8 +65,21 @@ public class TemplateEngine
 
     public SiteTemplate? MatchTemplate(string url)
     {
-        return _templates.FirstOrDefault(t =>
-            url.Contains(t.UrlMatch.Replace("*", ""), StringComparison.OrdinalIgnoreCase));
+        return _templates.FirstOrDefault(t => UrlMatchesGlob(url, t.UrlMatch));
+    }
+
+    // Glob-to-regex matching anchored at the start of the URL so that the
+    // pattern 'linkedin.com/jobs/*' matches https://www.linkedin.com/jobs/...
+    // but NOT notlinkedin.com/jobs/... — the old substring approach matched
+    // both. Templates may omit or include the http(s):// prefix; we strip
+    // it before regex-escaping so both forms work.
+    private static bool UrlMatchesGlob(string url, string glob)
+    {
+        if (string.IsNullOrWhiteSpace(glob)) return false;
+        var normalizedGlob = Regex.Replace(glob, @"^https?://", "", RegexOptions.IgnoreCase);
+        var escaped = Regex.Escape(normalizedGlob).Replace("\\*", ".*");
+        var pattern = $"^(?:https?://)?(?:www\\.)?{escaped}$";
+        return Regex.IsMatch(url, pattern, RegexOptions.IgnoreCase);
     }
 
     public async Task ExecuteTemplateAsync(
@@ -166,27 +180,35 @@ public class TemplateEngine
     {
         var data = profile.TailoredData;
         var nameParts = (data.Name ?? "").Split(' ', 2);
+        var key = (field ?? "").ToLower();
 
-        return (field ?? "").ToLower() switch
+        switch (key)
         {
-            "name" => data.Name,
-            "first_name" => nameParts.Length > 0 ? nameParts[0] : data.Name,
-            "last_name" => nameParts.Length > 1 ? nameParts[1] : "",
-            "email" => data.Email,
-            "contact_email" => data.Email,
-            "phone" => data.Phone,
-            "location" => data.Location ?? "",
-            "linkedin" => data.LinkedIn ?? "",
-            "website" => data.Website ?? "",
-            "summary" => data.Summary ?? "",
-            "org" => data.Experience.FirstOrDefault()?.Company ?? "",
-            "company" => data.Experience.FirstOrDefault()?.Company ?? "",
-            "resume_file" or "generated_pdf_path" => Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Envoy",
-                $"{data.Name.Replace(" ", "_")}_{profile.Company}_{profile.JobTitle}.pdf"),
-            _ => ""
-        };
+            case "name": return data.Name;
+            case "first_name": return nameParts.Length > 0 ? nameParts[0] : data.Name;
+            case "last_name": return nameParts.Length > 1 ? nameParts[1] : "";
+            case "email": return data.Email;
+            case "contact_email": return data.Email;
+            case "phone": return data.Phone;
+            case "location": return data.Location ?? "";
+            case "linkedin": return data.LinkedIn ?? "";
+            case "website": return data.Website ?? "";
+            case "summary": return data.Summary ?? "";
+            case "org":
+            case "company": return data.Experience.FirstOrDefault()?.Company ?? "";
+            case "resume_file":
+            case "generated_pdf_path":
+                return Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "Envoy",
+                    $"{data.Name.Replace(" ", "_")}_{profile.Company}_{profile.JobTitle}.pdf");
+        }
+
+        // Unknown field — log so template authors can debug typos rather than
+        // silently filling the form with an empty string.
+        System.Diagnostics.Debug.WriteLine(
+            $"[TemplateEngine] Unknown profile field '{field}' requested by template; using empty string.");
+        return "";
     }
 
     private static async Task UploadFileAsync(CdpBrowserService browser, string nodeId, string filePath, CancellationToken ct)
