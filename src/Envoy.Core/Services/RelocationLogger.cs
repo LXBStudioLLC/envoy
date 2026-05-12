@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
 namespace Envoy.Core.Services;
@@ -26,6 +27,12 @@ public class RelocationLogger
     };
 
     private readonly object _lock = new();
+    private readonly ILogger<RelocationLogger>? _log;
+
+    public RelocationLogger(ILogger<RelocationLogger>? log = null)
+    {
+        _log = log;
+    }
 
     public Task LogAsync(RelocationEntry entry)
     {
@@ -41,8 +48,15 @@ public class RelocationLogger
                     File.AppendAllText(LogPath, line + Environment.NewLine);
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                // The relocation log is the feedback loop for community template PRs. If
+                // we silently swallow write failures (disk full, perms denied, OneDrive
+                // sync locked the file, antivirus blocked it), contributors get nothing
+                // to PR against. Surface it.
+                _log?.LogWarning(ex, "Failed to write relocation entry for template {TemplateId} field {Field}",
+                    entry.TemplateId, entry.Field);
+                System.Diagnostics.Debug.WriteLine($"[RelocationLogger] Write failed: {ex.Message}");
             }
         });
     }
