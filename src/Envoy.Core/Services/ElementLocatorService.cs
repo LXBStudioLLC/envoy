@@ -211,7 +211,7 @@ public class ElementLocatorService : IElementLocator
                 best.CssSelector,
                 fingerprint,
                 best.Score,
-                DateTime.UtcNow));
+                DateTimeOffset.Now));
 
             return result;
         }

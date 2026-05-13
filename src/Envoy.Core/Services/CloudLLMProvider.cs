@@ -39,7 +39,7 @@ public class CloudLLMProvider : ILLMProvider
         => new("openai", "OpenAI", "GPT-4o, GPT-4o-mini via OpenAI API", apiKey, "https://api.openai.com", "gpt-4o-mini", log);
 
     public static CloudLLMProvider Anthropic(string apiKey, ILogger<CloudLLMProvider> log)
-        => new("anthropic", "Anthropic", "Claude 3.5 Sonnet, Haiku via Anthropic API", apiKey, "https://api.anthropic.com", "claude-3-5-sonnet-20241022", log);
+        => new("anthropic", "Anthropic", "Claude Opus 4.7, Sonnet 4.6, Haiku 4.5 via Anthropic API", apiKey, "https://api.anthropic.com", "claude-sonnet-4-6", log);
 
     public static CloudLLMProvider Gemini(string apiKey, ILogger<CloudLLMProvider> log)
         => new("gemini", "Google Gemini", "Gemini 1.5 Pro, Flash via Google AI API", apiKey, "https://generativelanguage.googleapis.com", "gemini-1.5-flash", log);
@@ -213,11 +213,15 @@ public class CloudLLMProvider : ILLMProvider
 
             if (ProviderId == "anthropic")
             {
+                // Anthropic doesn't expose a public models endpoint, so we
+                // hand-maintain the current Claude 4.x line plus the most
+                // recent 3.5 fallback for users on legacy access tiers.
                 return new List<LLMModelInfo>
                 {
-                    new() { Id = "claude-sonnet-4-20250514", Name = "Claude Sonnet 4", Provider = ProviderId, IsLoaded = true },
-                    new() { Id = "claude-3-5-sonnet-20241022", Name = "Claude 3.5 Sonnet", Provider = ProviderId, IsLoaded = true },
-                    new() { Id = "claude-3-5-haiku-20241022", Name = "Claude 3.5 Haiku", Provider = ProviderId, IsLoaded = true }
+                    new() { Id = "claude-opus-4-7", Name = "Claude Opus 4.7", Provider = ProviderId, IsLoaded = true },
+                    new() { Id = "claude-sonnet-4-6", Name = "Claude Sonnet 4.6", Provider = ProviderId, IsLoaded = true },
+                    new() { Id = "claude-haiku-4-5-20251001", Name = "Claude Haiku 4.5", Provider = ProviderId, IsLoaded = true },
+                    new() { Id = "claude-3-5-sonnet-20241022", Name = "Claude 3.5 Sonnet (legacy)", Provider = ProviderId, IsLoaded = true }
                 };
             }
 

@@ -84,8 +84,11 @@ public class EnvoySettings
             var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(SettingsPath, json);
         }
-        catch
+        catch (Exception ex)
         {
+            // File can be locked by antivirus / OneDrive / another Envoy instance. Don't crash
+            // the calling flow, but leave a breadcrumb so the user's lost setting isn't a mystery.
+            System.Diagnostics.Debug.WriteLine($"[EnvoySettings] Save to {SettingsPath} failed: {ex.Message}");
         }
     }
 

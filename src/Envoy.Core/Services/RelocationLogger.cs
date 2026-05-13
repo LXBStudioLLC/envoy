@@ -10,7 +10,7 @@ public sealed record RelocationEntry(
     string NewSelector,
     Fingerprint Fingerprint,
     double Score,
-    DateTime Timestamp);
+    DateTimeOffset Timestamp);
 
 public class RelocationLogger
 {
