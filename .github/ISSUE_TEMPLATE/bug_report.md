@@ -39,7 +39,7 @@ If the app crashed, paste the relevant section from `%LOCALAPPDATA%\Envoy\crash.
 
 ## Relocation log (parser issues only)
 
-If this is a "field not found" or wrong-field issue, paste the last few lines of `%LOCALAPPDATA%\Envoy\relocation.jsonl` showing the failed step.
+If this is a "field not found" or wrong-field issue, paste the last few lines of `%LOCALAPPDATA%\Envoy\relocations.jsonl` showing the failed step.
 
 ```
 <paste here>

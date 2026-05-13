@@ -147,7 +147,7 @@ All sub-fields are optional, but more signals = better resilience. The scoring w
 2. Run the app: `dotnet run --project src/Envoy.UI`.
 3. In the Dashboard, drop a resume PDF and paste a real job URL that matches your `url_match`.
 4. Open Chrome's remote-debugging session so Envoy can attach, and watch the form fill in real time.
-5. Inspect `%LOCALAPPDATA%\Envoy\relocation.jsonl` if any step relocated via fingerprint. If a step fell through to Safe Mode, that's where the trace lives.
+5. Inspect `%LOCALAPPDATA%\Envoy\relocations.jsonl` if any step relocated via fingerprint. If a step fell through to Safe Mode, that's where the trace lives.
 6. Iterate on selectors and fingerprints until the run completes without falling back. The Submit click should still require confirmation — that's by design.
 
 ## Multi-step forms

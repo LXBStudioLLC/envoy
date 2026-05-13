@@ -50,7 +50,7 @@ docs/
 ## Where to start
 
 - **Add a job-board template** — highest-leverage community contribution. See [docs/TEMPLATE_AUTHORING.md](docs/TEMPLATE_AUTHORING.md).
-- **Fix a parser regression** — adaptive parser logs DOM drift events to `%LOCALAPPDATA%\Envoy\relocation.jsonl`. PR-driven updates to existing templates that close those drift events are very welcome.
+- **Fix a parser regression** — adaptive parser logs DOM drift events to `%LOCALAPPDATA%\Envoy\relocations.jsonl`. PR-driven updates to existing templates that close those drift events are very welcome.
 - **Improve safety guardrails** — see `src/Envoy.Core/Services/SafetyService.cs` for the multi-layer validation pipeline.
 - **Docs** — anywhere the README, SETUP, or in-app strings disagree with current behavior.
 
@@ -70,6 +70,21 @@ If your change adds a new job-board template, include:
 - The board name and a representative job URL you tested against (do not include personal info in the URL).
 - A screenshot of the form before/after the fill.
 - A note in `CHANGELOG.md` under the unreleased section.
+
+## Style notes
+
+- **`ConfigureAwait(false)` is intentionally omitted.** Envoy.Core is consumed
+  only by Envoy.UI in-process; nothing else takes a dependency on it. The WPF
+  consumer wants its continuations on the UI thread for status updates. Don't
+  blanket-add `ConfigureAwait(false)` to existing awaits — it would force
+  marshaling work back to the UI thread anyway and obscures the call sites.
+  If you ever split Envoy.Core into a separately consumed library (e.g. a
+  service worker), revisit this choice.
+- **File-scoped namespaces** everywhere. Matches the existing pattern and the
+  rule in `.editorconfig`.
+- **Static frozen brushes** live in `src/Envoy.UI/Theme.cs`. Don't redeclare
+  `Color.FromRgb(...)` literals per view — pull from `Theme` via
+  `using static Envoy.UI.Theme;`.
 
 ## License
 
