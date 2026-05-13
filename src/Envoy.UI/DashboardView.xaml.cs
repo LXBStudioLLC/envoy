@@ -5,6 +5,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using static Envoy.UI.Theme;
 
 namespace Envoy.UI;
 
@@ -15,12 +16,6 @@ public partial class DashboardView : UserControl
     private readonly IBrowserLauncher _browserLauncher;
     private List<MasterProfile> _profiles = new();
     private bool _browserAutoLaunched;
-
-    private static readonly SolidColorBrush Cyan = new(Color.FromRgb(0x00, 0xF0, 0xFF));
-    private static readonly SolidColorBrush Green = new(Color.FromRgb(0x39, 0xFF, 0x14));
-    private static readonly SolidColorBrush Red = new(Color.FromRgb(0xFF, 0x07, 0x3A));
-    private static readonly SolidColorBrush Yellow = new(Color.FromRgb(0xFF, 0xE6, 0x00));
-    private static readonly SolidColorBrush Gray = new(Color.FromRgb(0x88, 0x92, 0xA4));
 
     public DashboardView(ApplicationOrchestrator orchestrator, IProfileRepository profileRepo, IBrowserLauncher browserLauncher)
     {
@@ -38,7 +33,10 @@ public partial class DashboardView : UserControl
             await LoadProfilesAsync();
             await RefreshBrowserStatusAsync();
         }
-        catch { }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[DashboardView] Loaded handler failed: {ex}");
+        }
     }
 
     private async Task LoadProfilesAsync()
@@ -225,7 +223,7 @@ public partial class DashboardView : UserControl
 
     private void ImportDropZone_DragLeave(object sender, DragEventArgs e)
     {
-        ImportDropZone.BorderBrush = new SolidColorBrush(Color.FromRgb(0x1A, 0x3A, 0x4A));
+        ImportDropZone.BorderBrush = BorderColor;
     }
 
     private void ImportDropZone_DragOver(object sender, DragEventArgs e)
@@ -238,7 +236,7 @@ public partial class DashboardView : UserControl
 
     private async void ImportDropZone_Drop(object sender, DragEventArgs e)
     {
-        ImportDropZone.BorderBrush = new SolidColorBrush(Color.FromRgb(0x1A, 0x3A, 0x4A));
+        ImportDropZone.BorderBrush = BorderColor;
 
         var files = e.Data.GetData(DataFormats.FileDrop) as string[];
         if (files == null || files.Length == 0) return;

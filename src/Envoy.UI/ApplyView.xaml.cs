@@ -2,7 +2,7 @@ using Envoy.Core.Models;
 using Envoy.Core.Services;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
+using static Envoy.UI.Theme;
 
 namespace Envoy.UI;
 
@@ -11,11 +11,6 @@ public partial class ApplyView : UserControl
     private readonly ApplicationOrchestrator _orchestrator;
     private Guid _profileId;
     private TailoredProfile? _tailored;
-
-    private static readonly SolidColorBrush Cyan = new(Color.FromRgb(0x00, 0xF0, 0xFF));
-    private static readonly SolidColorBrush Green = new(Color.FromRgb(0x39, 0xFF, 0x14));
-    private static readonly SolidColorBrush Red = new(Color.FromRgb(0xFF, 0x07, 0x3A));
-    private static readonly SolidColorBrush Yellow = new(Color.FromRgb(0xFF, 0xE6, 0x00));
 
     public ApplyView(ApplicationOrchestrator orchestrator)
     {

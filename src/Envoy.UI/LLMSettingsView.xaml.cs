@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using static Envoy.UI.Theme;
 
 namespace Envoy.UI;
 
@@ -29,12 +30,6 @@ public partial class LLMSettingsView : UserControl
     private readonly ILogger<LLMSettingsView> _log;
     private List<LLMProviderCard> _cards = new();
     private int _scanInFlight; // 0 = idle, 1 = scanning. Guarded with Interlocked.
-
-    private static readonly SolidColorBrush Cyan = new(Color.FromRgb(0x00, 0xF0, 0xFF));
-    private static readonly SolidColorBrush Green = new(Color.FromRgb(0x39, 0xFF, 0x14));
-    private static readonly SolidColorBrush Red = new(Color.FromRgb(0xFF, 0x07, 0x3A));
-    private static readonly SolidColorBrush Yellow = new(Color.FromRgb(0xFF, 0xE6, 0x00));
-    private static readonly SolidColorBrush Gray = new(Color.FromRgb(0x88, 0x92, 0xA4));
 
     public LLMSettingsView(LLMDetectionService detection, EnvoySettings settings, OllamaService ollamaService, ILogger<LLMSettingsView> log)
     {

@@ -9,7 +9,8 @@
             <TextBlock Text="SOVEREIGN JOB AGENT &#x2014; MISSION CONTROL" Style="{StaticResource CyberSubheading}" Margin="0,0,0,20"/>
 
             <Border x:Name="ImportDropZone" Background="#111827" CornerRadius="3" BorderBrush="#1A3A4A" BorderThickness="1" Padding="20" Margin="0,0,0,16"
-                    AllowDrop="True" DragEnter="ImportDropZone_DragEnter" DragLeave="ImportDropZone_DragLeave" DragOver="ImportDropZone_DragOver" Drop="ImportDropZone_Drop">
+                    AllowDrop="True" DragEnter="ImportDropZone_DragEnter" DragLeave="ImportDropZone_DragLeave" DragOver="ImportDropZone_DragOver" Drop="ImportDropZone_Drop"
+                    AutomationProperties.Name="Drop a PDF resume here or use the Select PDF File button">
                 <Border.Effect>
                     <DropShadowEffect Color="#00F0FF" BlurRadius="12" ShadowDepth="0" Opacity="0.15"/>
                 </Border.Effect>

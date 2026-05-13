@@ -5,26 +5,25 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
+using static Envoy.UI.Theme;
 
 namespace Envoy.UI;
 
 public partial class MainWindow : Window
 {
-    private static readonly SolidColorBrush TitleCyan = new(Color.FromRgb(0x00, 0xF0, 0xFF));
-    private static readonly SolidColorBrush TitleMagenta = new(Color.FromRgb(0xFF, 0x00, 0xFF));
-
     private readonly DashboardView _dashboard;
     private readonly ApplyView _apply;
     private readonly VaultView _vault;
     private readonly BrowserSelectionView _browser;
     private readonly LLMSettingsView _llmSettings;
     private readonly IBrowserLauncher _browserLauncher;
+    private readonly HardwareProfiler _hardwareProfiler;
     private DispatcherTimer? _glitchTimer;
     private DispatcherTimer? _statusTimer;
     private readonly TranslateTransform _titleTransform = new(0, 0);
     private Random _rng = new();
 
-    public MainWindow(DashboardView dashboard, ApplyView apply, VaultView vault, BrowserSelectionView browser, LLMSettingsView llmSettings, IBrowserLauncher browserLauncher)
+    public MainWindow(DashboardView dashboard, ApplyView apply, VaultView vault, BrowserSelectionView browser, LLMSettingsView llmSettings, IBrowserLauncher browserLauncher, HardwareProfiler hardwareProfiler)
     {
         _dashboard = dashboard;
         _apply = apply;
@@ -32,11 +31,10 @@ public partial class MainWindow : Window
         _browser = browser;
         _llmSettings = llmSettings;
         _browserLauncher = browserLauncher;
+        _hardwareProfiler = hardwareProfiler;
 
         InitializeComponent();
 
-        TitleCyan.Freeze();
-        TitleMagenta.Freeze();
         TitleText.RenderTransform = _titleTransform;
 
         Closed += MainWindow_Closed;
@@ -62,13 +60,13 @@ public partial class MainWindow : Window
             {
                 _titleTransform.X = _rng.Next(-3, 4);
                 _titleTransform.Y = _rng.Next(-1, 2);
-                TitleText.Foreground = _rng.NextDouble() < 0.5 ? TitleCyan : TitleMagenta;
+                TitleText.Foreground = _rng.NextDouble() < 0.5 ? Cyan : Magenta;
 
                 Task.Delay(80).ContinueWith(_ => Dispatcher.Invoke(() =>
                 {
                     _titleTransform.X = 0;
                     _titleTransform.Y = 0;
-                    TitleText.Foreground = TitleCyan;
+                    TitleText.Foreground = Cyan;
                 }));
             }
         };
@@ -99,13 +97,10 @@ public partial class MainWindow : Window
     {
         try
         {
-            var profiler = new HardwareProfiler();
-            var hw = profiler.DetectHardware();
+            var hw = _hardwareProfiler.DetectHardware();
 
             GpuLabel.Text = hw.HasGpu ? $"◉ GPU: {hw.GpuName}" : "◎ GPU: None detected";
-            GpuLabel.Foreground = hw.HasGpu
-                ? new SolidColorBrush(Color.FromRgb(0x39, 0xFF, 0x14))
-                : new SolidColorBrush(Color.FromRgb(0xFF, 0x07, 0x3A));
+            GpuLabel.Foreground = hw.HasGpu ? Green : Red;
 
             ModelLabel.Text = $"◈ {hw.RecommendedModel} ({hw.RecommendedQuantization})";
         }
@@ -134,17 +129,17 @@ public partial class MainWindow : Window
             if (browserReady)
             {
                 ChromeLabel.Text = $"◉ {browserName} Ready";
-                ChromeLabel.Foreground = new SolidColorBrush(Color.FromRgb(0x39, 0xFF, 0x14));
+                ChromeLabel.Foreground = Green;
             }
             else if (browserProcessRunning)
             {
                 ChromeLabel.Text = $"⚠ {browserName} (no debug)";
-                ChromeLabel.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xE6, 0x00));
+                ChromeLabel.Foreground = Yellow;
             }
             else
             {
                 ChromeLabel.Text = "⚠ Browser Offline";
-                ChromeLabel.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x07, 0x3A));
+                ChromeLabel.Foreground = Red;
             }
         }
         catch { }
@@ -190,21 +185,16 @@ public partial class MainWindow : Window
 
     private void UpdateNavButtons(string active)
     {
-        var cyan = new SolidColorBrush(Color.FromArgb(40, 0, 240, 255));
-        var transparent = new SolidColorBrush(Colors.Transparent);
-        var cyanBrush = new SolidColorBrush(Color.FromRgb(0x00, 0xF0, 0xFF));
-        var grayBrush = new SolidColorBrush(Color.FromRgb(0x88, 0x92, 0xA4));
-
-        NavDashboard.Background = active == "Dashboard" ? cyan : transparent;
-        NavDashboard.Foreground = active == "Dashboard" ? cyanBrush : grayBrush;
-        NavApply.Background = active == "Apply" ? cyan : transparent;
-        NavApply.Foreground = active == "Apply" ? cyanBrush : grayBrush;
-        NavVault.Background = active == "Vault" ? cyan : transparent;
-        NavVault.Foreground = active == "Vault" ? cyanBrush : grayBrush;
-        NavBrowser.Background = active == "Browser" ? cyan : transparent;
-        NavBrowser.Foreground = active == "Browser" ? cyanBrush : grayBrush;
-        NavLLM.Background = active == "LLM" ? cyan : transparent;
-        NavLLM.Foreground = active == "LLM" ? cyanBrush : grayBrush;
+        NavDashboard.Background = active == "Dashboard" ? NavActiveBg : Transparent;
+        NavDashboard.Foreground = active == "Dashboard" ? Cyan : Gray;
+        NavApply.Background = active == "Apply" ? NavActiveBg : Transparent;
+        NavApply.Foreground = active == "Apply" ? Cyan : Gray;
+        NavVault.Background = active == "Vault" ? NavActiveBg : Transparent;
+        NavVault.Foreground = active == "Vault" ? Cyan : Gray;
+        NavBrowser.Background = active == "Browser" ? NavActiveBg : Transparent;
+        NavBrowser.Foreground = active == "Browser" ? Cyan : Gray;
+        NavLLM.Background = active == "LLM" ? NavActiveBg : Transparent;
+        NavLLM.Foreground = active == "LLM" ? Cyan : Gray;
     }
 
     private void NavDashboard_Click(object sender, RoutedEventArgs e)
