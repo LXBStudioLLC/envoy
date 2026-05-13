@@ -121,7 +121,7 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="Ollama Port:" Foreground="#8892A4" FontSize="12" FontFamily="{StaticResource CyberFontBody}" VerticalAlignment="Center"/>
-                        <TextBox x:Name="OllamaEndpointBox" Style="{StaticResource CyberTextBox}" Grid.Column="1" Text="http://localhost:11434"/>
+                        <TextBox x:Name="OllamaEndpointBox" Style="{StaticResource CyberTextBox}" Grid.Column="1" Text="http://localhost:11434" AutomationProperties.Name="Ollama endpoint URL"/>
                     </Grid>
 
                     <Grid Margin="0,0,0,12">
@@ -130,7 +130,7 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="LM Studio Port:" Foreground="#8892A4" FontSize="12" FontFamily="{StaticResource CyberFontBody}" VerticalAlignment="Center"/>
-                        <TextBox x:Name="LmStudioPortBox" Style="{StaticResource CyberTextBox}" Grid.Column="1" Text="1234"/>
+                        <TextBox x:Name="LmStudioPortBox" Style="{StaticResource CyberTextBox}" Grid.Column="1" Text="1234" AutomationProperties.Name="LM Studio port number"/>
                     </Grid>
 
                     <Rectangle Fill="#1A3A4A" Height="1" Margin="0,4,0,12"/>
@@ -141,7 +141,7 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="OpenAI Key:" Foreground="#8892A4" FontSize="12" FontFamily="{StaticResource CyberFontBody}" VerticalAlignment="Center"/>
-                        <PasswordBox x:Name="OpenAIKeyBox" Grid.Column="1" Background="#0D1321" Foreground="#E0E6F0" BorderBrush="#1A3A4A" BorderThickness="1" Padding="8,6" FontFamily="{StaticResource CyberFontBody}" FontSize="12"/>
+                        <PasswordBox x:Name="OpenAIKeyBox" Grid.Column="1" Background="#0D1321" Foreground="#E0E6F0" BorderBrush="#1A3A4A" BorderThickness="1" Padding="8,6" FontFamily="{StaticResource CyberFontBody}" FontSize="12" AutomationProperties.Name="OpenAI API key"/>
                     </Grid>
 
                     <Grid Margin="0,0,0,12">
@@ -150,7 +150,7 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="Anthropic Key:" Foreground="#8892A4" FontSize="12" FontFamily="{StaticResource CyberFontBody}" VerticalAlignment="Center"/>
-                        <PasswordBox x:Name="AnthropicKeyBox" Grid.Column="1" Background="#0D1321" Foreground="#E0E6F0" BorderBrush="#1A3A4A" BorderThickness="1" Padding="8,6" FontFamily="{StaticResource CyberFontBody}" FontSize="12"/>
+                        <PasswordBox x:Name="AnthropicKeyBox" Grid.Column="1" Background="#0D1321" Foreground="#E0E6F0" BorderBrush="#1A3A4A" BorderThickness="1" Padding="8,6" FontFamily="{StaticResource CyberFontBody}" FontSize="12" AutomationProperties.Name="Anthropic API key"/>
                     </Grid>
 
                     <Grid Margin="0,0,0,12">
@@ -159,7 +159,7 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="Gemini Key:" Foreground="#8892A4" FontSize="12" FontFamily="{StaticResource CyberFontBody}" VerticalAlignment="Center"/>
-                        <PasswordBox x:Name="GeminiKeyBox" Grid.Column="1" Background="#0D1321" Foreground="#E0E6F0" BorderBrush="#1A3A4A" BorderThickness="1" Padding="8,6" FontFamily="{StaticResource CyberFontBody}" FontSize="12"/>
+                        <PasswordBox x:Name="GeminiKeyBox" Grid.Column="1" Background="#0D1321" Foreground="#E0E6F0" BorderBrush="#1A3A4A" BorderThickness="1" Padding="8,6" FontFamily="{StaticResource CyberFontBody}" FontSize="12" AutomationProperties.Name="Google Gemini API key"/>
                     </Grid>
 
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">

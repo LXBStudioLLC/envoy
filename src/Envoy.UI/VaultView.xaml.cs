@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
+using static Envoy.UI.Theme;
 
 namespace Envoy.UI;
 
@@ -12,12 +13,6 @@ public partial class VaultView : UserControl
     private readonly IProfileRepository _profileRepo;
     private MasterProfile? _profile;
 
-    private static readonly SolidColorBrush Cyan = new(Color.FromRgb(0x00, 0xF0, 0xFF));
-    private static readonly SolidColorBrush Magenta = new(Color.FromRgb(0xFF, 0x00, 0xFF));
-    private static readonly SolidColorBrush Green = new(Color.FromRgb(0x39, 0xFF, 0x14));
-    private static readonly SolidColorBrush Red = new(Color.FromRgb(0xFF, 0x07, 0x3A));
-    private static readonly SolidColorBrush TextFg = new(Color.FromRgb(0xE0, 0xE6, 0xF0));
-    private static readonly SolidColorBrush Muted = new(Color.FromRgb(0x88, 0x92, 0xA4));
     private static readonly FontFamily BodyFont = new("pack://application:,,,/Fonts/#JetBrains Mono");
 
     public VaultView(IProfileRepository profileRepo)
