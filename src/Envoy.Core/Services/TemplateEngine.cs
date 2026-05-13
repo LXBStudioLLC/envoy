@@ -179,17 +179,18 @@ public class TemplateEngine
     private static string GetValueFromProfile(TailoredProfile profile, string field)
     {
         var data = profile.TailoredData;
-        var nameParts = (data.Name ?? "").Split(' ', 2);
+        var name = data.Name ?? "";
+        var nameParts = name.Split(' ', 2);
         var key = (field ?? "").ToLower();
 
         switch (key)
         {
-            case "name": return data.Name;
-            case "first_name": return nameParts.Length > 0 ? nameParts[0] : data.Name;
+            case "name": return name;
+            case "first_name": return nameParts.Length > 0 ? nameParts[0] : name;
             case "last_name": return nameParts.Length > 1 ? nameParts[1] : "";
-            case "email": return data.Email;
-            case "contact_email": return data.Email;
-            case "phone": return data.Phone;
+            case "email": return data.Email ?? "";
+            case "contact_email": return data.Email ?? "";
+            case "phone": return data.Phone ?? "";
             case "location": return data.Location ?? "";
             case "linkedin": return data.LinkedIn ?? "";
             case "website": return data.Website ?? "";
@@ -201,7 +202,7 @@ public class TemplateEngine
                 return Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "Envoy",
-                    $"{data.Name.Replace(" ", "_")}_{profile.Company}_{profile.JobTitle}.pdf");
+                    $"{name.Replace(" ", "_")}_{profile.Company}_{profile.JobTitle}.pdf");
         }
 
         // Unknown field — log so template authors can debug typos rather than

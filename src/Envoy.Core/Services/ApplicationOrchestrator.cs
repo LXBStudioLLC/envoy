@@ -45,6 +45,13 @@ public class ApplicationOrchestrator
 
     public async Task<MasterProfile> ImportResumeAsync(string pdfPath, CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(pdfPath))
+            throw new ArgumentException("Resume path is empty.", nameof(pdfPath));
+        if (!File.Exists(pdfPath))
+            throw new FileNotFoundException($"Resume not found at {pdfPath}", pdfPath);
+        if (!pdfPath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Only .pdf resumes are supported.", nameof(pdfPath));
+
         var profile = await _parser.ParseAsync(pdfPath, ct);
         await _profileRepo.AddAsync(profile, ct);
         return profile;
@@ -70,7 +77,11 @@ public class ApplicationOrchestrator
         string jobDescription = "";
         var connected = await _browser.ConnectAsync(ct: ct);
 
-        if (connected)
+        if (!connected)
+        {
+            _log.LogWarning("Could not connect to browser for {JobUrl}; tailoring will run with empty job description", jobUrl);
+        }
+        else
         {
             try
             {
@@ -81,10 +92,14 @@ public class ApplicationOrchestrator
                     await _browser.NavigateAsync(jobUrl, ct);
                     jobDescription = await _browser.GetPageTextAsync(ct);
                 }
+                else
+                {
+                    _log.LogWarning("Failed to create CDP page for {JobUrl}; tailoring will run with empty job description", jobUrl);
+                }
             }
-            catch
+            catch (Exception ex)
             {
-                // Fallback: job description will be empty
+                _log.LogWarning(ex, "Failed to fetch job description from {JobUrl}; tailoring will run with empty job description", jobUrl);
             }
             finally
             {

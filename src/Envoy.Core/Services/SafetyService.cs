@@ -70,11 +70,6 @@ public class SafetyService
         return result;
     }
 
-    public bool RequiresSafeMode(SafetyResult result)
-    {
-        return !result.Passed || result.Violations.Any(v => v.Type is "LowConfidence" or "MissingField");
-    }
-
     private void CheckFactualIntegrity(MasterProfile original, MasterProfile tailored, SafetyResult result)
     {
         var originalSkills = new HashSet<string>(original.Skills, StringComparer.OrdinalIgnoreCase);
