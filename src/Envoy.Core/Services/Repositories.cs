@@ -143,6 +143,7 @@ public class TailoredProfileRepository : ITailoredProfileRepository
 
     public async Task UpdateAsync(TailoredProfile profile, CancellationToken ct = default)
     {
+        profile.UpdatedAt = DateTime.UtcNow;
         _db.TailoredProfiles.Update(profile);
         await _db.SaveChangesAsync(ct);
     }
