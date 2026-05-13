@@ -39,18 +39,21 @@ public class EnvoyDbContext : DbContext
         }
     }
 
+    // EF Core never passes null to these for entities with non-nullable List<T>
+    // properties. The null-forgiving operators silence false-positive nullability
+    // warnings from the compiler's expression-tree analysis.
     private static readonly ValueComparer<List<string>> StringListComparer = new(
-        (c1, c2) => c1.SequenceEqual(c2),
+        (c1, c2) => c1!.SequenceEqual(c2!),
         c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
         c => c.ToList());
 
     private static readonly ValueComparer<List<ParseAnomaly>> AnomalyListComparer = new(
-        (c1, c2) => c1.SequenceEqual(c2),
+        (c1, c2) => c1!.SequenceEqual(c2!),
         c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.Field.GetHashCode(), v.Message.GetHashCode(), v.Severity.GetHashCode())),
         c => c.ToList());
 
     private static readonly ValueComparer<List<string>> NewlineListComparer = new(
-        (c1, c2) => c1.SequenceEqual(c2),
+        (c1, c2) => c1!.SequenceEqual(c2!),
         c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
         c => c.ToList());
 

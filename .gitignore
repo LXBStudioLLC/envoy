@@ -54,7 +54,8 @@ resumes/
 
 # === LLM models ===
 *.gguf
-models/
+/models/
+/local-models/
 
 # === Audit / logs / screenshots ===
 audit/
