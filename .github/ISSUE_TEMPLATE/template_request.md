@@ -18,7 +18,7 @@ labels: template
 
 ## What goes wrong today
 
-If an existing template is broken, describe the symptom. Paste the relevant relocation.jsonl entries if Envoy fell back to Safe Mode.
+If an existing template is broken, describe the symptom. Paste the relevant relocations.jsonl entries if Envoy fell back to Safe Mode.
 
 ```
 <paste here>

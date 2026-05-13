@@ -18,7 +18,7 @@ Initial public release.
 - Real-Chrome stealth automation via raw WebSocket → Chrome DevTools Protocol. No bundled browser.
 - Human-behavior emulation: Bezier mouse paths, randomized typing cadence, natural scroll.
 - Multi-layer safety guardrails (parsing validation, tailoring guardrails, pre-submission verification, runtime anomaly detection). Falls back to Safe Mode when triggered.
-- Adaptive parser with structural-fingerprint element locator and JSONL relocation logging at `%LOCALAPPDATA%\Envoy\relocation.jsonl`.
+- Adaptive parser with structural-fingerprint element locator and JSONL relocation logging at `%LOCALAPPDATA%\Envoy\relocations.jsonl`.
 - Site templates: LinkedIn (Easy Apply), Greenhouse, Workday, Lever, Indeed.
 - Vault UI for profile history, corrections, and master profile editing.
 - LLM Settings view: connection check, model discovery, provider switching.
