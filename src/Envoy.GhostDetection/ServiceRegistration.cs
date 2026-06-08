@@ -1,6 +1,6 @@
 using Envoy.GhostDetection;
+using Envoy.GhostDetection.Signals;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using System.Reflection;
 
 namespace Envoy.GhostDetection;
@@ -15,6 +15,12 @@ public static class ServiceRegistration
     public static IServiceCollection AddEnvoyGhostDetection(this IServiceCollection services)
     {
         services.AddSingleton<GhostScorer>();
+
+        // Typed HttpClient for AtsCrossCheckSignal (8-second timeout)
+        services.AddHttpClient<AtsCrossCheckSignal>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(8);
+        });
 
         var assembly = Assembly.GetExecutingAssembly();
         var signalTypes = assembly.GetTypes()

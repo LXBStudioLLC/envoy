@@ -54,7 +54,7 @@ Envoy runs entirely on your machine using Ollama and a local LLM — that's the 
 | **PDF Parsing** | PdfPig + local LLM post-processor |
 | **PDF Generation** | QuestPDF |
 | **Browser** | Raw WebSocket → Chrome DevTools Protocol |
-| **Behavior** | Custom C# humanization engine |
+| **Form Fill** | Natural typing cadence + randomized mouse paths (review before submit) |
 
 ## Requirements
 
@@ -75,7 +75,7 @@ Envoy runs entirely on your machine using Ollama and a local LLM — that's the 
    ```
 3. Drop your resume PDF on the Dashboard.
 4. Paste a job URL.
-5. Envoy handles the rest.
+5. Envoy prepares the application — you review and submit.
 
 ## Packaging & Distribution
 

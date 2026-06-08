@@ -144,6 +144,65 @@ public class AtsCrossCheckSignalTests
         Assert.Null(result);
     }
 
+    [Fact]
+    public async Task EvaluateAsync_InferredAtsNoMatch_ReturnsNull()
+    {
+        // When the ATS is inferred from company name (not the posting URL),
+        // a no-match must NOT emit a high score — the guessed slug might
+        // resolve to a different company's real board.
+        var leverResponse = @"[
+            { ""text"": ""Junior Designer"", ""categories"": { ""location"": ""Austin, TX"" } }
+        ]";
+
+        var client = MockClient((
+            "https://api.lever.co/v0/postings/acme-corp?mode=json",
+            leverResponse,
+            HttpStatusCode.OK));
+
+        var signal = new AtsCrossCheckSignal(client);
+        var posting = new JobPosting
+        {
+            Source = JobSource.Indeed,
+            CompanyName = "Acme Corp",
+            JobTitle = "Senior Software Engineer",
+            Location = "San Francisco, CA",
+            Url = "https://www.indeed.com/viewjob?jk=abc123"
+        };
+
+        var result = await signal.EvaluateAsync(posting);
+
+        Assert.Null(result); // precision-first: no high-confidence flag on a guess
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_InferredAtsMatchFound_ReturnsLowScore()
+    {
+        var leverResponse = @"[
+            { ""text"": ""Senior Software Engineer"", ""categories"": { ""location"": ""San Francisco, CA"" } }
+        ]";
+
+        var client = MockClient((
+            "https://api.lever.co/v0/postings/acme-corp?mode=json",
+            leverResponse,
+            HttpStatusCode.OK));
+
+        var signal = new AtsCrossCheckSignal(client);
+        var posting = new JobPosting
+        {
+            Source = JobSource.LinkedIn,
+            CompanyName = "Acme Corp",
+            JobTitle = "Senior Software Engineer",
+            Location = "San Francisco, CA",
+            Url = "https://www.linkedin.com/jobs/view/999888"
+        };
+
+        var result = await signal.EvaluateAsync(posting);
+
+        Assert.NotNull(result);
+        Assert.True(result.Score < 0.5);
+        Assert.Contains("Confirmed live", result.Evidence[0]);
+    }
+
     // ── Mock handler ───────────────────────────────────────────────────
 
     private sealed class MockHttpMessageHandler : HttpMessageHandler

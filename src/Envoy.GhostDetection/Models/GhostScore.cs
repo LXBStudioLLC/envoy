@@ -8,7 +8,7 @@ public enum RiskBand
     /// <summary>Multiple converging signals suggest caution, but no single hard proof.</summary>
     Elevated,
 
-    /// <strong>Deterministic evidence indicates this posting is likely a waste of time.</strong>
+    /// <summary>Deterministic evidence indicates this posting is likely a waste of time.</summary>
     High
 }
 
