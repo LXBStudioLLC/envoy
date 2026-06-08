@@ -2,20 +2,26 @@
 
 Thanks for considering a contribution. Envoy is a Windows-only WPF desktop app whose **centerpiece is ghost-job detection**: scoring how likely a job posting is a waste of an applicant's time, with transparent evidence. The existing resume-tailoring + form-fill flow remains as a **human-gated copilot**.
 
-## The #1 way to contribute: author a ghost signal
+## The #1 way to contribute: author a ghost signal (hand it to your agent)
 
 Ghost detection is built on a **signal framework** (`src/Envoy.GhostDetection/`). Each signal is an independent `IGhostSignal` implementation that evaluates a `JobPosting` and returns a `SignalResult` (or `null` for no opinion). Signals run in parallel and are aggregated by `GhostScorer` into a risk band (Neutral / Elevated / High) with human-readable evidence.
 
+The framework auto-discovers every `IGhostSignal` implementation at runtime — **zero wiring, zero DI registration**. Network signals needing `HttpClient` are auto-registered too. This means adding a signal is literally "drop one file in `Signals/`, done."
+
 ### Step-by-step
 
-1. Pick an open signal issue (label: `signal`, `good first issue`) or propose a new one.
-2. Create `src/Envoy.GhostDetection/Signals/<Name>Signal.cs` implementing `IGhostSignal`.
-3. Choose a `SignalTier`: Deterministic (hard evidence), Probabilistic (strong correlation), Weak (noisy, evidence-only).
-4. Implement `EvaluateAsync`: return `null` when you can't evaluate; never throw.
-5. Use **public data only** — public ATS APIs, government datasets, the posting itself. No scraping behind auth.
-6. Add fixtures in `tests/Envoy.GhostDetection.Tests/fixtures/`.
-7. Add xUnit tests with **mocked dependencies** (no network calls in tests).
-8. Open a PR against `feat/ghost-detection`.
+1. Pick an open [`signal:` issue](https://github.com/LXBStudioLLC/envoy/issues?q=is%3Aissue+label%3Asignal) (or propose a new one).
+2. Open [`SIGNAL_AUTHORING.md`](SIGNAL_AUTHORING.md) and **copy the agent prompt verbatim**.
+3. Paste the prompt into your coding agent (Claude Code, Kimi, Copilot, etc.).
+4. Paste the **SPEC** block from the issue into the prompt.
+5. Review the generated diff. The agent will create:
+   - `src/Envoy.GhostDetection/Signals/<Name>Signal.cs`
+   - `tests/Envoy.GhostDetection.Tests/<Name>SignalTests.cs`
+   - `tests/Envoy.GhostDetection.Tests/fixtures/<name>-*.json` (if needed)
+6. `dotnet test` must pass, including `ContainerResolutionTests`.
+7. Open a PR against `feat/ghost-detection`.
+
+**The runbook already bakes in the precision rules**: default to `null`, earn your confidence, never punish visa sponsorship, human-readable evidence, zero network calls in tests. See [`SIGNAL_AUTHORING.md`](SIGNAL_AUTHORING.md) for the full prompt, interface contract, and definition of done.
 
 See [AGENTS.md](AGENTS.md) for full architecture and constraints.
 

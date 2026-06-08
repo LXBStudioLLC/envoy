@@ -24,6 +24,14 @@ Every signal returns **score + confidence + evidence lines**. The aggregator (`G
 
 **Bias for precision over recall**: flagging a real job is worse than missing a ghost. When unsure, Envoy does not flag.
 
+### Add a signal in 15 minutes (hand it to your agent)
+
+Envoy's signal framework is designed for **agent-driven contribution**: pick an open [`signal:` issue](https://github.com/LXBStudioLLC/envoy/issues?q=is%3Aissue+label%3Asignal), copy the prompt from [`SIGNAL_AUTHORING.md`](SIGNAL_AUTHORING.md), paste it into Claude Code / Kimi / Copilot, review the diff, and PR. The framework auto-discovers every `IGhostSignal` implementation at runtime — zero wiring, zero DI registration. Network signals needing `HttpClient` are auto-registered too.
+
+- **Reference signal**: [`AtsCrossCheckSignal`](src/Envoy.GhostDetection/Signals/AtsCrossCheckSignal.cs) — Greenhouse/Lever cross-check
+- **Dogfood example**: [`PostingAgeSignal`](src/Envoy.GhostDetection/Signals/PostingAgeSignal.cs) — built by following the runbook verbatim
+- **6 open signal lanes**: PERM filings, duplicate JD detection, posting age (done), repost frequency, hiring freeze, scam patterns
+
 ## Human-Gated Copilot
 
 Envoy can also help you apply to individual jobs:
