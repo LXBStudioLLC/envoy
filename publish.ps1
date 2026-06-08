@@ -6,7 +6,11 @@ param(
     [string]$Runtime = "win-x64",
     [switch]$SelfContained = $true,
     [string]$OutputPath = "artifacts",
-    [string]$Version = "1.0.0"
+    [string]$Version = "1.0.0",
+    [switch]$Sign,
+    [string]$SignScript = $env:LXB_SIGN_SCRIPT,
+    [string]$ProductName = "Envoy",
+    [string]$ProductUrl = "https://github.com/LXBStudioLLC/envoy"
 )
 
 $ErrorActionPreference = "Stop"
@@ -63,7 +67,7 @@ Copy-Item -Path "$DocsPath/*" -Destination $DocsDest -Force -Recurse
 
 # Create start script
 Write-Host "Creating launcher script..." -ForegroundColor Yellow
-$StartScriptContent = "@echo off`nchcp 65001 >nul`necho.`necho  Envoy Job Application Agent`necho.`necho  Starting Envoy...`necho.`n`n:: Check if Ollama is running (optional - only needed for local models)`ncurl -s http://localhost:11434 >nul 2>&1`nif errorlevel 1 (`n    echo  Note: Ollama is not running. That's fine if you only use cloud LLM providers.`n    echo  For local LLMs install Ollama: https://ollama.com/download`n    echo.`n)`n`n:: Start Envoy`nstart `"`" `"%~dp0Envoy.UI.exe`""
+$StartScriptContent = "@echo off`nchcp 65001 >nul`necho.`necho  Envoy Job Application Agent`necho.`necho  Starting Envoy...`necho.`n`n:: Check if Ollama is running (optional - only needed for local models)`ncurl -s http://localhost:11434 >nul 2>&1`nif errorlevel 1 (`n    echo  Note: Ollama is not running. That's fine if you only use cloud LLM providers.`n    echo  For local LLMs install Ollama: https://ollama.com/download`n    echo.`n)`n`n:: Start Envoy`nstart `"`" `"%~dp0Envoy.exe`""
 
 $StartScriptContent | Out-File -FilePath "$PublishPath/Start Envoy.bat" -Encoding UTF8
 
@@ -83,7 +87,7 @@ Installation
 ------------
 1. Extract this folder to any location (e.g., C:\Tools\Envoy).
 2. (Optional) Install Ollama and pull a local model: ollama pull qwen2.5-coder:14b
-3. Run "Start Envoy.bat" (or launch Envoy.UI.exe directly). The app opens as a
+3. Run "Start Envoy.bat" (or launch Envoy.exe directly). The app opens as a
    Windows desktop window - there is no browser/URL to open.
 
 First Time Setup
@@ -105,6 +109,27 @@ AGPLv3 - Your data stays on your machine.
 "@
 
 $PackageReadmeContent | Out-File -FilePath "$PublishPath/README.txt" -Encoding UTF8
+
+# Sign binaries (optional). MUST run before zipping so the archive contains signed files.
+# Opt-in via -Sign and path-configurable via -SignScript / $env:LXB_SIGN_SCRIPT so the
+# public repo carries no machine-specific paths.
+if ($Sign) {
+    Write-Host "Signing published binaries..." -ForegroundColor Yellow
+    if (-not $SignScript) {
+        Write-Error "-Sign was requested but no signing script path was given. Pass -SignScript <path> or set the LXB_SIGN_SCRIPT environment variable."
+        exit 1
+    }
+    if (-not (Test-Path $SignScript)) {
+        Write-Error "Signing script not found: $SignScript"
+        exit 1
+    }
+    & $SignScript -PublishDir $PublishPath -ProductName $ProductName -ProductUrl $ProductUrl
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Signing failed - aborting before packaging so an unsigned build can never be shipped."
+        exit 1
+    }
+    Write-Host "Binaries signed." -ForegroundColor Green
+}
 
 # Create ZIP package
 Write-Host "Creating ZIP package..." -ForegroundColor Yellow
