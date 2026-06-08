@@ -2,7 +2,12 @@
 ; Requires Inno Setup 6.2+
 
 #define MyAppName "Envoy"
-#define MyAppVersion "1.0.0"
+#ifndef MyAppVersion
+  #define MyAppVersion "1.0.0"
+#endif
+#ifndef MyAppVersionInfo
+  #define MyAppVersionInfo "1.0.0.0"
+#endif
 #define MyAppPublisher "LXB Studio LLC"
 #define MyAppURL "https://github.com/LXBStudioLLC/envoy"
 #define MyAppExeName "Envoy.exe"
@@ -24,7 +29,7 @@ Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayName={#MyAppName} Job Application Agent
-VersionInfoVersion={#MyAppVersion}
+VersionInfoVersion={#MyAppVersionInfo}
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoDescription=Local AI-powered job application agent
 VersionInfoProductName={#MyAppName}
