@@ -79,6 +79,10 @@ docs/
 
 ## How to Add a Ghost Signal
 
+> **Fast path:** Use the agent-contribution funnel in [`SIGNAL_AUTHORING.md`](SIGNAL_AUTHORING.md). Pick an open [`signal:` issue](https://github.com/LXBStudioLLC/envoy/issues?q=is%3Aissue+label%3Asignal), copy the prompt verbatim, hand it to your coding agent, review the diff, PR. The runbook bakes in the interface contract, precision rules, reference signal, and definition of done.
+
+### Manual checklist
+
 1. **Create a class** in `src/Envoy.GhostDetection/Signals/<Name>Signal.cs` that implements `IGhostSignal`.
 2. **Set `Tier`** appropriately:
    - `Deterministic` — hard evidence (e.g. ATS says closed, scam regex match)
@@ -91,7 +95,7 @@ docs/
 4. **Data sources**: public APIs only, no auth scraping. Use short timeouts. Cache responses.
 5. **Add fixtures**: create 1–2 JSON files in `tests/Envoy.GhostDetection.Tests/fixtures/` with labeled sample postings.
 6. **Add xUnit tests**: mock `HttpClient` or external dependencies — **NO network calls in tests**.
-7. **Registration is automatic**: `ServiceRegistration.AddEnvoyGhostDetection()` discovers all `IGhostSignal` implementations via reflection. No manual registration needed.
+7. **Registration is automatic**: `ServiceRegistration.AddEnvoyGhostDetection()` discovers all `IGhostSignal` implementations via reflection. Network signals with `HttpClient` constructors are auto-registered too. No manual wiring needed.
 8. **Open a PR** against `feat/ghost-detection` (not `main`). Include test plan and fixture samples.
 
 ## Style
