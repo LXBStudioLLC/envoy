@@ -28,7 +28,16 @@ public static class ServiceRegistration
 
         foreach (var type in signalTypes)
         {
-            services.AddSingleton(typeof(IGhostSignal), type);
+            // AtsCrossCheckSignal is registered above as a typed HttpClient client.
+            // Resolve its IGhostSignal through that registration so the configured
+            // HttpClient is injected. Default activation (AddSingleton(IGhostSignal, type))
+            // would try to resolve a bare HttpClient, which the typed-client registration
+            // does NOT provide — and that throws the moment GhostScorer pulls
+            // IEnumerable<IGhostSignal>.
+            if (type == typeof(AtsCrossCheckSignal))
+                services.AddSingleton<IGhostSignal>(sp => sp.GetRequiredService<AtsCrossCheckSignal>());
+            else
+                services.AddSingleton(typeof(IGhostSignal), type);
         }
 
         return services;
