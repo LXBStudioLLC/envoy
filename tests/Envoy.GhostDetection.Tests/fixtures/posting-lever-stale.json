@@ -1,0 +1,13 @@
+{
+  "Id": "00000000-0000-0000-0000-000000000003",
+  "Source": 1,
+  "CompanyName": "Beta Inc",
+  "JobTitle": "Product Manager",
+  "Location": "New York, NY",
+  "DescriptionText": "Drive product strategy for our consumer app.",
+  "Url": "https://jobs.lever.co/beta/abc-def",
+  "PostedAtUtc": "2026-04-01T00:00:00Z",
+  "LastUpdatedUtc": "2026-04-01T00:00:00Z",
+  "SalaryText": null,
+  "RawSourceId": "lever-abc-def"
+}

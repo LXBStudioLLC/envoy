@@ -1,0 +1,13 @@
+{
+  "Id": "00000000-0000-0000-0000-000000000002",
+  "Source": 0,
+  "CompanyName": "Acme Corp",
+  "JobTitle": "Senior Software Engineer",
+  "Location": "San Francisco, CA",
+  "DescriptionText": "Join our platform team as a senior software engineer.",
+  "Url": "https://boards.greenhouse.io/acme/jobs/12345",
+  "PostedAtUtc": "2026-05-15T00:00:00Z",
+  "LastUpdatedUtc": "2026-05-15T00:00:00Z",
+  "SalaryText": "$150k - $200k",
+  "RawSourceId": "gh-12345"
+}
