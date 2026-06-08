@@ -87,8 +87,28 @@ public class EnvoySettings
         catch (Exception ex)
         {
             // File can be locked by antivirus / OneDrive / another Envoy instance. Don't crash
-            // the calling flow, but leave a breadcrumb so the user's lost setting isn't a mystery.
-            System.Diagnostics.Debug.WriteLine($"[EnvoySettings] Save to {SettingsPath} failed: {ex.Message}");
+            // the calling flow. Debug.WriteLine is invisible in Release builds, so record the
+            // failure to a log file next to settings where the user can find it after the fact.
+            TryLogSaveFailure(ex);
+        }
+    }
+
+    // Best-effort failure log. Save() can fail when settings.json is locked by OneDrive,
+    // antivirus, or a second Envoy instance; this records it without crashing the calling
+    // flow. Never throws — logging must not become its own failure path.
+    private static void TryLogSaveFailure(Exception ex)
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(SettingsPath)!;
+            Directory.CreateDirectory(dir);
+            var logPath = Path.Combine(dir, "envoy.log");
+            var line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [EnvoySettings] Save to {SettingsPath} failed: {ex.Message}{Environment.NewLine}";
+            File.AppendAllText(logPath, line);
+        }
+        catch
+        {
+            // Logging is best-effort; swallow everything.
         }
     }
 
