@@ -2,6 +2,7 @@
 using Envoy.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System.IO;
 using System.Windows;
 
 namespace Envoy.UI;
@@ -10,8 +11,37 @@ public partial class App
 {
     private IHost? _host;
 
+    private static readonly string CrashLogPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "Envoy", "crash.log");
+
     private void App_OnStartup(object sender, StartupEventArgs e)
     {
+        Directory.CreateDirectory(Path.GetDirectoryName(CrashLogPath)!);
+
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+        {
+            if (args.ExceptionObject is Exception ex)
+            {
+                File.AppendAllText(CrashLogPath, $"[{DateTime.UtcNow:O}] [FATAL-AppDomain] {ex}\n\n");
+                System.Diagnostics.Debug.WriteLine($"[FATAL] Unhandled: {ex}");
+            }
+        };
+
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            File.AppendAllText(CrashLogPath, $"[{DateTime.UtcNow:O}] [FATAL-UnobservedTask] {args.Exception}\n\n");
+            System.Diagnostics.Debug.WriteLine($"[FATAL] Unobserved task: {args.Exception}");
+            args.SetObserved();
+        };
+
+        DispatcherUnhandledException += (_, args) =>
+        {
+            File.AppendAllText(CrashLogPath, $"[{DateTime.UtcNow:O}] [FATAL-Dispatcher] {args.Exception}\n\n");
+            System.Diagnostics.Debug.WriteLine($"[FATAL] Dispatcher: {args.Exception}");
+            args.Handled = true;
+        };
+
         _host = Host.CreateDefaultBuilder()
             .ConfigureServices((context, services) =>
             {
@@ -22,6 +52,7 @@ public partial class App
                 services.AddSingleton<ApplyView>();
                 services.AddSingleton<VaultView>();
                 services.AddSingleton<BrowserSelectionView>();
+                services.AddSingleton<LLMSettingsView>();
             })
             .Build();
 

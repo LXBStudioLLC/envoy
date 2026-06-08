@@ -2,7 +2,7 @@ using Envoy.Core.Models;
 using Envoy.Core.Services;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
+using static Envoy.UI.Theme;
 
 namespace Envoy.UI;
 
@@ -11,11 +11,6 @@ public partial class ApplyView : UserControl
     private readonly ApplicationOrchestrator _orchestrator;
     private Guid _profileId;
     private TailoredProfile? _tailored;
-
-    private static readonly SolidColorBrush Cyan = new(Color.FromRgb(0x00, 0xF0, 0xFF));
-    private static readonly SolidColorBrush Green = new(Color.FromRgb(0x39, 0xFF, 0x14));
-    private static readonly SolidColorBrush Red = new(Color.FromRgb(0xFF, 0x07, 0x3A));
-    private static readonly SolidColorBrush Yellow = new(Color.FromRgb(0xFF, 0xE6, 0x00));
 
     public ApplyView(ApplicationOrchestrator orchestrator)
     {
@@ -27,15 +22,27 @@ public partial class ApplyView : UserControl
     {
         _profileId = profileId;
         _tailored = null;
+        // Clear inputs left over from the previous profile so two job apps
+        // for two different people don't accidentally cross-pollinate.
+        TxtJobUrl.Text = "";
         ResultPanel.Visibility = Visibility.Collapsed;
         StatusText.Text = "";
     }
 
     private async void BtnInitiate_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(TxtJobUrl.Text))
+        var jobUrl = TxtJobUrl.Text?.Trim() ?? "";
+        if (string.IsNullOrWhiteSpace(jobUrl))
         {
             StatusText.Text = "⚠ TARGET URL REQUIRED";
+            StatusText.Foreground = Red;
+            return;
+        }
+
+        if (!Uri.TryCreate(jobUrl, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+        {
+            StatusText.Text = "⚠ TARGET URL MUST BE A FULL http:// OR https:// LINK";
             StatusText.Foreground = Red;
             return;
         }
@@ -47,7 +54,7 @@ public partial class ApplyView : UserControl
 
         try
         {
-            _tailored = await _orchestrator.PrepareApplicationAsync(_profileId, TxtJobUrl.Text);
+            _tailored = await _orchestrator.PrepareApplicationAsync(_profileId, jobUrl);
             ShowResult();
         }
         catch (Exception ex)

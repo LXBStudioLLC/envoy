@@ -1,6 +1,7 @@
 using Envoy.Core.Data;
 using Envoy.Core.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Envoy.Core.Services;
 
@@ -9,12 +10,14 @@ public class TailoringEngine
     private readonly OllamaService _ollama;
     private readonly SafetyService _safety;
     private readonly EnvoyDbContext _db;
+    private readonly ILogger<TailoringEngine> _log;
 
-    public TailoringEngine(OllamaService ollama, SafetyService safety, EnvoyDbContext db)
+    public TailoringEngine(OllamaService ollama, SafetyService safety, EnvoyDbContext db, ILogger<TailoringEngine> log)
     {
         _ollama = ollama;
         _safety = safety;
         _db = db;
+        _log = log;
     }
 
     public async Task<TailoredProfile> TailorAsync(Guid masterProfileId, string jobUrl, string jobDescription, CancellationToken ct = default)
@@ -26,13 +29,39 @@ public class TailoringEngine
             .FirstOrDefaultAsync(p => p.Id == masterProfileId, ct)
             ?? throw new InvalidOperationException("Master profile not found");
 
+        _log.LogInformation("Tailoring profile {ProfileId} for job: {JobUrl}", masterProfileId, jobUrl);
+
         var tailoredJson = await _ollama.CompleteJsonAsync<MasterProfile>(
             BuildTailoringPrompt(master, jobDescription),
             BuildTailoringSystemPrompt(),
             ct);
 
-        var tailored = tailoredJson ?? new MasterProfile();
+        if (tailoredJson == null)
+        {
+            _log.LogError("LLM returned null/invalid JSON for profile {ProfileId}. Falling back to original.", masterProfileId);
+            var failedResult = new TailoredProfile
+            {
+                MasterProfileId = masterProfileId,
+                JobUrl = jobUrl,
+                JobDescriptionText = jobDescription,
+                TailoredData = master,
+                SafetyResult = new SafetyResult
+                {
+                    Passed = false,
+                    Violations = new List<SafetyViolation>
+                    {
+                        new() { Type = "LowConfidence", Description = "LLM tailoring failed; original profile returned unchanged", Field = "Global" }
+                    }
+                },
+                MatchScore = 0,
+                ChangesMade = new List<string> { "Original profile returned (LLM tailoring failed)" }
+            };
+            _db.TailoredProfiles.Add(failedResult);
+            await _db.SaveChangesAsync(ct);
+            return failedResult;
+        }
 
+        var tailored = tailoredJson;
         var safetyResult = _safety.ValidateTailoredProfile(master, tailored, jobDescription);
 
         var result = new TailoredProfile
@@ -46,11 +75,14 @@ public class TailoringEngine
             ChangesMade = DiffChanges(master, tailored)
         };
 
-        if (safetyResult.Passed)
+        if (safetyResult.Passed || !safetyResult.ContainsHallucination)
         {
             result.JobTitle = ExtractJobTitle(jobDescription);
             result.Company = ExtractCompany(jobDescription);
         }
+
+        _log.LogInformation("Tailoring complete: Safety={Passed}, Match={Score:F1}%, Changes={ChangeCount}",
+            safetyResult.Passed ? "PASSED" : "FAILED", result.MatchScore, result.ChangesMade.Count);
 
         _db.TailoredProfiles.Add(result);
         await _db.SaveChangesAsync(ct);
@@ -67,13 +99,33 @@ CRITICAL RULES:
 2. Mirror the job description's keywords and terminology naturally.
 3. Rewrite the Professional Summary and top 4 experience bullet points to align with the JD.
 4. Output ONLY valid JSON matching the input schema exactly.
-5. If a field has no relevant changes, keep it identical to the original.";
+5. If a field has no relevant changes, keep it identical to the original.
+6. NEVER change dates, company names, or job titles.
+7. NEVER add skills that were not in the original resume.";
     }
 
     private string BuildTailoringPrompt(MasterProfile master, string jobDescription)
     {
         var masterJson = System.Text.Json.JsonSerializer.Serialize(master, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-        return $"MASTER RESUME:\n{masterJson}\n\nJOB DESCRIPTION:\n{jobDescription[..Math.Min(jobDescription.Length, 4000)]}\n\nRewrite the Master Resume JSON to better match the Job Description. Output ONLY the rewritten JSON.";
+        var truncatedJd = TruncateAtSentenceBoundary(jobDescription, 4000);
+        return $"MASTER RESUME:\n{masterJson}\n\nJOB DESCRIPTION:\n{truncatedJd}\n\nRewrite the Master Resume JSON to better match the Job Description. Output ONLY the rewritten JSON.";
+    }
+
+    private static string TruncateAtSentenceBoundary(string text, int maxLength)
+    {
+        if (string.IsNullOrEmpty(text) || text.Length <= maxLength)
+            return text;
+
+        var truncated = text[..maxLength];
+        var lastSentenceEnd = truncated.LastIndexOfAny(new[] { '.', '!', '?', '\n' });
+        if (lastSentenceEnd > maxLength * 0.5)
+            return truncated[..(lastSentenceEnd + 1)].Trim();
+
+        var lastSpace = truncated.LastIndexOf(' ');
+        if (lastSpace > 0)
+            return truncated[..lastSpace].Trim() + "...";
+
+        return truncated + "...";
     }
 
     private double CalculateMatchScore(MasterProfile tailored, string jobDescription)
@@ -100,8 +152,9 @@ CRITICAL RULES:
         var origSkills = new HashSet<string>(original.Skills, StringComparer.OrdinalIgnoreCase);
         var newSkills = new HashSet<string>(tailored.Skills, StringComparer.OrdinalIgnoreCase);
         var added = newSkills.Except(origSkills).ToList();
-        if (added.Any())
-            changes.Add($"Skills reordered/emphasized");
+        var removed = origSkills.Except(newSkills).ToList();
+        if (added.Any() || removed.Any())
+            changes.Add($"Skills changed: {added.Count} added, {removed.Count} removed");
 
         foreach (var tExp in tailored.Experience)
         {
@@ -120,7 +173,22 @@ CRITICAL RULES:
 
     private static string ExtractJobTitle(string jobDescription)
     {
-        var lines = jobDescription.Split('\n');
+        if (string.IsNullOrWhiteSpace(jobDescription)) return "";
+
+        var lines = jobDescription.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+        var titleKeywords = new[] { "engineer", "developer", "manager", "analyst", "designer", "director", "lead", "senior", "junior", "intern", "coordinator", "specialist", "architect", "consultant" };
+
+        foreach (var line in lines.Take(10))
+        {
+            var trimmed = line.Trim();
+            if (trimmed.Length > 3 && trimmed.Length < 80 && !trimmed.Contains(':', StringComparison.OrdinalIgnoreCase))
+            {
+                if (titleKeywords.Any(k => trimmed.Contains(k, StringComparison.OrdinalIgnoreCase)))
+                    return trimmed;
+            }
+        }
+
         return lines.FirstOrDefault()?.Trim() ?? "";
     }
 

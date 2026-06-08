@@ -61,9 +61,9 @@ public class ProfileRepository : IProfileRepository
         tracked.Skills = profile.Skills;
         tracked.Anomalies = profile.Anomalies;
 
-        _db.Entry(tracked).Collection(p => p.Experience).Load();
-        _db.Entry(tracked).Collection(p => p.Education).Load();
-        _db.Entry(tracked).Collection(p => p.Projects).Load();
+        await _db.Entry(tracked).Collection(p => p.Experience).LoadAsync(ct);
+        await _db.Entry(tracked).Collection(p => p.Education).LoadAsync(ct);
+        await _db.Entry(tracked).Collection(p => p.Projects).LoadAsync(ct);
 
         ReplaceOwnedCollection(tracked.Experience, profile.Experience, _db);
         ReplaceOwnedCollection(tracked.Education, profile.Education, _db);
@@ -143,6 +143,7 @@ public class TailoredProfileRepository : ITailoredProfileRepository
 
     public async Task UpdateAsync(TailoredProfile profile, CancellationToken ct = default)
     {
+        profile.UpdatedAt = DateTime.UtcNow;
         _db.TailoredProfiles.Update(profile);
         await _db.SaveChangesAsync(ct);
     }

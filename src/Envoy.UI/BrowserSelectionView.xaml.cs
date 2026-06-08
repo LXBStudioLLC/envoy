@@ -2,7 +2,7 @@ using Envoy.Core.Services;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Media;
+using static Envoy.UI.Theme;
 
 namespace Envoy.UI;
 
@@ -24,11 +24,6 @@ public partial class BrowserSelectionView : UserControl
     private readonly IBrowserLauncher _browserLauncher;
     private List<BrowserCard> _cards = new();
 
-    private static readonly SolidColorBrush Cyan = new(Color.FromRgb(0x00, 0xF0, 0xFF));
-    private static readonly SolidColorBrush Green = new(Color.FromRgb(0x39, 0xFF, 0x14));
-    private static readonly SolidColorBrush Red = new(Color.FromRgb(0xFF, 0x07, 0x3A));
-    private static readonly SolidColorBrush Muted = new(Color.FromRgb(0x88, 0x92, 0xA4));
-
     private static readonly Dictionary<BrowserType, string> BrowserIcons = new()
     {
         { BrowserType.Chrome, "\uE97A" },
@@ -47,7 +42,14 @@ public partial class BrowserSelectionView : UserControl
 
     private async void BrowserSelectionView_Loaded(object sender, RoutedEventArgs e)
     {
-        await ScanBrowsersAsync();
+        try
+        {
+            await ScanBrowsersAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[BrowserSelectionView] Initial scan failed: {ex}");
+        }
     }
 
     private async Task ScanBrowsersAsync()
@@ -64,7 +66,7 @@ public partial class BrowserSelectionView : UserControl
                 IconGlyph = BrowserIcons.TryGetValue(b.Type, out var icon) ? icon : "\u25C8",
                 StealthRating = b.StealthRating,
                 StealthNote = b.StealthNote,
-                StatusText = !b.IsInstalled ? "NOT FOUND" : b.IsRunning ? "DEBUG BRIDGE ACTIVE" : "INSTALLED",
+                StatusText = !b.IsInstalled ? "NOT FOUND" : b.IsRunning ? "DEBUG BRIDGE ACTIVE" : b.IsProcessRunning ? "RUNNING (NO DEBUG)" : "INSTALLED",
                 IsInstalled = b.IsInstalled,
                 IsRunning = b.IsRunning,
                 IsSelected = _browserLauncher.GetSelectedBrowser()?.Type == b.Type
@@ -111,24 +113,25 @@ public partial class BrowserSelectionView : UserControl
 
     private void BrowserCard_Enter(object sender, MouseEventArgs e)
     {
-        if (sender is Border border)
-        {
-            if (border.DataContext is BrowserCard card && !card.IsSelected)
-                border.BorderBrush = new SolidColorBrush(Color.FromArgb(100, 0, 240, 255));
-        }
+        if (sender is Border border && border.DataContext is BrowserCard card && !card.IsSelected)
+            border.BorderBrush = CyanHover;
     }
 
     private void BrowserCard_Leave(object sender, MouseEventArgs e)
     {
-        if (sender is Border border)
-        {
-            if (border.DataContext is BrowserCard card && !card.IsSelected)
-                border.BorderBrush = new SolidColorBrush(Color.FromRgb(0x1A, 0x3A, 0x4A));
-        }
+        if (sender is Border border && border.DataContext is BrowserCard card && !card.IsSelected)
+            border.BorderBrush = BorderColor;
     }
 
     private async void BtnScan_Click(object sender, RoutedEventArgs e)
     {
-        await ScanBrowsersAsync();
+        try
+        {
+            await ScanBrowsersAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[BrowserSelectionView] Rescan failed: {ex}");
+        }
     }
 }

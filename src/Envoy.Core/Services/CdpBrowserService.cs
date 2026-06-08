@@ -5,18 +5,21 @@ using Microsoft.Extensions.Logging;
 
 namespace Envoy.Core.Services;
 
-public class CdpBrowserService : ICdpCommandExecutor, IPageInteractor, IBrowserLifecycle, IAsyncDisposable
+public class CdpBrowserService : ICdpCommandExecutor, IPageInteractor, IBrowserLifecycle, IAsyncDisposable, IDisposable
 {
     private ClientWebSocket? _webSocket;
     private int _messageId = 0;
     private string? _sessionId;
     private readonly Dictionary<int, TaskCompletionSource<JsonElement>> _pendingCommands = new();
-    private readonly Dictionary<string, TaskCompletionSource<JsonElement>> _pendingEvents = new();
+    // Multiple callers may legitimately wait for the same event (e.g. concurrent
+    // multi-step nav). Store a list of TCSs and complete-all on arrival.
+    private readonly Dictionary<string, List<TaskCompletionSource<JsonElement>>> _pendingEvents = new();
     private readonly HumanizationService _humanization;
     private readonly ILogger<CdpBrowserService> _log;
     private readonly object _lock = new();
     private Task? _receiveLoopTask;
     private readonly CancellationTokenSource _receiveCts = new();
+    private bool _disposed;
 
     public bool IsConnected => _webSocket?.State == WebSocketState.Open;
 
@@ -348,7 +351,12 @@ public class CdpBrowserService : ICdpCommandExecutor, IPageInteractor, IBrowserL
 
         lock (_lock)
         {
-            _pendingEvents[eventName] = tcs;
+            if (!_pendingEvents.TryGetValue(eventName, out var list))
+            {
+                list = new List<TaskCompletionSource<JsonElement>>();
+                _pendingEvents[eventName] = list;
+            }
+            list.Add(tcs);
         }
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -362,7 +370,11 @@ public class CdpBrowserService : ICdpCommandExecutor, IPageInteractor, IBrowserL
         {
             lock (_lock)
             {
-                _pendingEvents.Remove(eventName);
+                if (_pendingEvents.TryGetValue(eventName, out var list))
+                {
+                    list.Remove(tcs);
+                    if (list.Count == 0) _pendingEvents.Remove(eventName);
+                }
             }
         }
     }
@@ -426,10 +438,20 @@ public class CdpBrowserService : ICdpCommandExecutor, IPageInteractor, IBrowserL
                 else if (root.TryGetProperty("method", out var methodProp))
                 {
                     var method = methodProp.GetString() ?? "";
+                    List<TaskCompletionSource<JsonElement>>? waiters = null;
                     lock (_lock)
                     {
-                        if (_pendingEvents.TryGetValue(method, out var tcs))
-                            tcs.TrySetResult(root);
+                        if (_pendingEvents.TryGetValue(method, out var list) && list.Count > 0)
+                        {
+                            waiters = new List<TaskCompletionSource<JsonElement>>(list);
+                            // WaitForEventAsync's finally clause will remove the entries
+                            // it owns; we only consume the snapshot here.
+                        }
+                    }
+                    if (waiters != null)
+                    {
+                        foreach (var w in waiters)
+                            w.TrySetResult(root);
                     }
                 }
             }
@@ -450,6 +472,9 @@ public class CdpBrowserService : ICdpCommandExecutor, IPageInteractor, IBrowserL
 
     public async ValueTask DisposeAsync()
     {
+        if (_disposed) return;
+        _disposed = true;
+
         _receiveCts.Cancel();
         if (_receiveLoopTask != null)
         {
@@ -457,5 +482,22 @@ public class CdpBrowserService : ICdpCommandExecutor, IPageInteractor, IBrowserL
         }
         await CloseAsync(CancellationToken.None);
         _receiveCts.Dispose();
+    }
+
+    // Synchronous disposal for DI containers that don't honor IAsyncDisposable
+    // (Microsoft.Extensions.DependencyInjection does, but defense in depth).
+    // Runs the async path with GetAwaiter().GetResult(); safe at app shutdown
+    // when no SynchronizationContext is captured.
+    public void Dispose()
+    {
+        if (_disposed) return;
+        try
+        {
+            DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "CdpBrowserService synchronous dispose failed");
+        }
     }
 }

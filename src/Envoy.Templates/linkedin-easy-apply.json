@@ -11,7 +11,17 @@
     },
     {
       "action": "click",
-      "selector": "button.jobs-apply-button"
+      "selector": "button.jobs-apply-button",
+      "fingerprint": {
+        "tag": "button",
+        "attributes": {
+          "class": "jobs-apply-button"
+        },
+        "label_text": "Apply",
+        "text_content": "Apply",
+        "ancestor_chain": ["div.jobs-unified-top-card", "div.jobs-search__job-details"],
+        "position_index": 0
+      }
     },
     {
       "action": "wait_for",
@@ -22,19 +32,51 @@
       "action": "fill",
       "field_id": "contact_email",
       "selector": "input[id*='email']",
-      "fallback_selector": "input[type='email']"
+      "fallback_selector": "input[type='email']",
+      "fingerprint": {
+        "tag": "input",
+        "attributes": {
+          "type": "email",
+          "name": "email"
+        },
+        "label_text": "Email Address",
+        "ancestor_chain": ["div.jobs-easy-apply-form", "div.form-section"],
+        "position_index": 0
+      }
     },
     {
       "action": "upload",
       "field_id": "resume_file",
       "selector": "input[type='file']",
-      "value_from": "generated_pdf_path"
+      "value_from": "generated_pdf_path",
+      "fingerprint": {
+        "tag": "input",
+        "attributes": {
+          "type": "file",
+          "name": "resume"
+        },
+        "label_text": "Resume",
+        "ancestor_chain": ["div.jobs-easy-apply-form", "div.form-section"],
+        "siblings_before": ["Email Address"],
+        "position_index": 1
+      }
     },
     {
       "action": "conditional_click",
       "description": "Review and submit application",
       "selector": "button[aria-label='Submit application']",
-      "require_confirmation": true
+      "require_confirmation": true,
+      "fingerprint": {
+        "tag": "button",
+        "attributes": {
+          "aria-label": "Submit application"
+        },
+        "label_text": "Submit application",
+        "text_content": "Submit Application",
+        "ancestor_chain": ["div.jobs-easy-apply-form"],
+        "siblings_before": ["Email Address", "Resume"],
+        "position_index": 2
+      }
     }
   ]
 }

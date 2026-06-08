@@ -1,28 +1,50 @@
+using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace Envoy.Core.Services;
 
-public interface IBrowserLauncher
+public interface IBrowserLauncher : IDisposable
 {
     Task<List<BrowserInfo>> DetectBrowsersAsync();
     Task<bool> IsRunningWithDebuggingAsync(BrowserType type, int port = 9222);
+    Task<bool> IsProcessRunningAsync(BrowserType type);
     Task<bool> LaunchAsync(BrowserType type, int port = 9222);
     BrowserInfo? GetSelectedBrowser();
     void SetSelectedBrowser(BrowserType type);
+    BrowserType? GetSelectedBrowserType();
+    Task<bool> RestartWithDebuggingAsync(BrowserType type, int port = 9222);
 }
 
 public class BrowserLauncher : IBrowserLauncher
 {
+    // Shared HttpClient; per-call timeouts via CancellationTokenSource.
+    private static readonly HttpClient Http = new() { Timeout = Timeout.InfiniteTimeSpan };
+
     private BrowserType? _selectedBrowser;
     private List<BrowserInfo> _cachedBrowsers = new();
+    private bool _hasLaunchedThisSession;
+    private BrowserType _launchedBrowserType;
+    private int _launchAttemptCount;
+    private Process? _launchedProcess;
+    private readonly ILogger<BrowserLauncher>? _log;
+    private bool _disposed;
+
+    public BrowserLauncher(ILogger<BrowserLauncher>? log = null)
+    {
+        _log = log;
+    }
+
+    private static readonly string EnvoyProfileDir = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "Envoy", "BrowserProfile");
 
     public async Task<List<BrowserInfo>> DetectBrowsersAsync()
     {
         var browsers = new List<BrowserInfo>();
-
         var candidates = GetBrowserCandidates();
-        foreach (var (type, exePaths, userDataPaths) in candidates)
+
+        foreach (var (type, exePaths, _) in candidates)
         {
             var exePath = exePaths.FirstOrDefault(File.Exists);
             if (exePath == null)
@@ -37,7 +59,8 @@ public class BrowserLauncher : IBrowserLauncher
             }
 
             var userDataDir = ResolveUserDataDir(type, exePath);
-            var isRunning = await IsRunningWithDebuggingAsync(type);
+            var isRunningWithDebug = await IsRunningWithDebuggingAsync(type);
+            var isProcessRunning = IsProcessRunning(type);
 
             browsers.Add(new BrowserInfo
             {
@@ -46,13 +69,23 @@ public class BrowserLauncher : IBrowserLauncher
                 ExecutablePath = exePath,
                 UserDataDir = userDataDir,
                 IsInstalled = true,
-                IsRunning = isRunning,
+                IsRunning = isRunningWithDebug,
+                IsProcessRunning = isProcessRunning,
                 StealthRating = GetStealthRating(type),
                 StealthNote = GetStealthNote(type)
             });
         }
 
         _cachedBrowsers = browsers;
+
+        if (!_selectedBrowser.HasValue)
+        {
+            var defaultBrowser = browsers.FirstOrDefault(b => b.IsInstalled && b.Type == BrowserType.Chrome)
+                ?? browsers.FirstOrDefault(b => b.IsInstalled);
+            if (defaultBrowser != null)
+                _selectedBrowser = defaultBrowser.Type;
+        }
+
         return browsers;
     }
 
@@ -60,9 +93,21 @@ public class BrowserLauncher : IBrowserLauncher
     {
         try
         {
-            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
-            var response = await client.GetAsync($"http://localhost:{port}/json/version");
-            return response.IsSuccessStatusCode;
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            var response = await Http.GetAsync($"http://localhost:{port}/json/version", cts.Token);
+            if (!response.IsSuccessStatusCode)
+                return false;
+
+            var json = await response.Content.ReadAsStringAsync(cts.Token);
+
+            if (type == BrowserType.Edge)
+            {
+                if (!json.Contains("Edg/", StringComparison.OrdinalIgnoreCase))
+                    return false;
+            }
+
+            return json.Contains("Browser", StringComparison.OrdinalIgnoreCase)
+                || json.Contains("webkit", StringComparison.OrdinalIgnoreCase);
         }
         catch
         {
@@ -70,8 +115,27 @@ public class BrowserLauncher : IBrowserLauncher
         }
     }
 
+    public Task<bool> IsProcessRunningAsync(BrowserType type)
+    {
+        return Task.FromResult(IsProcessRunning(type));
+    }
+
     public async Task<bool> LaunchAsync(BrowserType type, int port = 9222)
     {
+        if (_hasLaunchedThisSession && _launchedBrowserType == type)
+        {
+            if (await IsRunningWithDebuggingAsync(type, port))
+                return true;
+        }
+
+        var alreadyOnPort = await IsRunningWithDebuggingAsync(type, port);
+        if (alreadyOnPort)
+        {
+            _hasLaunchedThisSession = true;
+            _launchedBrowserType = type;
+            return true;
+        }
+
         var browser = _cachedBrowsers.FirstOrDefault(b => b.Type == type)
             ?? (await DetectBrowsersAsync()).FirstOrDefault(b => b.Type == type);
 
@@ -82,15 +146,59 @@ public class BrowserLauncher : IBrowserLauncher
         if (string.IsNullOrEmpty(exePath))
             return false;
 
-        var userDataDir = browser.UserDataDir;
-        var args = userDataDir != null
-            ? $"--remote-debugging-port={port} --user-data-dir=\"{userDataDir}\" --no-first-run --no-default-browser-check --password-store=basic --restore-last-session"
-            : $"--remote-debugging-port={port} --no-first-run --no-default-browser-check --password-store=basic";
+        return await StartNewBrowserInstanceAsync(type, exePath, port);
+    }
+
+    public async Task<bool> RestartWithDebuggingAsync(BrowserType type, int port = 9222)
+    {
+        KillBrowserProcesses(type);
+
+        for (int i = 0; i < 40; i++)
+        {
+            await Task.Delay(250);
+            if (!IsProcessRunning(type))
+                break;
+        }
+
+        await Task.Delay(500);
+
+        var browser = _cachedBrowsers.FirstOrDefault(b => b.Type == type)
+            ?? (await DetectBrowsersAsync()).FirstOrDefault(b => b.Type == type);
+
+        if (browser == null || !browser.IsInstalled || string.IsNullOrEmpty(browser.ExecutablePath))
+            return false;
+
+        CleanProfileLockFiles(type);
+
+        await Task.Delay(300);
+
+        return await StartNewBrowserInstanceAsync(type, browser.ExecutablePath, port);
+    }
+
+    public BrowserInfo? GetSelectedBrowser() =>
+        _selectedBrowser.HasValue
+            ? _cachedBrowsers.FirstOrDefault(b => b.Type == _selectedBrowser.Value)
+            : null;
+
+    public void SetSelectedBrowser(BrowserType type) => _selectedBrowser = type;
+
+    public BrowserType? GetSelectedBrowserType() => _selectedBrowser;
+
+    private async Task<bool> StartNewBrowserInstanceAsync(BrowserType type, string exePath, int port)
+    {
+        Directory.CreateDirectory(EnvoyProfileDir);
 
         if (type == BrowserType.Opera)
         {
             var actualExe = FindOperaActualExe(exePath);
             if (actualExe != null) exePath = actualExe;
+        }
+
+        var args = $"--remote-debugging-port={port} --user-data-dir=\"{EnvoyProfileDir}\" --no-first-run --no-default-browser-check --password-store=basic --disable-background-networking --disable-client-side-phishing-detection --disable-default-apps --disable-hang-monitor --disable-popup-blocking --disable-prompt-on-repost --disable-sync --metrics-recording-only --safebrowsing-disable-auto-update";
+
+        if (type == BrowserType.Chrome || type == BrowserType.Edge)
+        {
+            args += " --restore-last-session";
         }
 
         var psi = new ProcessStartInfo
@@ -103,9 +211,78 @@ public class BrowserLauncher : IBrowserLauncher
 
         try
         {
-            Process.Start(psi);
-            await Task.Delay(3000);
-            return await IsRunningWithDebuggingAsync(type, port);
+            // Capture the Process so we can clean it up on app shutdown. Caveat: many
+            // browsers spawn a "launcher" that exits after forking the real browser
+            // process(es). In that case _launchedProcess will report HasExited=true
+            // at Dispose time and we won't kill anything — that's intentional, to
+            // avoid killing browser windows the user opened separately.
+            var proc = Process.Start(psi);
+            if (proc != null)
+                _launchedProcess = proc;
+
+            _launchAttemptCount++;
+
+            for (int i = 0; i < 20; i++)
+            {
+                await Task.Delay(750);
+                if (await IsRunningWithDebuggingAsync(type, port))
+                {
+                    _hasLaunchedThisSession = true;
+                    _launchedBrowserType = type;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _log?.LogWarning(ex, "Failed to start browser {Type} from {Path}", type, exePath);
+            return false;
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        try
+        {
+            var proc = _launchedProcess;
+            if (proc != null && !proc.HasExited)
+            {
+                proc.Kill(entireProcessTree: true);
+            }
+        }
+        catch (Exception ex)
+        {
+            _log?.LogWarning(ex, "Failed to clean up launched browser process");
+        }
+        finally
+        {
+            _launchedProcess?.Dispose();
+            _launchedProcess = null;
+        }
+
+        GC.SuppressFinalize(this);
+    }
+
+    private static bool IsProcessRunning(BrowserType type)
+    {
+        var processNames = type switch
+        {
+            BrowserType.Chrome => new[] { "chrome" },
+            BrowserType.Edge => new[] { "msedge" },
+            BrowserType.Brave => new[] { "brave" },
+            BrowserType.Opera => new[] { "opera" },
+            BrowserType.Vivaldi => new[] { "vivaldi" },
+            _ => Array.Empty<string>()
+        };
+
+        try
+        {
+            return processNames.Any(name => Process.GetProcessesByName(name).Length > 0);
         }
         catch
         {
@@ -113,12 +290,56 @@ public class BrowserLauncher : IBrowserLauncher
         }
     }
 
-    public BrowserInfo? GetSelectedBrowser() =>
-        _selectedBrowser.HasValue
-            ? _cachedBrowsers.FirstOrDefault(b => b.Type == _selectedBrowser.Value)
-            : null;
+    private void KillBrowserProcesses(BrowserType type)
+    {
+        var processNames = type switch
+        {
+            BrowserType.Chrome => new[] { "chrome" },
+            BrowserType.Edge => new[] { "msedge" },
+            BrowserType.Brave => new[] { "brave" },
+            BrowserType.Opera => new[] { "opera" },
+            BrowserType.Vivaldi => new[] { "vivaldi" },
+            _ => Array.Empty<string>()
+        };
 
-    public void SetSelectedBrowser(BrowserType type) => _selectedBrowser = type;
+        try
+        {
+            foreach (var name in processNames)
+            {
+                foreach (var proc in Process.GetProcessesByName(name))
+                {
+                    try { proc.Kill(); }
+                    catch (Exception ex) { _log?.LogDebug(ex, "Could not kill {Process} (pid {Pid})", name, proc.Id); }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _log?.LogWarning(ex, "KillBrowserProcesses({Type}) failed", type);
+        }
+    }
+
+    private static void CleanProfileLockFiles(BrowserType type)
+    {
+        if (!Directory.Exists(EnvoyProfileDir))
+            return;
+
+        var filesToClean = new[] { "SingletonLock", "lockfile", "SingletonCookie", "SingletonSocket" };
+        foreach (var fileName in filesToClean)
+        {
+            var path = Path.Combine(EnvoyProfileDir, fileName);
+            for (int i = 0; i < 10; i++)
+            {
+                try
+                {
+                    if (File.Exists(path))
+                        File.Delete(path);
+                    break;
+                }
+                catch { Thread.Sleep(200); }
+            }
+        }
+    }
 
     private static string GetDisplayName(BrowserType type) => type switch
     {
@@ -213,11 +434,6 @@ public class BrowserLauncher : IBrowserLauncher
 
     private static string? ResolveUserDataDir(BrowserType type, string exePath)
     {
-        var isEdge = type == BrowserType.Edge || exePath.Contains("Edge", StringComparison.OrdinalIgnoreCase);
-        var isBrave = type == BrowserType.Brave || exePath.Contains("Brave", StringComparison.OrdinalIgnoreCase);
-        var isOpera = type == BrowserType.Opera || exePath.Contains("Opera", StringComparison.OrdinalIgnoreCase);
-        var isVivaldi = type == BrowserType.Vivaldi || exePath.Contains("Vivaldi", StringComparison.OrdinalIgnoreCase);
-
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             var lad = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
