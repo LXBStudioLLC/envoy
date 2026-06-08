@@ -185,7 +185,7 @@ public static class DomScorer
         return tokens;
     }
 
-    private static double NormalizedSimilarity(string a, string b)
+    public static double NormalizedSimilarity(string a, string b)
     {
         if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b)) return 0;
         int distance = LevenshteinDistance(a, b);

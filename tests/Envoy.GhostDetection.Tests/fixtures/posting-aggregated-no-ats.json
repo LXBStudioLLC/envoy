@@ -1,0 +1,13 @@
+{
+  "Id": "00000000-0000-0000-0000-000000000001",
+  "Source": 0,
+  "CompanyName": "Acme Corp",
+  "JobTitle": "Senior Software Engineer",
+  "Location": "San Francisco, CA",
+  "DescriptionText": "We are looking for a senior software engineer to join our platform team.",
+  "Url": "https://www.indeed.com/viewjob?jk=abc123",
+  "PostedAtUtc": "2026-05-01T00:00:00Z",
+  "LastUpdatedUtc": "2026-05-01T00:00:00Z",
+  "SalaryText": "$150k - $200k",
+  "RawSourceId": "indeed-abc123"
+}
