@@ -20,7 +20,6 @@ public class AtsCrossCheckSignal : IGhostSignal
     public AtsCrossCheckSignal(HttpClient http)
     {
         _http = http;
-        _http.Timeout = TimeSpan.FromSeconds(8);
     }
 
     public async Task<SignalResult?> EvaluateAsync(JobPosting posting, CancellationToken ct = default)
@@ -36,6 +35,12 @@ public class AtsCrossCheckSignal : IGhostSignal
 
             if (match == null)
             {
+                // If the ATS was inferred from the company name (not the posting URL),
+                // a no-match is not actionable: the guessed slug might resolve to a
+                // different company's real board. Returning null preserves precision.
+                if (ats.IsInferred)
+                    return null;
+
                 return new SignalResult
                 {
                     SignalName = Name,
@@ -79,30 +84,31 @@ public class AtsCrossCheckSignal : IGhostSignal
 
     private static AtsInfo? ExtractAtsInfo(JobPosting posting)
     {
-        // Direct Greenhouse URL
+        // Direct Greenhouse URL — known ATS, not inferred
         if (posting.Url.Contains("greenhouse.io", StringComparison.OrdinalIgnoreCase))
         {
             var token = ExtractGreenhouseBoardToken(posting.Url);
             if (!string.IsNullOrEmpty(token))
-                return new AtsInfo("Greenhouse", token, null);
+                return new AtsInfo("Greenhouse", token, null, false);
         }
 
-        // Direct Lever URL
+        // Direct Lever URL — known ATS, not inferred
         if (posting.Url.Contains("lever.co", StringComparison.OrdinalIgnoreCase))
         {
             var company = ExtractLeverCompany(posting.Url);
             if (!string.IsNullOrEmpty(company))
-                return new AtsInfo("Lever", null, company);
+                return new AtsInfo("Lever", null, company, false);
         }
 
-        // Aggregator — try to infer from company name
+        // Aggregator — inferred from company name; never emit a high-confidence
+        // "not found" on a guess. If the guessed slug resolves to a different
+        // company's board, we'd falsely flag a real job.
         if (posting.Source is JobSource.Indeed or JobSource.LinkedIn or JobSource.Other)
         {
             var companySlug = Slugify(posting.CompanyName);
             if (!string.IsNullOrEmpty(companySlug))
             {
-                // Try Lever first (shorter slug), then Greenhouse
-                return new AtsInfo("Lever", null, companySlug);
+                return new AtsInfo("Lever", null, companySlug, true);
             }
         }
 
@@ -250,6 +256,6 @@ public class AtsCrossCheckSignal : IGhostSignal
 
     // ── Internal models ──────────────────────────────────────────────────
 
-    private record AtsInfo(string AtsName, string? BoardToken, string? CompanySlug);
+    private record AtsInfo(string AtsName, string? BoardToken, string? CompanySlug, bool IsInferred);
     private record AtsJob(string Title, string Location);
 }
