@@ -14,10 +14,10 @@
                 </Border.Effect>
                 <StackPanel>
                     <TextBlock Text="&#x25C8; TARGET URL" Foreground="#00F0FF" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,6"/>
-                    <TextBox x:Name="TxtJobUrl" Style="{StaticResource CyberTextBox}" Margin="0,0,0,12"/>
+                    <TextBox x:Name="TxtJobUrl" Style="{StaticResource CyberTextBox}" Margin="0,0,0,12" AutomationProperties.Name="Job posting URL"/>
 
                     <TextBlock Text="&#x25C8; OPERATION MODE" Foreground="#00F0FF" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,6"/>
-                    <ComboBox x:Name="CmbMode" Style="{StaticResource CyberComboBox}" Margin="0,0,0,12">
+                    <ComboBox x:Name="CmbMode" Style="{StaticResource CyberComboBox}" Margin="0,0,0,12" AutomationProperties.Name="Execution mode">
                         <ComboBoxItem Content="Stealth" IsSelected="True"/>
                         <ComboBoxItem Content="Safe"/>
                     </ComboBox>

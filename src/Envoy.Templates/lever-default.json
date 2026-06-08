@@ -12,41 +12,116 @@
     {
       "action": "fill",
       "field_id": "name",
-      "selector": "input[name='name']"
+      "selector": "input[name='name']",
+      "fingerprint": {
+        "tag": "input",
+        "attributes": {
+          "type": "text",
+          "name": "name"
+        },
+        "label_text": "Full Name",
+        "ancestor_chain": ["div.application-form", "div.field-row"],
+        "position_index": 0
+      }
     },
     {
       "action": "fill",
       "field_id": "email",
-      "selector": "input[name='email']"
+      "selector": "input[name='email']",
+      "fingerprint": {
+        "tag": "input",
+        "attributes": {
+          "type": "email",
+          "name": "email"
+        },
+        "label_text": "Email Address",
+        "ancestor_chain": ["div.application-form", "div.field-row"],
+        "siblings_before": ["Full Name"],
+        "position_index": 1
+      }
     },
     {
       "action": "fill",
       "field_id": "phone",
-      "selector": "input[name='phone']"
+      "selector": "input[name='phone']",
+      "fingerprint": {
+        "tag": "input",
+        "attributes": {
+          "type": "tel",
+          "name": "phone"
+        },
+        "label_text": "Phone",
+        "ancestor_chain": ["div.application-form", "div.field-row"],
+        "siblings_before": ["Full Name", "Email Address"],
+        "position_index": 2
+      }
     },
     {
       "action": "fill",
       "field_id": "org",
       "selector": "input[name='org']",
-      "fallback_selector": "input[name='company']"
+      "fallback_selector": "input[name='company']",
+      "fingerprint": {
+        "tag": "input",
+        "attributes": {
+          "type": "text",
+          "name": "org"
+        },
+        "label_text": "Company",
+        "ancestor_chain": ["div.application-form", "div.field-row"],
+        "siblings_before": ["Full Name", "Email Address", "Phone"],
+        "position_index": 3
+      }
     },
     {
       "action": "fill",
       "field_id": "urls[LinkedIn]",
       "selector": "input[name='urls[LinkedIn]']",
-      "fallback_selector": "input[placeholder*='LinkedIn']"
+      "fallback_selector": "input[placeholder*='LinkedIn']",
+      "fingerprint": {
+        "tag": "input",
+        "attributes": {
+          "type": "url",
+          "name": "urls[LinkedIn]"
+        },
+        "label_text": "LinkedIn",
+        "ancestor_chain": ["div.application-form", "div.field-row"],
+        "siblings_before": ["Full Name", "Email Address", "Phone", "Company"],
+        "position_index": 4
+      }
     },
     {
       "action": "upload",
       "field_id": "resume",
       "selector": "input[name='resume']",
-      "value_from": "generated_pdf_path"
+      "value_from": "generated_pdf_path",
+      "fingerprint": {
+        "tag": "input",
+        "attributes": {
+          "type": "file",
+          "name": "resume"
+        },
+        "label_text": "Resume",
+        "ancestor_chain": ["div.application-form", "div.field-row"],
+        "position_index": 5
+      }
     },
     {
       "action": "conditional_click",
       "description": "Submit Lever application",
       "selector": "button[type='submit']",
-      "require_confirmation": true
+      "require_confirmation": true,
+      "fingerprint": {
+        "tag": "button",
+        "attributes": {
+          "type": "submit"
+        },
+        "label_text": "Submit Application",
+        "text_content": "Submit Application",
+        "ancestor_chain": ["div.application-form"],
+        "siblings_before": ["Full Name", "Email Address", "Phone", "Company", "LinkedIn", "Resume"],
+        "position_index": 6
+      }
     }
   ]
 }

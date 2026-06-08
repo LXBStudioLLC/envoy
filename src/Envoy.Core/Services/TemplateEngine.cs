@@ -1,8 +1,27 @@
 using Envoy.Core.Models;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace Envoy.Core.Services;
+
+public class Fingerprint
+{
+    public string? Tag { get; set; }
+    public Dictionary<string, string>? Attributes { get; set; }
+    [JsonPropertyName("label_text")]
+    public string? LabelText { get; set; }
+    [JsonPropertyName("text_content")]
+    public string? TextContent { get; set; }
+    [JsonPropertyName("ancestor_chain")]
+    public List<string>? AncestorChain { get; set; }
+    [JsonPropertyName("siblings_before")]
+    public List<string>? SiblingsBefore { get; set; }
+    [JsonPropertyName("siblings_after")]
+    public List<string>? SiblingsAfter { get; set; }
+    [JsonPropertyName("position_index")]
+    public int? PositionIndex { get; set; }
+}
 
 public class TemplateStep
 {
@@ -18,6 +37,7 @@ public class TemplateStep
     public bool RequireConfirmation { get; set; }
     public int Timeout { get; set; } = 5000;
     public string? Description { get; set; }
+    public Fingerprint? Fingerprint { get; set; }
 }
 
 public class SiteTemplate
@@ -34,17 +54,32 @@ public class TemplateEngine
 {
     private readonly List<SiteTemplate> _templates = new();
     private readonly string _templatesPath;
+    private readonly IElementLocator? _elementLocator;
 
-    public TemplateEngine(string templatesPath)
+    public TemplateEngine(string templatesPath, IElementLocator? elementLocator = null)
     {
         _templatesPath = templatesPath;
+        _elementLocator = elementLocator;
         LoadTemplates();
     }
 
     public SiteTemplate? MatchTemplate(string url)
     {
-        return _templates.FirstOrDefault(t =>
-            url.Contains(t.UrlMatch.Replace("*", ""), StringComparison.OrdinalIgnoreCase));
+        return _templates.FirstOrDefault(t => UrlMatchesGlob(url, t.UrlMatch));
+    }
+
+    // Glob-to-regex matching anchored at the start of the URL so that the
+    // pattern 'linkedin.com/jobs/*' matches https://www.linkedin.com/jobs/...
+    // but NOT notlinkedin.com/jobs/... — the old substring approach matched
+    // both. Templates may omit or include the http(s):// prefix; we strip
+    // it before regex-escaping so both forms work.
+    private static bool UrlMatchesGlob(string url, string glob)
+    {
+        if (string.IsNullOrWhiteSpace(glob)) return false;
+        var normalizedGlob = Regex.Replace(glob, @"^https?://", "", RegexOptions.IgnoreCase);
+        var escaped = Regex.Escape(normalizedGlob).Replace("\\*", ".*");
+        var pattern = $"^(?:https?://)?(?:www\\.)?{escaped}$";
+        return Regex.IsMatch(url, pattern, RegexOptions.IgnoreCase);
     }
 
     public async Task ExecuteTemplateAsync(
@@ -65,13 +100,13 @@ public class TemplateEngine
                     break;
 
                 case "click":
-                    var clickNode = await FindElementAsync(browser, step, ct);
+                    var clickNode = await FindElementAsync(browser, step, template.Id, ct);
                     if (clickNode != null)
                         await browser.ClickAsync(clickNode, ct);
                     break;
 
                 case "fill":
-                    var fillNode = await FindElementAsync(browser, step, ct);
+                    var fillNode = await FindElementAsync(browser, step, template.Id, ct);
                     if (fillNode != null)
                     {
                         var value = GetValueFromProfile(profile, step.ValueFrom ?? step.FieldId ?? "");
@@ -81,13 +116,12 @@ public class TemplateEngine
                     break;
 
                 case "upload":
-                    var uploadNode = await FindElementAsync(browser, step, ct);
+                    var uploadNode = await FindElementAsync(browser, step, template.Id, ct);
                     if (uploadNode != null)
                     {
                         var filePath = GetValueFromProfile(profile, step.ValueFrom ?? "");
                         if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
                         {
-                            // CDP file upload requires DOM.setFileInputFiles
                             await UploadFileAsync(browser, uploadNode, filePath, ct);
                         }
                     }
@@ -98,7 +132,7 @@ public class TemplateEngine
                     {
                         await onConfirmationRequired(step.Description ?? "Submit application?");
                     }
-                    var submitNode = await FindElementAsync(browser, step, ct);
+                    var submitNode = await FindElementAsync(browser, step, template.Id, ct);
                     if (submitNode != null)
                         await browser.ClickAsync(submitNode, ct);
                     break;
@@ -119,8 +153,14 @@ public class TemplateEngine
         }
     }
 
-    private async Task<string?> FindElementAsync(CdpBrowserService browser, TemplateStep step, CancellationToken ct)
+    private async Task<string?> FindElementAsync(CdpBrowserService browser, TemplateStep step, string templateId, CancellationToken ct)
     {
+        if (_elementLocator != null)
+        {
+            var result = await _elementLocator.LocateAsync(step, templateId, ct);
+            return result.NodeId;
+        }
+
         if (!string.IsNullOrEmpty(step.Selector))
         {
             var node = await browser.QuerySelectorAsync(step.Selector, ct);
@@ -139,28 +179,37 @@ public class TemplateEngine
     private static string GetValueFromProfile(TailoredProfile profile, string field)
     {
         var data = profile.TailoredData;
-        var nameParts = (data.Name ?? "").Split(' ', 2);
+        var name = data.Name ?? "";
+        var nameParts = name.Split(' ', 2);
+        var key = (field ?? "").ToLower();
 
-        return (field ?? "").ToLower() switch
+        switch (key)
         {
-            "name" => data.Name,
-            "first_name" => nameParts.Length > 0 ? nameParts[0] : data.Name,
-            "last_name" => nameParts.Length > 1 ? nameParts[1] : "",
-            "email" => data.Email,
-            "contact_email" => data.Email,
-            "phone" => data.Phone,
-            "location" => data.Location ?? "",
-            "linkedin" => data.LinkedIn ?? "",
-            "website" => data.Website ?? "",
-            "summary" => data.Summary ?? "",
-            "org" => data.Experience.FirstOrDefault()?.Company ?? "",
-            "company" => data.Experience.FirstOrDefault()?.Company ?? "",
-            "resume_file" or "generated_pdf_path" => Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Envoy",
-                $"{data.Name.Replace(" ", "_")}_{profile.Company}_{profile.JobTitle}.pdf"),
-            _ => ""
-        };
+            case "name": return name;
+            case "first_name": return nameParts.Length > 0 ? nameParts[0] : name;
+            case "last_name": return nameParts.Length > 1 ? nameParts[1] : "";
+            case "email": return data.Email ?? "";
+            case "contact_email": return data.Email ?? "";
+            case "phone": return data.Phone ?? "";
+            case "location": return data.Location ?? "";
+            case "linkedin": return data.LinkedIn ?? "";
+            case "website": return data.Website ?? "";
+            case "summary": return data.Summary ?? "";
+            case "org":
+            case "company": return data.Experience.FirstOrDefault()?.Company ?? "";
+            case "resume_file":
+            case "generated_pdf_path":
+                return Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "Envoy",
+                    $"{name.Replace(" ", "_")}_{profile.Company}_{profile.JobTitle}.pdf");
+        }
+
+        // Unknown field — log so template authors can debug typos rather than
+        // silently filling the form with an empty string.
+        System.Diagnostics.Debug.WriteLine(
+            $"[TemplateEngine] Unknown profile field '{field}' requested by template; using empty string.");
+        return "";
     }
 
     private static async Task UploadFileAsync(CdpBrowserService browser, string nodeId, string filePath, CancellationToken ct)

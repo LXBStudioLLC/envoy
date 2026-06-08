@@ -1,70 +1,99 @@
-using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
 namespace Envoy.Core.Services;
 
-public class OllamaService : IDisposable
+public class OllamaService
 {
-    private readonly IChatClient _chatClient;
-    private readonly string _modelName;
-    private bool _disposed;
+    // Reference assignment to _activeProvider is atomic on .NET. CompleteAsync
+    // snapshots the reference into a local before using it, so a concurrent
+    // SwitchProvider can't NRE the in-flight call — the worst case is an
+    // already-running completion finishes against the prior provider, which
+    // is the desired semantics anyway. No lock needed.
+    private ILLMProvider _activeProvider;
+    private readonly ILogger<OllamaService> _log;
 
-    public OllamaService(string modelName = "qwen2.5-coder:14b", string endpoint = "http://localhost:11434")
+    public OllamaService(ILLMProvider provider, ILogger<OllamaService>? log = null)
     {
-        _modelName = modelName;
-        _chatClient = new OllamaChatClient(new Uri(endpoint), modelName);
+        _activeProvider = provider;
+        _log = log ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<OllamaService>.Instance;
+        _log.LogInformation("OllamaService initialized with provider {Provider} ({ProviderId})", provider.DisplayName, provider.ProviderId);
+    }
+
+    public void SwitchProvider(ILLMProvider newProvider)
+    {
+        _activeProvider = newProvider;
+        _log.LogInformation("Switched LLM provider to {Provider} ({ProviderId})", newProvider.DisplayName, newProvider.ProviderId);
     }
 
     public async Task<string> CompleteAsync(string prompt, string systemPrompt = "", CancellationToken ct = default)
     {
-        var messages = new List<ChatMessage>();
-        if (!string.IsNullOrWhiteSpace(systemPrompt))
+        var provider = _activeProvider;
+        try
         {
-            messages.Add(new ChatMessage(ChatRole.System, systemPrompt));
+            return await provider.CompleteAsync(prompt, systemPrompt, null, ct);
         }
-        messages.Add(new ChatMessage(ChatRole.User, prompt));
-
-        var response = await _chatClient.CompleteAsync(messages, cancellationToken: ct);
-        return response.Message.Text ?? string.Empty;
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "LLM completion failed via {Provider}", provider.DisplayName);
+            throw;
+        }
     }
 
     public async Task<T?> CompleteJsonAsync<T>(string prompt, string systemPrompt = "", CancellationToken ct = default)
     {
-        var text = await CompleteAsync(prompt, systemPrompt, ct);
-        text = ExtractJson(text);
+        var provider = _activeProvider;
         try
         {
-            return JsonSerializer.Deserialize<T>(text, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return await provider.CompleteJsonAsync<T>(prompt, systemPrompt, null, ct);
         }
-        catch (JsonException)
+        catch (Exception ex)
         {
+            _log.LogError(ex, "LLM JSON completion failed via {Provider}", provider.DisplayName);
             return default;
         }
     }
 
-    private static string ExtractJson(string text)
+    public static string ExtractJson(string text)
     {
         var start = text.IndexOf('{');
         if (start < 0) return text;
 
         var depth = 0;
+        var inString = false;
+        var escape = false;
+
         for (var i = start; i < text.Length; i++)
         {
-            if (text[i] == '{') depth++;
-            else if (text[i] == '}') depth--;
+            var c = text[i];
+
+            if (escape)
+            {
+                escape = false;
+                continue;
+            }
+
+            if (c == '\\' && inString)
+            {
+                escape = true;
+                continue;
+            }
+
+            if (c == '"')
+            {
+                inString = !inString;
+                continue;
+            }
+
+            if (inString) continue;
+
+            if (c == '{') depth++;
+            else if (c == '}') depth--;
+
             if (depth == 0)
                 return text[start..(i + 1)];
         }
 
         return text[start..];
-    }
-
-    public void Dispose()
-    {
-        if (!_disposed)
-        {
-            _disposed = true;
-            (_chatClient as IDisposable)?.Dispose();
-        }
     }
 }

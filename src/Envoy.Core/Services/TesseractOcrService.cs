@@ -56,7 +56,9 @@ public class TesseractOcrService : IOcrService
 
     public Task<string> ExtractTextFromPdfAsync(string pdfPath, CancellationToken ct = default)
     {
-        return Task.FromResult(string.Empty);
+        throw new NotSupportedException(
+            "OCR for image-based PDFs is not yet implemented. Drag your resume in as a text-based PDF " +
+            "or paste the content manually into the Vault view.");
     }
 
     private static string? FindTesseract()

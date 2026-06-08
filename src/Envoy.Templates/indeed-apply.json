@@ -11,7 +11,17 @@
     },
     {
       "action": "click",
-      "selector": "button[aria-label='Apply now']"
+      "selector": "button[aria-label='Apply now']",
+      "fingerprint": {
+        "tag": "button",
+        "attributes": {
+          "aria-label": "Apply now"
+        },
+        "label_text": "Apply now",
+        "text_content": "Apply now",
+        "ancestor_chain": ["div.jobsearch-ViewJobLayout"],
+        "position_index": 0
+      }
     },
     {
       "action": "wait_for",
@@ -21,25 +31,67 @@
     {
       "action": "fill",
       "field_id": "email",
-      "selector": "input[type='email']"
+      "selector": "input[type='email']",
+      "fingerprint": {
+        "tag": "input",
+        "attributes": {
+          "type": "email",
+          "name": "email"
+        },
+        "label_text": "Email Address",
+        "ancestor_chain": ["div.ia-ApplyFormWrapper", "div.ia-FormField"],
+        "position_index": 0
+      }
     },
     {
       "action": "upload",
       "field_id": "resume",
       "selector": "input[type='file']",
-      "value_from": "generated_pdf_path"
+      "value_from": "generated_pdf_path",
+      "fingerprint": {
+        "tag": "input",
+        "attributes": {
+          "type": "file",
+          "name": "resume"
+        },
+        "label_text": "Resume",
+        "ancestor_chain": ["div.ia-ApplyFormWrapper", "div.ia-FormField"],
+        "position_index": 1
+      }
     },
     {
       "action": "conditional_click",
       "description": "Continue to review",
       "selector": "button[data-testid='continue-button']",
-      "require_confirmation": false
+      "require_confirmation": false,
+      "fingerprint": {
+        "tag": "button",
+        "attributes": {
+          "data-testid": "continue-button"
+        },
+        "label_text": "Continue",
+        "text_content": "Continue",
+        "ancestor_chain": ["div.ia-ApplyFormWrapper"],
+        "siblings_before": ["Email Address", "Resume"],
+        "position_index": 2
+      }
     },
     {
       "action": "conditional_click",
       "description": "Submit Indeed application",
       "selector": "button[data-testid='submit-button']",
-      "require_confirmation": true
+      "require_confirmation": true,
+      "fingerprint": {
+        "tag": "button",
+        "attributes": {
+          "data-testid": "submit-button"
+        },
+        "label_text": "Submit",
+        "text_content": "Submit Application",
+        "ancestor_chain": ["div.ia-ApplyFormWrapper"],
+        "siblings_before": ["Continue"],
+        "position_index": 3
+      }
     }
   ]
 }

@@ -2,34 +2,36 @@
 
 ## Requirements
 
-- Windows 10/11, macOS 12+, or Linux
-- [Ollama](https://ollama.com) installed and running
-- Google Chrome or Microsoft Edge
+- **Windows 10/11 (64-bit).** Envoy is a WPF desktop application — macOS/Linux are not supported at v1.
+- [Ollama](https://ollama.com) installed and running (only required if you want to use a local model; you can run Envoy with a cloud provider instead).
+- Google Chrome or Microsoft Edge installed.
 
 ## Installation
 
-### Windows
-1. Download `Envoy-Setup.exe` from [Releases](../../releases)
-2. Run the installer. It will check for Ollama and offer to install it if missing.
-3. Launch Envoy from the Start Menu.
+### Inno Setup installer (recommended)
+1. Download `Envoy-v1.0.0-setup.exe` from [Releases](../../releases).
+2. Run the installer.
+3. Launch Envoy from the Start Menu or desktop shortcut.
 
-### macOS
-1. Download `Envoy.dmg` from [Releases](../../releases)
-2. Drag Envoy to Applications.
-3. Launch Envoy. Grant permissions when prompted.
+### ZIP package
+1. Download `Envoy-v1.0.0-win-x64.zip` from [Releases](../../releases).
+2. Extract anywhere (e.g. `C:\Tools\Envoy\`).
+3. Double-click `Envoy.exe` (or `Envoy.UI.exe`, depending on the build).
 
-### Linux
-1. Download `Envoy.AppImage` from [Releases](../../releases)
-2. `chmod +x Envoy.AppImage`
-3. `./Envoy.AppImage`
+### PowerShell installer
+From inside the extracted ZIP, run:
+```powershell
+.\install.ps1
+```
+This copies the app to `%LOCALAPPDATA%\Envoy`, adds desktop + Start Menu shortcuts, and registers an uninstall entry under Apps & Features.
 
 ## First Launch
 
-1. **Hardware Check:** Envoy will detect your GPU and recommend the best local model.
-2. **Ollama Setup:** If Ollama is not running, the app will prompt you to start it.
+1. **Hardware Check:** Envoy detects your GPU and recommends the best local model.
+2. **LLM Setup:** Open the LLM Settings view. If Ollama is running, pick a local model. Otherwise enter an OpenAI / Anthropic / Gemini API key and pick a cloud model. Keys are encrypted with Windows DPAPI before being persisted.
 3. **Chrome Setup:** Envoy will request you relaunch Chrome with remote debugging enabled.
 
-## GPU Recommendations
+## GPU Recommendations (local Ollama)
 
 | VRAM | Recommended Model | Speed |
 |------|------------------|-------|
@@ -43,22 +45,26 @@
 
 For the stealth browser to work, Chrome must be launched with:
 
-```bash
+```
 --remote-debugging-port=9222
 ```
 
-Envoy will handle this automatically on Windows. On macOS/Linux, you may need to close Chrome and let Envoy relaunch it.
+Envoy will handle this automatically — it relaunches Chrome with the right flag if a debug session isn't already running.
 
 ## Troubleshooting
 
 **"Cannot connect to Ollama"**
 - Ensure Ollama is running: `ollama serve`
-- Check firewall settings on port 11434
+- Check firewall settings on port 11434.
+- Or switch to a cloud provider in LLM Settings if you don't want a local model.
 
 **"Cannot connect to Chrome"**
-- Close all Chrome windows
-- Let Envoy relaunch Chrome, or launch manually with `--remote-debugging-port=9222`
+- Close all Chrome windows.
+- Let Envoy relaunch Chrome, or launch manually with `--remote-debugging-port=9222`.
 
 **"Model too slow"**
-- Go to Settings and select a smaller model
-- Ensure your GPU drivers are up to date
+- Open LLM Settings and select a smaller local model, or switch to a cloud provider.
+- Ensure your GPU drivers are up to date.
+
+**"Cloud API key not accepted after I copied my settings to another PC"**
+- API keys are encrypted with Windows DPAPI under the `CurrentUser` scope — they cannot be decrypted by a different Windows user account or on a different machine. Re-enter the key on the new machine.

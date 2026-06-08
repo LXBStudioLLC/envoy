@@ -12,34 +12,103 @@
     {
       "action": "fill",
       "field_id": "first_name",
-      "selector": "#first_name"
+      "selector": "#first_name",
+      "fingerprint": {
+        "tag": "input",
+        "attributes": {
+          "type": "text",
+          "name": "first_name",
+          "id": "first_name"
+        },
+        "label_text": "First Name",
+        "ancestor_chain": ["form#new_application", "div.field"],
+        "position_index": 0
+      }
     },
     {
       "action": "fill",
       "field_id": "last_name",
-      "selector": "#last_name"
+      "selector": "#last_name",
+      "fingerprint": {
+        "tag": "input",
+        "attributes": {
+          "type": "text",
+          "name": "last_name",
+          "id": "last_name"
+        },
+        "label_text": "Last Name",
+        "ancestor_chain": ["form#new_application", "div.field"],
+        "siblings_before": ["First Name"],
+        "position_index": 1
+      }
     },
     {
       "action": "fill",
       "field_id": "email",
-      "selector": "#email"
+      "selector": "#email",
+      "fingerprint": {
+        "tag": "input",
+        "attributes": {
+          "type": "email",
+          "name": "email",
+          "id": "email"
+        },
+        "label_text": "Email Address",
+        "ancestor_chain": ["form#new_application", "div.field"],
+        "siblings_before": ["First Name", "Last Name"],
+        "position_index": 2
+      }
     },
     {
       "action": "fill",
       "field_id": "phone",
-      "selector": "#phone"
+      "selector": "#phone",
+      "fingerprint": {
+        "tag": "input",
+        "attributes": {
+          "type": "tel",
+          "name": "phone",
+          "id": "phone"
+        },
+        "label_text": "Phone",
+        "ancestor_chain": ["form#new_application", "div.field"],
+        "siblings_before": ["First Name", "Last Name", "Email Address"],
+        "position_index": 3
+      }
     },
     {
       "action": "upload",
       "field_id": "resume",
       "selector": "input[name='resume']",
-      "value_from": "generated_pdf_path"
+      "value_from": "generated_pdf_path",
+      "fingerprint": {
+        "tag": "input",
+        "attributes": {
+          "type": "file",
+          "name": "resume"
+        },
+        "label_text": "Resume",
+        "ancestor_chain": ["form#new_application", "div.field"],
+        "position_index": 4
+      }
     },
     {
       "action": "conditional_click",
       "description": "Submit Greenhouse application",
       "selector": "#submit_app",
-      "require_confirmation": true
+      "require_confirmation": true,
+      "fingerprint": {
+        "tag": "button",
+        "attributes": {
+          "type": "submit",
+          "id": "submit_app"
+        },
+        "label_text": "Submit Application",
+        "text_content": "Submit Application",
+        "ancestor_chain": ["form#new_application"],
+        "siblings_before": ["First Name", "Last Name", "Email Address", "Phone"],
+        "position_index": 5
+      }
     }
   ]
 }
