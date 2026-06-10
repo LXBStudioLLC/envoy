@@ -50,4 +50,4 @@ If you have real-world postings you'd like to contribute (with the company's per
 - Your manual label: `real` or `ghost` + a one-sentence reason
 - The signal(s) that caught it (if known)
 
-Submit via PR to `feat/ghost-detection`.
+Submit via PR against `main` from a `feature/<name>` branch.

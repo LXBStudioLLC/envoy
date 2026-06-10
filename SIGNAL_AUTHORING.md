@@ -13,7 +13,7 @@
 3. Paste the **SPEC** block from the issue into the prompt.
 4. Review the generated diff.
 5. `dotnet test` must pass, including `ContainerResolutionTests`.
-6. Open a PR against `feat/ghost-detection`.
+6. Open a PR against `main` from a `feature/<name>` branch.
 
 ---
 
@@ -124,7 +124,7 @@ SPEC
 - [ ] **Zero network calls in tests** (mock `HttpClient` or use pure local data)
 - [ ] `dotnet test` passes (including `ContainerResolutionTests`)
 - [ ] One fixture JSON added if the signal consumes structured external data
-- [ ] PR targets `feat/ghost-detection` (not `main`)
+- [ ] PR targets `main` from a `feature/<name>` branch
 
 ---
 

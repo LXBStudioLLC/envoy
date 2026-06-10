@@ -19,7 +19,7 @@ The framework auto-discovers every `IGhostSignal` implementation at runtime — 
    - `tests/Envoy.GhostDetection.Tests/<Name>SignalTests.cs`
    - `tests/Envoy.GhostDetection.Tests/fixtures/<name>-*.json` (if needed)
 6. `dotnet test` must pass, including `ContainerResolutionTests`.
-7. Open a PR against `feat/ghost-detection`.
+7. Open a PR against `main` from a `feature/<name>` branch.
 
 **The runbook already bakes in the precision rules**: default to `null`, earn your confidence, never punish visa sponsorship, human-readable evidence, zero network calls in tests. See [`SIGNAL_AUTHORING.md`](SIGNAL_AUTHORING.md) for the full prompt, interface contract, and definition of done.
 
@@ -86,7 +86,7 @@ docs/
 
 ## Pull requests
 
-Open a PR against `feat/ghost-detection`. The PR template will walk you through the summary, type, test plan, and AGPL agreement checkbox. CI runs `dotnet restore` / `build` / `test` on Windows for every PR — green CI is a prerequisite for review.
+Open a PR against `main` from a `feature/<name>` branch. The PR template will walk you through the summary, type, test plan, and AGPL agreement checkbox. CI runs `dotnet restore` / `build` / `test` on Windows for every PR — green CI is a prerequisite for review.
 
 If your change adds a new ghost signal, include:
 - The signal name and intended data source
