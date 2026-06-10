@@ -6,8 +6,8 @@ Envoy is in active development. Security fixes are issued against the latest rel
 
 | Version | Supported |
 |---------|-----------|
-| 1.0.x   | Yes |
-| < 1.0   | No |
+| 0.2.x (current beta) | Yes |
+| < 0.2   | No |
 
 ## Reporting a vulnerability
 
@@ -51,3 +51,14 @@ If you discover a way to leak a stored key from `settings.json` to another proce
 ## Disclosure
 
 After a fix ships, we'll publish a GitHub Security Advisory crediting the reporter (unless they prefer to remain anonymous).
+
+## Repository integrity — is this repo safe to open?
+
+Recent supply-chain attacks have planted auto-executing configuration in repositories to target IDEs and AI coding agents (editor task files or agent hooks that run on open). We keep Envoy free of those primitives and say so explicitly so you can verify:
+
+- **Nothing runs when you open or clone this repo.** No `.vscode/tasks.json` or any auto-run task, no `.claude/` hooks, no `.cursor/` auto-run rules, no IDE/shell startup hooks anywhere in the tree.
+- **No install-time code execution.** Envoy is an SDK-style .NET project. It carries none of the npm/PyPI-style lifecycle scripts (`preinstall`, `postinstall`, etc.) those attacks abuse; `dotnet restore` runs no package scripts.
+- **Building does run code, by definition.** `dotnet build` and `dotnet test` compile and execute the project's own source and tests. Evaluating an untrusted fork or PR branch? Build it in a throwaway VM/container, not on a machine holding your credentials.
+- **You can confirm all of the above from the diff.** Every change lands via a reviewed pull request with required CI; we do not merge auto-run config, build hooks, or obfuscated binaries. Commit author/date are not proof of authorship — review what a change *does*.
+
+Find an auto-executing file or hook here? Treat it as a security report and use the disclosure process above.
