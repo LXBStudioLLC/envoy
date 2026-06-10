@@ -1,0 +1,18 @@
+// Repost-bumped scenario: posting re-listed 4 times in 10 days without text changes.
+// Expected: RepostFrequencySignal fires with high score and rapid-cycling evidence.
+{
+  "Id": "posting-repost-bumped",
+  "Source": 6,
+  "CompanyName": "BetaTech Solutions",
+  "JobTitle": "Software Engineer",
+  "Location": "Remote",
+  "DescriptionText": "We are seeking a passionate software engineer to join our growing team. You will design, develop, and maintain high-quality software applications. The ideal candidate has strong problem-solving skills and experience with modern frameworks. Responsibilities include writing clean code, performing code reviews, and collaborating with cross-functional teams. Requirements: 3+ years of experience, proficiency in C# and .NET, familiarity with cloud platforms. Benefits include competitive salary, health insurance, and flexible working hours. We value diversity and inclusion and are an equal opportunity employer. Apply today to be part of our innovative journey.",
+  "Url": "https://example.com/jobs/betatech-123",
+  "PostedAtUtc": "2026-05-20T00:00:00Z",
+  "LastUpdatedUtc": "2026-06-01T00:00:00Z",
+  "SalaryText": "$100k - $140k",
+  "RawSourceId": "bt-123",
+  "Extra": {
+    "repost.history": "[{\"seenAtUtc\":\"2026-05-22T00:00:00Z\",\"description\":\"We are seeking a passionate software engineer to join our growing team. You will design, develop, and maintain high-quality software applications. The ideal candidate has strong problem-solving skills and experience with modern frameworks. Responsibilities include writing clean code, performing code reviews, and collaborating with cross-functional teams. Requirements: 3+ years of experience, proficiency in C# and .NET, familiarity with cloud platforms. Benefits include competitive salary, health insurance, and flexible working hours. We value diversity and inclusion and are an equal opportunity employer. Apply today to be part of our innovative journey.\"},{\"seenAtUtc\":\"2026-05-25T00:00:00Z\",\"description\":\"We are seeking a passionate software engineer to join our growing team. You will design, develop, and maintain high-quality software applications. The ideal candidate has strong problem-solving skills and experience with modern frameworks. Responsibilities include writing clean code, performing code reviews, and collaborating with cross-functional teams. Requirements: 3+ years of experience, proficiency in C# and .NET, familiarity with cloud platforms. Benefits include competitive salary, health insurance, and flexible working hours. We value diversity and inclusion and are an equal opportunity employer. Apply today to be part of our innovative journey.\"},{\"seenAtUtc\":\"2026-05-28T00:00:00Z\",\"description\":\"We are seeking a passionate software engineer to join our growing team. You will design, develop, and maintain high-quality software applications. The ideal candidate has strong problem-solving skills and experience with modern frameworks. Responsibilities include writing clean code, performing code reviews, and collaborating with cross-functional teams. Requirements: 3+ years of experience, proficiency in C# and .NET, familiarity with cloud platforms. Benefits include competitive salary, health insurance, and flexible working hours. We value diversity and inclusion and are an equal opportunity employer. Apply today to be part of our innovative journey.\"}]"
+  }
+}
