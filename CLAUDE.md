@@ -17,7 +17,7 @@ The existing resume-tailoring + form-fill flow remains as a **human-gated copilo
 5. Do **NOT** add any autonomous batch-apply loop or CAPTCHA-solver hookpoint.
 6. This work is **ADDITIVE**. Do **NOT** refactor the existing apply/tailoring flow beyond confirming gated mode is the default.
 7. **.NET 8**, nullable enabled, file-scoped namespaces, match existing patterns. Do **NOT** blanket-add `ConfigureAwait(false)`.
-8. Work on branch `feat/ghost-detection` (or `feature/<name>`). Do **NOT** push to or modify `main`. Do **NOT** force-push.
+8. Work on a `feature/<name>` branch created off `main`. Do **NOT** push directly to `main`. Do **NOT** force-push.
 
 ## Build / Test / Run
 
@@ -36,6 +36,6 @@ dotnet test
 5. Add fixtures in `tests/Envoy.GhostDetection.Tests/fixtures/`.
 6. Add xUnit tests with mocked dependencies — **NO network calls in tests**.
 7. Registration is automatic via `AddEnvoyGhostDetection()` reflection.
-8. Open a PR against `feat/ghost-detection`.
+8. Open a PR against `main` from a `feature/<name>` branch.
 
 See [AGENTS.md](../AGENTS.md) for the full module map and architecture.
