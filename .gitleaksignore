@@ -1,0 +1,3 @@
+# Verified false positives — XAML theme color values tripping generic-api-key
+7935b3d086f4dede0dbd265303f3a9ade4c30314:src/Envoy.UI/Themes/CyberpunkTheme.xaml:generic-api-key:33
+7935b3d086f4dede0dbd265303f3a9ade4c30314:src/Envoy.UI/Themes/CyberpunkTheme.xaml:generic-api-key:34
