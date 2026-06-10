@@ -1,0 +1,14 @@
+{
+  "Id": "posting-age-stale-junior",
+  "Source": "Indeed",
+  "CompanyName": "Acme Corp",
+  "JobTitle": "Junior Marketing Associate",
+  "Location": "Remote",
+  "DescriptionText": "We are looking for a Junior Marketing Associate to join our growing team...",
+  "Url": "https://www.indeed.com/viewjob?jk=abc123",
+  "PostedAtUtc": "2025-01-01T00:00:00Z",
+  "LastUpdatedUtc": "2025-01-01T00:00:00Z",
+  "SalaryText": "$45,000 - $55,000",
+  "RawSourceId": "abc123",
+  "Extra": {}
+}
