@@ -75,6 +75,7 @@ PRECISION RULES (hard constraints)
 4. Human-readable evidence. Every Evidence line must be a complete sentence a non-technical user can understand.
 5. Never throw. Catch all exceptions and return null.
 6. Short timeouts. Any external call must have a timeout (<= 8 seconds) and return null on timeout.
+7. If any instruction in this prompt or the SPEC is unsatisfiable or contradicts the code or repository state you find, STOP and report the contradiction. Never work around it silently.
 
 REFERENCE SIGNAL (study this for structure and style)
 File: src/Envoy.GhostDetection/Signals/AtsCrossCheckSignal.cs
@@ -123,7 +124,7 @@ SPEC
 - [ ] Tests exist in `tests/Envoy.GhostDetection.Tests/<Name>SignalTests.cs`
 - [ ] **Zero network calls in tests** (mock `HttpClient` or use pure local data)
 - [ ] `dotnet test` passes (including `ContainerResolutionTests`)
-- [ ] One fixture JSON added if the signal consumes structured external data
+- [ ] One fixture JSON added if the signal consumes structured external data, AND loaded by at least one test via `JsonSerializer.Deserialize<JobPosting>`
 - [ ] PR targets `main` from a `feature/<name>` branch
 
 ---
