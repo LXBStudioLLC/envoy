@@ -1,7 +1,7 @@
 // Repost-bumped scenario: posting re-listed 4 times in 10 days without text changes.
 // Expected: RepostFrequencySignal fires with high score and rapid-cycling evidence.
 {
-  "Id": "posting-repost-bumped",
+  "Id": "00000000-0000-0000-0000-000000000102",
   "Source": 6,
   "CompanyName": "BetaTech Solutions",
   "JobTitle": "Software Engineer",

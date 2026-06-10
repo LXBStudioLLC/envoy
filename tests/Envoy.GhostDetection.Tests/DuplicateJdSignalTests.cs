@@ -210,15 +210,10 @@ public class DuplicateJdSignalTests
         var fixturePath = Path.Combine(assemblyDir, "..", "..", "..", "fixtures", "posting-dupjd-template-farm.json");
         var raw = File.ReadAllText(fixturePath);
         var stripped = string.Join("\n", raw.Split('\n').Where(l => !l.TrimStart().StartsWith("//")));
-        using var doc = JsonDocument.Parse(stripped);
-        var descriptionText = doc.RootElement.GetProperty("DescriptionText").GetString();
-        Assert.NotNull(descriptionText);
-        Assert.False(string.IsNullOrWhiteSpace(descriptionText));
+        var fixture = JsonSerializer.Deserialize<JobPosting>(stripped)!;
+        fixture.Extra["dupcheck.corpus"] = BuildCorpusJson(("Unrelated Corp", fixture.DescriptionText));
 
-        var corpus = BuildCorpusJson(("Unrelated Corp", descriptionText));
-        var posting = BuildPosting("Acme Corp", descriptionText, corpus);
-
-        var result = await Signal.EvaluateAsync(posting);
+        var result = await Signal.EvaluateAsync(fixture);
 
         Assert.NotNull(result);
         Assert.Equal(SignalTier.Weak, result.Tier);
