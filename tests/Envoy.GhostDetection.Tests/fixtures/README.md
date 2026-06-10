@@ -6,6 +6,8 @@ This directory contains labeled sample job postings for testing the ghost-detect
 
 Each `.json` file is a serialized `Envoy.GhostDetection.Models.JobPosting`:
 
+- `Id` must be a valid GUID.
+
 ```json
 {
   "Id": "...",
