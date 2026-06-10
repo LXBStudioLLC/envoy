@@ -25,6 +25,12 @@ public class DuplicateJdSignal : IGhostSignal
     public string Name => "Duplicate JD";
     public SignalTier Tier => SignalTier.Weak;
 
+    private const double ContainmentThreshold = 0.65;
+    private static readonly JsonSerializerOptions CorpusJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     public Task<SignalResult?> EvaluateAsync(JobPosting posting, CancellationToken ct = default)
     {
         try
@@ -47,10 +53,7 @@ public class DuplicateJdSignal : IGhostSignal
             List<CorpusEntry> corpusEntries;
             try
             {
-                corpusEntries = JsonSerializer.Deserialize<List<CorpusEntry>>(corpusJson, new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                }) ?? new List<CorpusEntry>();
+                corpusEntries = JsonSerializer.Deserialize<List<CorpusEntry>>(corpusJson, CorpusJsonOptions) ?? new List<CorpusEntry>();
             }
             catch (JsonException)
             {
@@ -81,7 +84,7 @@ public class DuplicateJdSignal : IGhostSignal
                     continue;
 
                 var containment = ComputeContainment(postingShingles, entryShingles);
-                if (containment >= 0.55)
+                if (containment >= ContainmentThreshold)
                 {
                     matches.Add(new MatchInfo(entry.Company, containment));
                 }
@@ -124,29 +127,7 @@ public class DuplicateJdSignal : IGhostSignal
                 sb.Append(' ');
         }
 
-        var normalized = sb.ToString();
-        // Collapse runs of whitespace manually (no Regex needed)
-        var collapsed = new System.Text.StringBuilder(normalized.Length);
-        bool lastWasSpace = false;
-        foreach (var ch in normalized)
-        {
-            if (ch == ' ')
-            {
-                if (!lastWasSpace)
-                {
-                    collapsed.Append(' ');
-                    lastWasSpace = true;
-                }
-            }
-            else
-            {
-                collapsed.Append(ch);
-                lastWasSpace = false;
-            }
-        }
-
-        var result = collapsed.ToString().Trim();
-        var tokens = result.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var tokens = sb.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries);
         return tokens.Length >= 60 ? tokens : null;
     }
 
@@ -201,12 +182,14 @@ public class DuplicateJdSignal : IGhostSignal
         var bestC = matches.Max(m => m.Containment);
 
         double score;
-        if (bestC <= 0.80)
-            score = 0.55;
+        if (bestC <= ContainmentThreshold)
+            score = 0.40;
+        else if (bestC <= 0.80)
+            score = 0.40 + (bestC - ContainmentThreshold) / 0.15 * 0.20;
         else if (bestC <= 0.90)
-            score = 0.55 + (bestC - 0.80) / 0.10 * 0.20;
+            score = 0.60 + (bestC - 0.80) / 0.10 * 0.18;
         else
-            score = 0.75 + (bestC - 0.90) / 0.10 * 0.15;
+            score = 0.78 + (bestC - 0.90) / 0.10 * 0.12;
 
         score = Math.Min(0.90, score);
         score = Math.Round(score, 2);

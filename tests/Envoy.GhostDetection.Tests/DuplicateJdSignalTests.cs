@@ -162,8 +162,8 @@ public class DuplicateJdSignalTests
         var result = await Signal.EvaluateAsync(posting);
 
         Assert.NotNull(result);
-        Assert.True(result.Score >= 0.55 && result.Score <= 0.90,
-            $"Expected Score in [0.55, 0.90] for partial copy, got {result.Score}");
+        Assert.True(result.Score >= 0.40 && result.Score <= 0.70,
+            $"Expected Score in [0.40, 0.70] for partial copy, got {result.Score}");
     }
 
     [Fact]
@@ -201,5 +201,26 @@ public class DuplicateJdSignalTests
 
         Assert.NotNull(result);
         Assert.Contains("Other Corp", result.Evidence[0]);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_FixtureTemplateFarm_FiresWithWeakTier()
+    {
+        var assemblyDir = Path.GetDirectoryName(typeof(DuplicateJdSignalTests).Assembly.Location)!;
+        var fixturePath = Path.Combine(assemblyDir, "..", "..", "..", "fixtures", "posting-dupjd-template-farm.json");
+        var raw = File.ReadAllText(fixturePath);
+        var stripped = string.Join("\n", raw.Split('\n').Where(l => !l.TrimStart().StartsWith("//")));
+        using var doc = JsonDocument.Parse(stripped);
+        var descriptionText = doc.RootElement.GetProperty("DescriptionText").GetString();
+        Assert.NotNull(descriptionText);
+        Assert.False(string.IsNullOrWhiteSpace(descriptionText));
+
+        var corpus = BuildCorpusJson(("Unrelated Corp", descriptionText));
+        var posting = BuildPosting("Acme Corp", descriptionText, corpus);
+
+        var result = await Signal.EvaluateAsync(posting);
+
+        Assert.NotNull(result);
+        Assert.Equal(SignalTier.Weak, result.Tier);
     }
 }
