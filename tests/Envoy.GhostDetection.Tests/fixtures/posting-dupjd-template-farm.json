@@ -1,7 +1,7 @@
 // Template-farm scenario: two unrelated companies share ~90% of the JD text.
 // Expected: DuplicateJdSignal fires with high containment.
 {
-  "Id": "posting-dupjd-template-farm",
+  "Id": "00000000-0000-0000-0000-000000000101",
   "Source": 6,
   "CompanyName": "BetaTech Solutions",
   "JobTitle": "Software Engineer",

@@ -319,31 +319,7 @@ public class RepostFrequencySignalTests
         var fixturePath = Path.Combine(assemblyDir, "..", "..", "..", "fixtures", "posting-repost-bumped.json");
         var raw = File.ReadAllText(fixturePath);
         var stripped = string.Join("\n", raw.Split('\n').Where(l => !l.TrimStart().StartsWith("//")));
-        using var doc = JsonDocument.Parse(stripped);
-        var root = doc.RootElement;
-
-        var descriptionText = root.GetProperty("DescriptionText").GetString();
-        Assert.NotNull(descriptionText);
-
-        var lastUpdated = root.GetProperty("LastUpdatedUtc").GetDateTime();
-
-        var extra = new Dictionary<string, string>();
-        if (root.TryGetProperty("Extra", out var extraElement))
-        {
-            foreach (var prop in extraElement.EnumerateObject())
-            {
-                extra[prop.Name] = prop.Value.GetString() ?? string.Empty;
-            }
-        }
-
-        var fixture = new JobPosting
-        {
-            CompanyName = root.GetProperty("CompanyName").GetString() ?? "",
-            JobTitle = root.GetProperty("JobTitle").GetString() ?? "",
-            DescriptionText = descriptionText,
-            LastUpdatedUtc = lastUpdated,
-            Extra = extra
-        };
+        var fixture = JsonSerializer.Deserialize<JobPosting>(stripped)!;
 
         var result = await Signal.EvaluateAsync(fixture);
 
