@@ -26,9 +26,6 @@ public static class ServiceRegistration
 
         foreach (var type in signalTypes)
         {
-            // If the signal has a constructor that takes HttpClient, register a typed
-            // client so MS DI can inject it. This makes network signals zero-wiring:
-            // an author only needs `public MySignal(HttpClient http)` in the class.
             if (HasHttpClientConstructor(type))
             {
                 // Use reflection to call the generic AddHttpClient<T>(Action<HttpClient>)
@@ -42,16 +39,22 @@ public static class ServiceRegistration
                     .Select(x => x.Method)
                     .FirstOrDefault();
 
-                if (method != null)
-                {
-                    var generic = method.MakeGenericMethod(type);
-                    generic.Invoke(null, new object[] { services, new Action<HttpClient>(c => c.Timeout = TimeSpan.FromSeconds(8)) });
-                }
-            }
+                if (method == null)
+                    throw new InvalidOperationException("Could not locate AddHttpClient<T>(IServiceCollection, Action<HttpClient>) extension method.");
 
-            // AddHttpClient<T> also registers T as a transient service, but we need
-            // it as IGhostSignal singleton so GhostScorer receives it via IEnumerable<IGhostSignal>.
-            services.AddSingleton(typeof(IGhostSignal), type);
+                var generic = method.MakeGenericMethod(type);
+                generic.Invoke(null, new object[] { services, new Action<HttpClient>(c => c.Timeout = TimeSpan.FromSeconds(8)) });
+
+                // Resolve IGhostSignal THROUGH the typed-client registration so the configured
+                // 8s HttpClient is injected. Bare AddSingleton(typeof(IGhostSignal), type)
+                // activates against the container's DEFAULT HttpClient (unconfigured, ~100s),
+                // silently bypassing the typed client. Mocked tests cannot catch this.
+                services.AddSingleton(typeof(IGhostSignal), sp => (IGhostSignal)sp.GetRequiredService(type));
+            }
+            else
+            {
+                services.AddSingleton(typeof(IGhostSignal), type);
+            }
         }
 
         return services;
