@@ -223,15 +223,18 @@ public class RepostFrequencySignalTests
     }
 
     // 11. Unsorted history input is sorted by seenAtUtc before pairing.
+    // Falsifiable: scrambled order would yield 0 bumps (null) if not sorted.
     [Fact]
     public async Task EvaluateAsync_UnsortedHistory_SortedBeforePairing()
     {
-        var t1 = DateTime.UtcNow.AddDays(-40);
-        var t2 = DateTime.UtcNow.AddDays(-20);
+        var t1 = DateTime.UtcNow.AddDays(-60);
+        var t2 = DateTime.UtcNow.AddDays(-40);
+        var t3 = DateTime.UtcNow.AddDays(-20);
         var history = BuildHistoryJson(
-            (t2, LongDesc),   // out of order
+            (t2, LongDesc),       // scrambled order
+            (t3, DifferentDesc),
             (t1, LongDesc));
-        var posting = BuildPosting(LongDesc, lastUpdated: DateTime.UtcNow, historyJson: history);
+        var posting = BuildPosting(DifferentDesc, lastUpdated: DateTime.UtcNow, historyJson: history);
 
         var result = await Signal.EvaluateAsync(posting);
 
@@ -306,5 +309,49 @@ public class RepostFrequencySignalTests
         Assert.Equal(0.45, result.Score);
         Assert.Equal(0.60, result.Confidence);
         Assert.Single(result.Evidence);
+    }
+
+    // 16. Load fixture posting-repost-bumped.json and assert PATH A fires.
+    [Fact]
+    public async Task EvaluateAsync_Fixture_RepostBumped_Fires()
+    {
+        var assemblyDir = Path.GetDirectoryName(typeof(RepostFrequencySignalTests).Assembly.Location)!;
+        var fixturePath = Path.Combine(assemblyDir, "..", "..", "..", "fixtures", "posting-repost-bumped.json");
+        var raw = File.ReadAllText(fixturePath);
+        var stripped = string.Join("\n", raw.Split('\n').Where(l => !l.TrimStart().StartsWith("//")));
+        using var doc = JsonDocument.Parse(stripped);
+        var root = doc.RootElement;
+
+        var descriptionText = root.GetProperty("DescriptionText").GetString();
+        Assert.NotNull(descriptionText);
+
+        var lastUpdated = root.GetProperty("LastUpdatedUtc").GetDateTime();
+
+        var extra = new Dictionary<string, string>();
+        if (root.TryGetProperty("Extra", out var extraElement))
+        {
+            foreach (var prop in extraElement.EnumerateObject())
+            {
+                extra[prop.Name] = prop.Value.GetString() ?? string.Empty;
+            }
+        }
+
+        var fixture = new JobPosting
+        {
+            CompanyName = root.GetProperty("CompanyName").GetString() ?? "",
+            JobTitle = root.GetProperty("JobTitle").GetString() ?? "",
+            DescriptionText = descriptionText,
+            LastUpdatedUtc = lastUpdated,
+            Extra = extra
+        };
+
+        var result = await Signal.EvaluateAsync(fixture);
+
+        Assert.NotNull(result);
+        Assert.Equal(0.65, result.Score);
+        Assert.Equal(0.70, result.Confidence);
+        Assert.Equal(SignalTier.Weak, result.Tier);
+        Assert.Equal(2, result.Evidence.Length);
+        Assert.Contains("rapid", result.Evidence[1].ToLowerInvariant());
     }
 }
