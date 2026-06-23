@@ -30,6 +30,7 @@ public class EnvoySettings
     public string? OpenAIApiKeyEncrypted { get; set; }
     public string? AnthropicApiKeyEncrypted { get; set; }
     public string? GeminiApiKeyEncrypted { get; set; }
+    public string? BraveSearchApiKeyEncrypted { get; set; }
 
     [JsonIgnore]
     public string? OpenAIApiKey
@@ -50,6 +51,17 @@ public class EnvoySettings
     {
         get => Decrypt(GeminiApiKeyEncrypted);
         set => GeminiApiKeyEncrypted = Encrypt(value);
+    }
+
+    /// <summary>
+    /// Optional Brave Search API key (X-Subscription-Token) used by the job-discovery
+    /// web-search source. Stored DPAPI-encrypted like the LLM provider keys.
+    /// </summary>
+    [JsonIgnore]
+    public string? BraveSearchApiKey
+    {
+        get => Decrypt(BraveSearchApiKeyEncrypted);
+        set => BraveSearchApiKeyEncrypted = Encrypt(value);
     }
 
     public static EnvoySettings Load()

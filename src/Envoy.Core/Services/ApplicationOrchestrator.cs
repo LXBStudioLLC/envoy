@@ -10,7 +10,6 @@ public class ApplicationOrchestrator
     private readonly CdpBrowserService _browser;
     private readonly TemplateEngine _templates;
     private readonly IResumePdfGenerator _pdfGenerator;
-    private readonly HardwareProfiler _hardware;
     private readonly IProfileRepository _profileRepo;
     private readonly ITailoredProfileRepository _tailoredRepo;
     private readonly IApplicationLogRepository _logRepo;
@@ -23,7 +22,6 @@ public class ApplicationOrchestrator
         CdpBrowserService browser,
         TemplateEngine templates,
         IResumePdfGenerator pdfGenerator,
-        HardwareProfiler hardware,
         IProfileRepository profileRepo,
         ITailoredProfileRepository tailoredRepo,
         IApplicationLogRepository logRepo,
@@ -35,7 +33,6 @@ public class ApplicationOrchestrator
         _browser = browser;
         _templates = templates;
         _pdfGenerator = pdfGenerator;
-        _hardware = hardware;
         _profileRepo = profileRepo;
         _tailoredRepo = tailoredRepo;
         _logRepo = logRepo;
@@ -57,7 +54,7 @@ public class ApplicationOrchestrator
         return profile;
     }
 
-    public async Task<TailoredProfile> PrepareApplicationAsync(Guid masterProfileId, string jobUrl, CancellationToken ct = default)
+    public async Task<PreparedApplication> PrepareApplicationAsync(Guid masterProfileId, string jobUrl, CancellationToken ct = default)
     {
         var master = await _profileRepo.GetByIdAsync(masterProfileId, ct)
             ?? throw new InvalidOperationException("Master profile not found");
@@ -122,13 +119,13 @@ public class ApplicationOrchestrator
             await File.WriteAllBytesAsync(pdfPath, pdfBytes, ct);
         }
 
-        return tailored;
+        return new PreparedApplication(tailored, jobDescription);
     }
 
     public async Task<ApplicationLog> SubmitApplicationAsync(
         Guid tailoredProfileId,
         ExecutionMode mode,
-        Func<string, Task> onConfirmationRequired,
+        Func<string, Task<bool>> onConfirmationRequired,
         CancellationToken ct = default)
     {
         var tailored = await _tailoredRepo.GetByIdAsync(tailoredProfileId, ct)
@@ -210,15 +207,21 @@ public class ApplicationOrchestrator
 
             log.SiteTemplateId = template.Id;
 
-            // Execute template
+            // Execute template. The submit step is human-gated in EVERY mode: the
+            // final click only fires after explicit approval. Stealth changes how
+            // input is typed, never whether the human confirms the submission.
             await _templates.ExecuteTemplateAsync(template, _browser, tailored, async msg =>
             {
-                if (mode == ExecutionMode.Safe || template.Steps.Any(s => s.RequireConfirmation))
+                log.Status = ApplicationStatus.SafeModeStopped;
+                await _logRepo.UpdateAsync(log, ct);
+
+                var approved = await onConfirmationRequired(msg);
+                if (approved)
                 {
-                    log.Status = ApplicationStatus.SafeModeStopped;
-                    await onConfirmationRequired(msg);
+                    log.Status = ApplicationStatus.InProgress;
                     await _logRepo.UpdateAsync(log, ct);
                 }
+                return approved;
             }, ct);
 
             // Final screenshot
@@ -243,6 +246,4 @@ public class ApplicationOrchestrator
 
         return log;
     }
-
-    public HardwareProfile GetHardwareProfile() => _hardware.DetectHardware();
 }

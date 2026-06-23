@@ -16,6 +16,7 @@ public class AtsCrossCheckSignal : IGhostSignal
 
     public string Name => "ATS Cross-Check";
     public SignalTier Tier => SignalTier.Deterministic;
+    public bool RequiresNetwork => true;
 
     public AtsCrossCheckSignal(HttpClient http)
     {

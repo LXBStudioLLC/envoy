@@ -52,25 +52,28 @@ src/
       JobPosting.cs
       SignalResult.cs
       GhostScore.cs
-    Signals/
-      AtsCrossCheckSignal.cs       — reference signal (Deterministic, public ATS APIs)
-      PermFilingSignal.cs          — stub
-      DuplicateJdSignal.cs         — stub
-      PostingAgeSignal.cs          — stub
-      RepostFrequencySignal.cs     — stub
-      HiringFreezeSignal.cs        — stub
-      ScamPatternSignal.cs         — stub
-    IGhostSignal.cs
-    GhostScorer.cs
-    ServiceRegistration.cs
-  Envoy.UI/                  WPF views, themes, app host (entry point)
+    Signals/                         — 5 implemented + tested signals
+      AtsCrossCheckSignal.cs       — Deterministic, network (public Greenhouse/Lever APIs)
+      ScamPatternSignal.cs         — Deterministic, local regex (scam-pattern detection)
+      PostingAgeSignal.cs          — Probabilistic, local (age vs. seniority baseline)
+      DuplicateJdSignal.cs         — Weak, local (cross-company near-duplicate JD)
+      RepostFrequencySignal.cs     — Weak, local (unchanged re-listing)
+      (Hiring Freeze, PERM cross-check — planned; see issues #5 / #1)
+    IGhostSignal.cs                  — Name, Tier, RequiresNetwork, EvaluateAsync
+    GhostScorer.cs                   — aggregates signals → Neutral / Elevated / High
+    ServiceRegistration.cs           — AddEnvoyGhostDetection() (reflection auto-discovery)
+  Envoy.Discovery/           NEW — sanctioned job discovery (public ATS APIs + Brave search)
+    Sources/                     — Greenhouse, Lever, Ashby, Workable, Recruitee, Brave
+    JobDiscoveryService.cs       — aggregates public postings, ghost-scores them
+    ServiceRegistration.cs       — AddEnvoyDiscovery()
+  Envoy.UI/                  WPF views (incl. Find Jobs + Apply ghost-risk panel), app host
   Envoy.Assets/              PDF generation, fonts
   Envoy.Templates/           JSON templates for supported job boards
 tests/
-  Envoy.Core.Tests/
-  Envoy.GhostDetection.Tests/  — xUnit + Moq, NO network calls
-fixtures/
-  posting-*.json               — labeled sample job postings
+  Envoy.Core.Tests/            — xUnit, NO network calls
+  Envoy.GhostDetection.Tests/  — xUnit, NO network calls
+    fixtures/posting-*.json      — labeled sample job postings
+  Envoy.Discovery.Tests/       — xUnit + stubbed HttpClient, NO network calls
 docs/
   ADAPTIVE_PARSER.md
   TEMPLATE_AUTHORING.md
@@ -83,7 +86,7 @@ docs/
 
 ### Manual checklist
 
-1. **Create a class** in `src/Envoy.GhostDetection/Signals/<Name>Signal.cs` that implements `IGhostSignal`.
+1. **Create a class** in `src/Envoy.GhostDetection/Signals/<Name>Signal.cs` that implements `IGhostSignal` (`Name`, `Tier`, `RequiresNetwork`, `EvaluateAsync`). Set `RequiresNetwork` to `true` only if `EvaluateAsync` makes a network call.
 2. **Set `Tier`** appropriately:
    - `Deterministic` — hard evidence (e.g. ATS says closed, scam regex match)
    - `Probabilistic` — strong statistical/correlational evidence

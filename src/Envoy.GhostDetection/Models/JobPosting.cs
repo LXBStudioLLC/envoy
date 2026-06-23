@@ -8,7 +8,10 @@ public enum JobSource
     LinkedIn,
     Workday,
     Ashby,
-    Other
+    Other,
+    Workable,
+    Recruitee,
+    SmartRecruiters
 }
 
 public class JobPosting
