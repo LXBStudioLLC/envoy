@@ -10,8 +10,12 @@ The existing resume-tailoring + form-fill flow remains as a **human-gated copilo
 
 ## Hard Constraints (Never Violate)
 
-1. **NO CAPTCHA-solving, NO bot-detection bypass, NO anti-fingerprinting/evasion code.**
-2. Ghost detection only **READS public, sanctioned data**: public ATS JSON APIs, public government datasets, and the posting already in front of the user. **NO scraping behind authentication. NO LinkedIn scraping.**
+1. **Human-cadence "stealth" input lives behind an explicit, off-by-default, guarded opt-in — never the default, never on the data layers.**
+   - The apply/form-fill copilot automates **the user's own actions in their own browser session** and is **human-gated** (the user explicitly confirms before any submit).
+   - Human-cadence input emulation (Bezier mouse paths, typing jitter — the "Stealth" input option) is **retained** but stays **OFF by default** (`StealthModeEnabled`) and enables only through a deliberate, guarded toggle in the Browser view behind an acknowledgement. When off, forms are filled with plain input and only Safe mode is offered.
+   - **NO CAPTCHA-solving, ever** — detect a CAPTCHA and hand off to the human; no CAPTCHA-solver hookpoint.
+   - The **ghost-detection and job-discovery data layers READ ONLY public, sanctioned data** and must **never** use scraping or anti-bot evasion. Stealth input emulation must **never** be repurposed to bypass bot-detection or to harvest data a site withholds.
+2. Ghost detection **and job discovery** only **READ public, sanctioned data**: public ATS JSON APIs, official key-gated search APIs (e.g. Brave Search), public government datasets, and the posting already in front of the user. **NO scraping behind authentication. NO LinkedIn scraping. NO defeating a site's bot-protection to access data.**
 3. Ghost detection outputs **RISK SCORE + CONFIDENCE + EVIDENCE**. **NEVER** a binary "FAKE"/"GHOST" verdict on a named company. Default to neutral; only flag high on strong (deterministic) evidence or multiple converging weaker signals.
 4. **Bias for PRECISION over recall**: flagging a real job is worse than missing a ghost. When unsure, do not flag.
 5. Do **NOT** add any autonomous batch-apply loop or CAPTCHA-solver hookpoint.

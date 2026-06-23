@@ -46,8 +46,6 @@ public static class DomScorer
         ["class"] = 0.5,
     };
 
-    private const string DefaultTag = "";
-
     public static double WeightAttributes = 0.30;
     public static double WeightLabel = 0.30;
     public static double WeightAncestor = 0.15;

@@ -1,10 +1,12 @@
+// Stale-junior scenario: an entry-level role left open far past its baseline.
+// Expected: PostingAgeSignal fires Probabilistic with an elevated score.
 {
-  "Id": "posting-age-stale-junior",
-  "Source": "Indeed",
+  "Id": "00000000-0000-0000-0000-000000000201",
+  "Source": 2,
   "CompanyName": "Acme Corp",
   "JobTitle": "Junior Marketing Associate",
   "Location": "Remote",
-  "DescriptionText": "We are looking for a Junior Marketing Associate to join our growing team...",
+  "DescriptionText": "We are looking for a Junior Marketing Associate to join our growing team. This entry-level role supports campaigns, social media scheduling, and content production. No prior agency experience required.",
   "Url": "https://www.indeed.com/viewjob?jk=abc123",
   "PostedAtUtc": "2025-01-01T00:00:00Z",
   "LastUpdatedUtc": "2025-01-01T00:00:00Z",

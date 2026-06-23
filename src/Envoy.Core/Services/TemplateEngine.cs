@@ -84,9 +84,9 @@ public class TemplateEngine
 
     public async Task ExecuteTemplateAsync(
         SiteTemplate template,
-        CdpBrowserService browser,
+        IPageInteractor browser,
         TailoredProfile profile,
-        Func<string, Task> onConfirmationRequired,
+        Func<string, Task<bool>> onConfirmationRequired,
         CancellationToken ct = default)
     {
         foreach (var step in template.Steps)
@@ -130,7 +130,12 @@ public class TemplateEngine
                 case "conditional_click":
                     if (step.RequireConfirmation)
                     {
-                        await onConfirmationRequired(step.Description ?? "Submit application?");
+                        // Human-gated submit: block on explicit approval. If the user
+                        // declines, leave the filled form in place for manual review and
+                        // stop — never click submit without consent.
+                        var approved = await onConfirmationRequired(step.Description ?? "Submit application?");
+                        if (!approved)
+                            return;
                     }
                     var submitNode = await FindElementAsync(browser, step, template.Id, ct);
                     if (submitNode != null)
@@ -140,7 +145,7 @@ public class TemplateEngine
         }
     }
 
-    private async Task WaitForElementAsync(CdpBrowserService browser, TemplateStep step, CancellationToken ct)
+    private async Task WaitForElementAsync(IPageInteractor browser, TemplateStep step, CancellationToken ct)
     {
         var timeout = TimeSpan.FromMilliseconds(step.Timeout);
         var start = DateTime.UtcNow;
@@ -153,7 +158,7 @@ public class TemplateEngine
         }
     }
 
-    private async Task<string?> FindElementAsync(CdpBrowserService browser, TemplateStep step, string templateId, CancellationToken ct)
+    private async Task<string?> FindElementAsync(IPageInteractor browser, TemplateStep step, string templateId, CancellationToken ct)
     {
         if (_elementLocator != null)
         {
@@ -212,7 +217,7 @@ public class TemplateEngine
         return "";
     }
 
-    private static async Task UploadFileAsync(CdpBrowserService browser, string nodeId, string filePath, CancellationToken ct)
+    private static async Task UploadFileAsync(IPageInteractor browser, string nodeId, string filePath, CancellationToken ct)
     {
         await browser.SetFileInputAsync(nodeId, filePath, ct);
     }

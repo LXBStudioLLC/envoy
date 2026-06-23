@@ -61,14 +61,16 @@ The first launch will create `%LOCALAPPDATA%\Envoy\` for settings, SQLite databa
 ```
 src/
   Envoy.Core/         core services, data layer, LLM providers, browser/CDP
-  Envoy.GhostDetection/  ghost-job detection framework (NEW centerpiece)
+  Envoy.GhostDetection/  ghost-job detection framework (centerpiece)
+  Envoy.Discovery/    sanctioned job discovery (public ATS board APIs + Brave Search)
   Envoy.UI/           WPF views, themes, app host (entry point)
   Envoy.Assets/       PDF generation, fonts
   Envoy.Templates/    JSON templates for supported job boards
 tests/
   Envoy.Core.Tests/   xUnit + Moq tests for Core services
   Envoy.GhostDetection.Tests/  xUnit + Moq tests for ghost signals
-  fixtures/           labeled sample job postings
+    fixtures/         labeled sample job postings (tests/Envoy.GhostDetection.Tests/fixtures/)
+  Envoy.Discovery.Tests/  xUnit + Moq tests for job discovery
 docs/
   ADAPTIVE_PARSER.md       adaptive parser scoring, fingerprints, relocation
   TEMPLATE_AUTHORING.md    walk-through for adding new job-board templates

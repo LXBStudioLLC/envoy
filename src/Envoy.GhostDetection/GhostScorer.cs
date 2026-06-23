@@ -26,11 +26,16 @@ public class GhostScorer
         _log = log;
     }
 
-    public async Task<GhostScore> ScoreAsync(JobPosting posting, CancellationToken ct = default)
+    public async Task<GhostScore> ScoreAsync(JobPosting posting, CancellationToken ct = default, bool localOnly = false)
     {
         var results = new List<SignalResult>();
 
-        foreach (var signal in _signals)
+        // localOnly skips network-bound signals (e.g. ATS cross-check) so callers scoring
+        // many postings at once — like the discovery list — stay fast and don't fan out
+        // one request per posting.
+        var signals = localOnly ? _signals.Where(s => !s.RequiresNetwork) : _signals;
+
+        foreach (var signal in signals)
         {
             try
             {

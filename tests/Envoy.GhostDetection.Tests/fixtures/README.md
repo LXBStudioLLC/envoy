@@ -44,6 +44,10 @@ When you add a new signal, include 1–2 fixture files that exercise it:
 | `posting-greenhouse-live.json` | Direct Greenhouse URL, job confirmed live | Neutral (confirmed on ATS) |
 | `posting-lever-stale.json` | Direct Lever URL, old posting | Elevated (age + not on ATS) |
 | `posting-linkedin-inferred.json` | LinkedIn aggregator, company inferred | Neutral (inferred ATS check) |
+| `posting-age-stale-junior.json` | Junior role open a long time (PostingAge signal) | Neutral/Elevated by age |
+| `posting-dupjd-template-farm.json` | Boilerplate JD reused across postings (DuplicateJd signal — Weak) | Elevated |
+| `posting-repost-bumped.json` | Unchanged posting repeatedly relisted (RepostFrequency signal — Weak) | Elevated |
+| `posting-scam-telegram-crypto.json` | Off-platform Telegram redirect + crypto payment (ScamPattern signal — Deterministic) | High |
 
 ## Labels
 

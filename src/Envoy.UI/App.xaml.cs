@@ -1,5 +1,7 @@
 ﻿using Envoy.Core.Data;
 using Envoy.Core.Services;
+using Envoy.Discovery;
+using Envoy.GhostDetection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.IO;
@@ -46,10 +48,13 @@ public partial class App
             .ConfigureServices((context, services) =>
             {
                 services.AddEnvoyCore();
+                services.AddEnvoyGhostDetection();
+                services.AddEnvoyDiscovery();
                 services.AddScoped<IResumePdfGenerator, Envoy.Assets.Pdf.ResumePdfGenerator>();
                 services.AddSingleton<MainWindow>();
                 services.AddSingleton<DashboardView>();
                 services.AddSingleton<ApplyView>();
+                services.AddSingleton<FindJobsView>();
                 services.AddSingleton<VaultView>();
                 services.AddSingleton<BrowserSelectionView>();
                 services.AddSingleton<LLMSettingsView>();

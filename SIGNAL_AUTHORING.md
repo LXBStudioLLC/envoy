@@ -33,6 +33,7 @@ public interface IGhostSignal
 {
     string Name { get; }                          // human-readable signal name
     SignalTier Tier { get; }                      // Deterministic | Probabilistic | Weak
+    bool RequiresNetwork { get; }                 // true if EvaluateAsync makes a network call; lets callers request local-only scoring when ranking many postings at once
     Task<SignalResult?> EvaluateAsync(JobPosting posting, CancellationToken ct = default);
 }
 
@@ -118,13 +119,13 @@ SPEC
 ## Definition of Done
 
 - [ ] Signal class exists in `src/Envoy.GhostDetection/Signals/<Name>Signal.cs`
-- [ ] Implements `IGhostSignal` with correct `Name` and `Tier`
+- [ ] Implements `IGhostSignal` with correct `Name`, `Tier`, and `RequiresNetwork`
 - [ ] `EvaluateAsync` returns `null` for missing/unsupported data (never throws)
 - [ ] Evidence strings are human-readable, complete sentences
 - [ ] Tests exist in `tests/Envoy.GhostDetection.Tests/<Name>SignalTests.cs`
 - [ ] **Zero network calls in tests** (mock `HttpClient` or use pure local data)
 - [ ] `dotnet test` passes (including `ContainerResolutionTests`)
-- [ ] One fixture JSON added if the signal consumes structured external data, AND loaded by at least one test via `JsonSerializer.Deserialize<JobPosting>`
+- [ ] One fixture JSON added if the signal consumes structured external data, placed in `tests/Envoy.GhostDetection.Tests/fixtures/` with a valid GUID `Id` and numeric `Source`, AND loaded by at least one test via `JsonSerializer.Deserialize<JobPosting>`
 - [ ] PR targets `main` from a `feature/<name>` branch
 
 ---
@@ -157,6 +158,7 @@ public class MyLocalSignal : IGhostSignal
 {
     public string Name => "My Local Signal";
     public SignalTier Tier => SignalTier.Probabilistic;
+    public bool RequiresNetwork => false;
 
     public Task<SignalResult?> EvaluateAsync(JobPosting posting, CancellationToken ct = default)
     {
@@ -174,6 +176,7 @@ public class MyNetworkSignal : IGhostSignal
     private readonly HttpClient _http;
     public string Name => "My Network Signal";
     public SignalTier Tier => SignalTier.Probabilistic;
+    public bool RequiresNetwork => true;
 
     public MyNetworkSignal(HttpClient http) => _http = http;
 

@@ -24,6 +24,7 @@ public class DuplicateJdSignal : IGhostSignal
 {
     public string Name => "Duplicate JD";
     public SignalTier Tier => SignalTier.Weak;
+    public bool RequiresNetwork => false;
 
     private const double ContainmentThreshold = 0.65;
     private static readonly JsonSerializerOptions CorpusJsonOptions = new()

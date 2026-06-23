@@ -1,0 +1,17 @@
+// Scam scenario: off-platform (Telegram/WhatsApp) interview redirect + crypto
+// "buy equipment and we reimburse you" + upfront training fee. Multiple converging
+// deterministic tells. Expected: ScamPatternSignal fires High (score >= 0.90).
+{
+  "Id": "00000000-0000-0000-0000-000000000301",
+  "Source": 6,
+  "CompanyName": "Global Remote Staffing LLC",
+  "JobTitle": "Data Entry Clerk (Remote)",
+  "Location": "Remote",
+  "DescriptionText": "URGENT HIRING — earn $4,500 per week, no experience needed! To apply, message our hiring manager on Telegram @fast_hr_2026 or WhatsApp. New hires must buy office equipment in Bitcoin and we will reimburse you later. A $150 training fee is required to start.",
+  "Url": "https://example.com/jobs/global-remote-staffing-301",
+  "PostedAtUtc": "2026-06-01T00:00:00Z",
+  "LastUpdatedUtc": "2026-06-01T00:00:00Z",
+  "SalaryText": "$4,500 / week",
+  "RawSourceId": "grs-301",
+  "Extra": {}
+}
