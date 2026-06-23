@@ -15,7 +15,8 @@ Go-live release. Ghost-job detection is now a first-class, in-app feature, and E
 - `IGhostSignal.RequiresNetwork` so callers can request fast, local-only scoring when ranking many postings at once (e.g. the Find Jobs list).
 
 ### Changed
-- **Human-gated submit is now truly blocking.** The final submit click waits for an explicit Confirm / Cancel decision in every execution mode; the default Operation Mode is now **Safe**. (Stealth input behavior is unchanged.)
+- **Human-gated submit is now truly blocking.** The final submit click waits for an explicit Confirm / Cancel decision in every execution mode; the default Operation Mode is now **Safe**.
+- **Stealth input emulation is now a guarded, off-by-default opt-in.** Human-cadence typing / mouse movement only runs after you explicitly enable it in the Browser view behind an acknowledgement (`StealthModeEnabled`); otherwise the form is filled with plain input and only Safe mode is offered. It never bypasses CAPTCHAs and is never used for discovery / scraping.
 - Removed the inert `HiringFreezeSignal` and `PermFilingSignal` stubs from the shipped build; they remain tracked as future signals (issues #5 and #1). Envoy now ships **5 working signals** — ATS Cross-Check, Posting Age, Duplicate JD, Repost Frequency, Scam Pattern — none inert.
 
 ## [0.2.0-beta] — 2026-06-08

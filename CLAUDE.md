@@ -10,8 +10,9 @@ The existing resume-tailoring + form-fill flow remains as a **human-gated copilo
 
 ## Hard Constraints (Never Violate)
 
-1. **Stealth input emulation is allowed ONLY inside the human-gated apply copilot; the data layers stay clean.**
-   - The apply/form-fill copilot automates **the user's own actions in their own browser session** and is **human-gated** (the user explicitly confirms before any submit). Human-cadence input emulation — natural typing/mouse timing, the "Stealth" execution mode — is **permitted here** so assistive automation behaves like a human operator.
+1. **Human-cadence "stealth" input lives behind an explicit, off-by-default, guarded opt-in — never the default, never on the data layers.**
+   - The apply/form-fill copilot automates **the user's own actions in their own browser session** and is **human-gated** (the user explicitly confirms before any submit).
+   - Human-cadence input emulation (Bezier mouse paths, typing jitter — the "Stealth" input option) is **retained** but stays **OFF by default** (`StealthModeEnabled`) and enables only through a deliberate, guarded toggle in the Browser view behind an acknowledgement. When off, forms are filled with plain input and only Safe mode is offered.
    - **NO CAPTCHA-solving, ever** — detect a CAPTCHA and hand off to the human; no CAPTCHA-solver hookpoint.
    - The **ghost-detection and job-discovery data layers READ ONLY public, sanctioned data** and must **never** use scraping or anti-bot evasion. Stealth input emulation must **never** be repurposed to bypass bot-detection or to harvest data a site withholds.
 2. Ghost detection **and job discovery** only **READ public, sanctioned data**: public ATS JSON APIs, official key-gated search APIs (e.g. Brave Search), public government datasets, and the posting already in front of the user. **NO scraping behind authentication. NO LinkedIn scraping. NO defeating a site's bot-protection to access data.**

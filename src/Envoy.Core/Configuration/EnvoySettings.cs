@@ -16,7 +16,15 @@ public class EnvoySettings
     public string PreferredModel { get; set; } = "qwen2.5-coder:14b";
     public string ChromeDebuggingPort { get; set; } = "9222";
     public bool AutoLaunchChrome { get; set; } = true;
-    public ExecutionMode DefaultMode { get; set; } = ExecutionMode.Stealth;
+    public ExecutionMode DefaultMode { get; set; } = ExecutionMode.Safe;
+
+    /// <summary>
+    /// Master gate for human-cadence input emulation (Bezier mouse paths, typing jitter)
+    /// in the apply copilot. OFF by default and must be explicitly, deliberately enabled
+    /// from the Browser view. When false, the form is filled with plain, direct input and
+    /// the Stealth execution mode is not offered.
+    /// </summary>
+    public bool StealthModeEnabled { get; set; } = false;
     public bool CaptureScreenshots { get; set; } = true;
     public string TemplatesPath { get; set; } = "";
     public int TypingSpeedVariance { get; set; } = 35;

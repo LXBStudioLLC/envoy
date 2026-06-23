@@ -1,3 +1,4 @@
+using Envoy.Core.Configuration;
 using Envoy.Core.Models;
 using Envoy.Core.Services;
 using Envoy.GhostDetection;
@@ -12,16 +13,29 @@ public partial class ApplyView : UserControl
 {
     private readonly ApplicationOrchestrator _orchestrator;
     private readonly GhostScorer _ghostScorer;
+    private readonly EnvoySettings _settings;
     private Guid _profileId;
     private TailoredProfile? _tailored;
     private string _jobDescription = "";
     private TaskCompletionSource<bool>? _confirmTcs;
 
-    public ApplyView(ApplicationOrchestrator orchestrator, GhostScorer ghostScorer)
+    public ApplyView(ApplicationOrchestrator orchestrator, GhostScorer ghostScorer, EnvoySettings settings)
     {
         _orchestrator = orchestrator;
         _ghostScorer = ghostScorer;
+        _settings = settings;
         InitializeComponent();
+        Loaded += (_, _) => RefreshModeOptions();
+    }
+
+    // Only offers the Stealth execution mode when stealth input is enabled (the guarded
+    // opt-in from the Browser view); otherwise Safe is the only option.
+    private void RefreshModeOptions()
+    {
+        CmbMode.Items.Clear();
+        CmbMode.Items.Add(new ComboBoxItem { Content = "Safe", IsSelected = true });
+        if (_settings.StealthModeEnabled)
+            CmbMode.Items.Add(new ComboBoxItem { Content = "Stealth" });
     }
 
     public void SetProfileId(Guid profileId)
