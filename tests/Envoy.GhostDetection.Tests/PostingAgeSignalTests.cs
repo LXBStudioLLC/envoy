@@ -1,5 +1,6 @@
 using Envoy.GhostDetection.Models;
 using Envoy.GhostDetection.Signals;
+using System.Text.Json;
 using Xunit;
 
 namespace Envoy.GhostDetection.Tests;
@@ -7,6 +8,22 @@ namespace Envoy.GhostDetection.Tests;
 public class PostingAgeSignalTests
 {
     private static readonly PostingAgeSignal Signal = new();
+
+    [Fact]
+    public async Task EvaluateAsync_StaleJuniorFixture_FiresProbabilistic()
+    {
+        var assemblyDir = Path.GetDirectoryName(typeof(PostingAgeSignalTests).Assembly.Location)!;
+        var fixturePath = Path.Combine(assemblyDir, "..", "..", "..", "fixtures", "posting-age-stale-junior.json");
+        var raw = File.ReadAllText(fixturePath);
+        var stripped = string.Join("\n", raw.Split('\n').Where(l => !l.TrimStart().StartsWith("//")));
+        var fixture = JsonSerializer.Deserialize<JobPosting>(stripped)!;
+
+        var result = await Signal.EvaluateAsync(fixture);
+
+        Assert.NotNull(result);
+        Assert.Equal(SignalTier.Probabilistic, result.Tier);
+        Assert.True(result.Score > 0.5, $"Expected stale junior fixture to score > 0.5, got {result.Score}");
+    }
 
     [Fact]
     public async Task EvaluateAsync_FreshPosting_ReturnsNull()

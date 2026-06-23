@@ -1,6 +1,7 @@
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
+using Envoy.Core.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Envoy.Core.Services;
@@ -15,6 +16,7 @@ public class CdpBrowserService : ICdpCommandExecutor, IPageInteractor, IBrowserL
     // multi-step nav). Store a list of TCSs and complete-all on arrival.
     private readonly Dictionary<string, List<TaskCompletionSource<JsonElement>>> _pendingEvents = new();
     private readonly HumanizationService _humanization;
+    private readonly EnvoySettings _settings;
     private readonly ILogger<CdpBrowserService> _log;
     private readonly object _lock = new();
     private Task? _receiveLoopTask;
@@ -23,9 +25,10 @@ public class CdpBrowserService : ICdpCommandExecutor, IPageInteractor, IBrowserL
 
     public bool IsConnected => _webSocket?.State == WebSocketState.Open;
 
-    public CdpBrowserService(HumanizationService humanization, ILogger<CdpBrowserService> log)
+    public CdpBrowserService(HumanizationService humanization, EnvoySettings settings, ILogger<CdpBrowserService> log)
     {
         _humanization = humanization;
+        _settings = settings;
         _log = log;
     }
 
@@ -140,8 +143,9 @@ public class CdpBrowserService : ICdpCommandExecutor, IPageInteractor, IBrowserL
 
         foreach (var ch in text)
         {
-            var delay = _humanization.GetTypingDelay();
-            await Task.Delay(delay, ct);
+            // Per-keystroke human-cadence jitter only when stealth input is enabled.
+            if (_settings.StealthModeEnabled)
+                await Task.Delay(_humanization.GetTypingDelay(), ct);
 
             string code;
             int vkCode;
@@ -200,6 +204,18 @@ public class CdpBrowserService : ICdpCommandExecutor, IPageInteractor, IBrowserL
         var box = await GetBoundingBoxAsync(nodeId, ct);
         if (box == null) return;
 
+        if (!_settings.StealthModeEnabled)
+        {
+            // Plain click at the element center — no synthetic human movement or jitter.
+            var px = box.Value.x + box.Value.width / 2;
+            var py = box.Value.y + box.Value.height / 2;
+            await SendCommandAsync("Input.dispatchMouseEvent", new { type = "mouseMoved", x = px, y = py }, ct);
+            await SendCommandAsync("Input.dispatchMouseEvent", new { type = "mousePressed", x = px, y = py, button = "left", clickCount = 1 }, ct);
+            await SendCommandAsync("Input.dispatchMouseEvent", new { type = "mouseReleased", x = px, y = py, button = "left", clickCount = 1 }, ct);
+            return;
+        }
+
+        // Stealth (gated by StealthModeEnabled): human-cadence movement along a Bezier path.
         var (x, y) = _humanization.GetClickTarget(box.Value.x, box.Value.y, box.Value.width, box.Value.height);
         var path = _humanization.GenerateMousePath(0, 0, x, y);
 

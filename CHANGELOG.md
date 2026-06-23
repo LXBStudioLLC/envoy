@@ -4,9 +4,33 @@ All notable changes to Envoy are documented in this file. Format is based on [Ke
 
 ## [Unreleased]
 
-## [1.0.0] — 2026-05-12
+## [1.0.0] — 2026-06-23
 
-Initial public release.
+Go-live release. Ghost-job detection is now a first-class, in-app feature, and Envoy can discover jobs from sanctioned public sources.
+
+### Added
+- **Ghost detection wired into the app.** `AddEnvoyGhostDetection()` runs at startup; every prepared application shows a **Ghost Risk** panel — risk band + confidence + human-readable evidence — in the Apply view.
+- **Find Jobs view + `Envoy.Discovery` module.** Sanctioned job discovery that reads **public, unauthenticated ATS board APIs** (Greenhouse, Lever, Ashby, Workable, Recruitee) and an **official, key-gated web-search API** (Brave Search — you supply your own key, stored DPAPI-encrypted). No scraping behind authentication, no anti-bot evasion, no CAPTCHA bypass. Every discovered posting is ghost-scored and shown with a risk badge.
+- **Scam Pattern signal** (Deterministic, local regex): flags off-platform interview redirects (Telegram/WhatsApp), upfront fee / PII asks, crypto / gift-card payment demands, and check / overpayment fraud. Precision-first; evidence describes the pattern, never a verdict on a named company.
+- `IGhostSignal.RequiresNetwork` so callers can request fast, local-only scoring when ranking many postings at once (e.g. the Find Jobs list).
+
+### Changed
+- **Human-gated submit is now truly blocking.** The final submit click waits for an explicit Confirm / Cancel decision in every execution mode; the default Operation Mode is now **Safe**.
+- **Stealth input emulation is now a guarded, off-by-default opt-in.** Human-cadence typing / mouse movement only runs after you explicitly enable it in the Browser view behind an acknowledgement (`StealthModeEnabled`); otherwise the form is filled with plain input and only Safe mode is offered. It never bypasses CAPTCHAs and is never used for discovery / scraping.
+- Removed the inert `HiringFreezeSignal` and `PermFilingSignal` stubs from the shipped build; they remain tracked as future signals (issues #5 and #1). Envoy now ships **5 working signals** — ATS Cross-Check, Posting Age, Duplicate JD, Repost Frequency, Scam Pattern — none inert.
+
+## [0.2.0-beta] — 2026-06-08
+
+Ghost-job detection preview.
+
+### Added
+- `Envoy.GhostDetection` signal framework: `IGhostSignal`, `SignalResult`, `GhostScore`, and `GhostScorer` with Neutral / Elevated / High banding (bias for precision over recall).
+- Signals: ATS Cross-Check (Deterministic, public Greenhouse/Lever APIs), Posting Age (Probabilistic), Duplicate JD (Weak), Repost Frequency (Weak).
+- Fixture-backed xUnit tests with no network calls; reflection-based signal auto-registration.
+
+## [0.1.0] — 2026-05-12
+
+Initial foundation: local-first resume tailoring + human-assisted apply.
 
 ### Added
 - WPF desktop UI (.NET 8 + HandyControl) with cyberpunk theme, glitch title, custom chrome.
@@ -34,3 +58,4 @@ Initial public release.
 
 [Unreleased]: https://github.com/LXBStudioLLC/envoy/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/LXBStudioLLC/envoy/releases/tag/v1.0.0
+[0.2.0-beta]: https://github.com/LXBStudioLLC/envoy/releases/tag/v0.2.0-beta

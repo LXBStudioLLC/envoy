@@ -11,6 +11,7 @@ public class PostingAgeSignal : IGhostSignal
 {
     public string Name => "Posting Age";
     public SignalTier Tier => SignalTier.Probabilistic;
+    public bool RequiresNetwork => false;
 
     public Task<SignalResult?> EvaluateAsync(JobPosting posting, CancellationToken ct = default)
     {

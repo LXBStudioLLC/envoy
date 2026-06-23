@@ -1,3 +1,4 @@
+using Envoy.Core.Configuration;
 using Envoy.Core.Services;
 using System.Windows;
 using System.Windows.Controls;
@@ -22,6 +23,7 @@ public class BrowserCard
 public partial class BrowserSelectionView : UserControl
 {
     private readonly IBrowserLauncher _browserLauncher;
+    private readonly EnvoySettings _settings;
     private List<BrowserCard> _cards = new();
 
     private static readonly Dictionary<BrowserType, string> BrowserIcons = new()
@@ -33,15 +35,17 @@ public partial class BrowserSelectionView : UserControl
         { BrowserType.Vivaldi, "\u2605" }
     };
 
-    public BrowserSelectionView(IBrowserLauncher browserLauncher)
+    public BrowserSelectionView(IBrowserLauncher browserLauncher, EnvoySettings settings)
     {
         _browserLauncher = browserLauncher;
+        _settings = settings;
         InitializeComponent();
         Loaded += BrowserSelectionView_Loaded;
     }
 
     private async void BrowserSelectionView_Loaded(object sender, RoutedEventArgs e)
     {
+        RefreshStealthStatus();
         try
         {
             await ScanBrowsersAsync();
@@ -133,5 +137,48 @@ public partial class BrowserSelectionView : UserControl
         {
             System.Diagnostics.Debug.WriteLine($"[BrowserSelectionView] Rescan failed: {ex}");
         }
+    }
+
+    private void RefreshStealthStatus()
+    {
+        if (_settings.StealthModeEnabled)
+        {
+            StealthStatusText.Text = "ENABLED";
+            StealthStatusText.Foreground = Green;
+            BtnToggleStealth.Content = "DISABLE STEALTH INPUT";
+        }
+        else
+        {
+            StealthStatusText.Text = "DISABLED";
+            StealthStatusText.Foreground = Gray;
+            BtnToggleStealth.Content = "ENABLE STEALTH INPUT";
+        }
+    }
+
+    private void BtnToggleStealth_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_settings.StealthModeEnabled)
+        {
+            // Guarded enable: deliberate acknowledgement before turning stealth input on.
+            var result = MessageBox.Show(
+                "Enable stealth input emulation?\n\n" +
+                "This makes Envoy type and move the mouse with human-like timing during the form-fill, " +
+                "in the human-gated apply flow only. It does NOT solve CAPTCHAs and is NEVER used for " +
+                "scraping or job discovery.\n\n" +
+                "You are responsible for complying with the terms of use of any site you apply to. " +
+                "Enable only if you understand and accept that.",
+                "Enable Stealth Input",
+                MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes) return;
+            _settings.StealthModeEnabled = true;
+        }
+        else
+        {
+            _settings.StealthModeEnabled = false;
+        }
+
+        _settings.Save();
+        RefreshStealthStatus();
     }
 }

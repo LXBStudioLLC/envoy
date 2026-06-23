@@ -15,6 +15,13 @@ public interface IGhostSignal
     SignalTier Tier { get; }
 
     /// <summary>
+    /// True if <see cref="EvaluateAsync"/> performs a network call. Consumers scoring
+    /// many postings at once (e.g. the discovery results list) can request local-only
+    /// scoring to stay responsive and avoid one outbound request per posting.
+    /// </summary>
+    bool RequiresNetwork { get; }
+
+    /// <summary>
     /// Evaluate a job posting. Return <c>null</c> when the signal has no opinion
     /// (e.g. data source unavailable, unsupported board, or insufficient information).
     /// </summary>

@@ -16,7 +16,15 @@ public class EnvoySettings
     public string PreferredModel { get; set; } = "qwen2.5-coder:14b";
     public string ChromeDebuggingPort { get; set; } = "9222";
     public bool AutoLaunchChrome { get; set; } = true;
-    public ExecutionMode DefaultMode { get; set; } = ExecutionMode.Stealth;
+    public ExecutionMode DefaultMode { get; set; } = ExecutionMode.Safe;
+
+    /// <summary>
+    /// Master gate for human-cadence input emulation (Bezier mouse paths, typing jitter)
+    /// in the apply copilot. OFF by default and must be explicitly, deliberately enabled
+    /// from the Browser view. When false, the form is filled with plain, direct input and
+    /// the Stealth execution mode is not offered.
+    /// </summary>
+    public bool StealthModeEnabled { get; set; } = false;
     public bool CaptureScreenshots { get; set; } = true;
     public string TemplatesPath { get; set; } = "";
     public int TypingSpeedVariance { get; set; } = 35;
@@ -30,6 +38,7 @@ public class EnvoySettings
     public string? OpenAIApiKeyEncrypted { get; set; }
     public string? AnthropicApiKeyEncrypted { get; set; }
     public string? GeminiApiKeyEncrypted { get; set; }
+    public string? BraveSearchApiKeyEncrypted { get; set; }
 
     [JsonIgnore]
     public string? OpenAIApiKey
@@ -50,6 +59,17 @@ public class EnvoySettings
     {
         get => Decrypt(GeminiApiKeyEncrypted);
         set => GeminiApiKeyEncrypted = Encrypt(value);
+    }
+
+    /// <summary>
+    /// Optional Brave Search API key (X-Subscription-Token) used by the job-discovery
+    /// web-search source. Stored DPAPI-encrypted like the LLM provider keys.
+    /// </summary>
+    [JsonIgnore]
+    public string? BraveSearchApiKey
+    {
+        get => Decrypt(BraveSearchApiKeyEncrypted);
+        set => BraveSearchApiKeyEncrypted = Encrypt(value);
     }
 
     public static EnvoySettings Load()

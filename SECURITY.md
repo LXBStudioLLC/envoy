@@ -6,8 +6,8 @@ Envoy is in active development. Security fixes are issued against the latest rel
 
 | Version | Supported |
 |---------|-----------|
-| 0.2.x (current beta) | Yes |
-| < 0.2   | No |
+| 1.0.x (current stable) | Yes |
+| < 1.0   | No |
 
 ## Reporting a vulnerability
 

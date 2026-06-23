@@ -14,6 +14,8 @@
     <ProjectReference Include="..\Envoy.Core\Envoy.Core.csproj" />
     <ProjectReference Include="..\Envoy.Assets\Envoy.Assets.csproj" />
     <ProjectReference Include="..\Envoy.Templates\Envoy.Templates.csproj" />
+    <ProjectReference Include="..\Envoy.GhostDetection\Envoy.GhostDetection.csproj" />
+    <ProjectReference Include="..\Envoy.Discovery\Envoy.Discovery.csproj" />
   </ItemGroup>
 
   <ItemGroup>

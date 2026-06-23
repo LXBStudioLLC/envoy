@@ -40,6 +40,7 @@ public class RepostFrequencySignal : IGhostSignal
 {
     public string Name => "Repost Frequency";
     public SignalTier Tier => SignalTier.Weak;
+    public bool RequiresNetwork => false;
 
     private const double UnchangedSimilarityThreshold = 0.95;
     private const int MaxHistoryEntries = 24;

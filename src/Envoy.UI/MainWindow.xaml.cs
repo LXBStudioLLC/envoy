@@ -12,6 +12,7 @@ namespace Envoy.UI;
 public partial class MainWindow : Window
 {
     private readonly DashboardView _dashboard;
+    private readonly FindJobsView _find;
     private readonly ApplyView _apply;
     private readonly VaultView _vault;
     private readonly BrowserSelectionView _browser;
@@ -23,9 +24,10 @@ public partial class MainWindow : Window
     private readonly TranslateTransform _titleTransform = new(0, 0);
     private Random _rng = new();
 
-    public MainWindow(DashboardView dashboard, ApplyView apply, VaultView vault, BrowserSelectionView browser, LLMSettingsView llmSettings, IBrowserLauncher browserLauncher, HardwareProfiler hardwareProfiler)
+    public MainWindow(DashboardView dashboard, FindJobsView find, ApplyView apply, VaultView vault, BrowserSelectionView browser, LLMSettingsView llmSettings, IBrowserLauncher browserLauncher, HardwareProfiler hardwareProfiler)
     {
         _dashboard = dashboard;
+        _find = find;
         _apply = apply;
         _vault = vault;
         _browser = browser;
@@ -187,6 +189,8 @@ public partial class MainWindow : Window
     {
         NavDashboard.Background = active == "Dashboard" ? NavActiveBg : Transparent;
         NavDashboard.Foreground = active == "Dashboard" ? Cyan : Gray;
+        NavFind.Background = active == "Find" ? NavActiveBg : Transparent;
+        NavFind.Foreground = active == "Find" ? Cyan : Gray;
         NavApply.Background = active == "Apply" ? NavActiveBg : Transparent;
         NavApply.Foreground = active == "Apply" ? Cyan : Gray;
         NavVault.Background = active == "Vault" ? NavActiveBg : Transparent;
@@ -201,6 +205,12 @@ public partial class MainWindow : Window
     {
         NavigateTo(_dashboard);
         UpdateNavButtons("Dashboard");
+    }
+
+    private void NavFind_Click(object sender, RoutedEventArgs e)
+    {
+        NavigateTo(_find);
+        UpdateNavButtons("Find");
     }
 
     private void NavApply_Click(object sender, RoutedEventArgs e)
