@@ -11,7 +11,11 @@ public static class ServiceRegistration
 {
     public static IServiceCollection AddEnvoyCore(this IServiceCollection services)
     {
-        services.AddDbContext<EnvoyDbContext>();
+        // A factory (not a scoped context) so the singleton views that hold repositories
+        // never capture a long-lived DbContext. Each repository creates a short-lived
+        // context per operation, so there's no shared change tracker and no concurrent-
+        // access crash.
+        services.AddDbContextFactory<EnvoyDbContext>();
 
         services.AddScoped<IProfileRepository, ProfileRepository>();
         services.AddScoped<ITailoredProfileRepository, TailoredProfileRepository>();

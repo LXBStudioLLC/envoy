@@ -16,18 +16,19 @@ public interface IProfileRepository
 
 public class ProfileRepository : IProfileRepository
 {
-    private readonly EnvoyDbContext _db;
+    private readonly IDbContextFactory<EnvoyDbContext> _factory;
     private readonly ILogger<ProfileRepository> _log;
 
-    public ProfileRepository(EnvoyDbContext db, ILogger<ProfileRepository> log)
+    public ProfileRepository(IDbContextFactory<EnvoyDbContext> factory, ILogger<ProfileRepository> log)
     {
-        _db = db;
+        _factory = factory;
         _log = log;
     }
 
     public async Task<List<MasterProfile>> GetAllAsync(CancellationToken ct = default)
     {
-        return await _db.MasterProfiles
+        using var db = _factory.CreateDbContext();
+        return await db.MasterProfiles
             .AsNoTracking()
             .Include(p => p.Experience)
             .Include(p => p.Education)
@@ -38,7 +39,8 @@ public class ProfileRepository : IProfileRepository
 
     public async Task<MasterProfile?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        return await _db.MasterProfiles
+        using var db = _factory.CreateDbContext();
+        return await db.MasterProfiles
             .AsNoTracking()
             .Include(p => p.Experience)
             .Include(p => p.Education)
@@ -48,31 +50,33 @@ public class ProfileRepository : IProfileRepository
 
     public async Task AddAsync(MasterProfile profile, CancellationToken ct = default)
     {
-        _db.MasterProfiles.Add(profile);
-        await _db.SaveChangesAsync(ct);
+        using var db = _factory.CreateDbContext();
+        db.MasterProfiles.Add(profile);
+        await db.SaveChangesAsync(ct);
     }
 
     public async Task UpdateAsync(MasterProfile profile, CancellationToken ct = default)
     {
-        var tracked = await _db.MasterProfiles.FindAsync(new object[] { profile.Id }, ct);
+        using var db = _factory.CreateDbContext();
+        var tracked = await db.MasterProfiles.FindAsync(new object[] { profile.Id }, ct);
         if (tracked == null) return;
 
-        _db.Entry(tracked).CurrentValues.SetValues(profile);
+        db.Entry(tracked).CurrentValues.SetValues(profile);
         tracked.Skills = profile.Skills;
         tracked.Anomalies = profile.Anomalies;
 
-        await _db.Entry(tracked).Collection(p => p.Experience).LoadAsync(ct);
-        await _db.Entry(tracked).Collection(p => p.Education).LoadAsync(ct);
-        await _db.Entry(tracked).Collection(p => p.Projects).LoadAsync(ct);
+        await db.Entry(tracked).Collection(p => p.Experience).LoadAsync(ct);
+        await db.Entry(tracked).Collection(p => p.Education).LoadAsync(ct);
+        await db.Entry(tracked).Collection(p => p.Projects).LoadAsync(ct);
 
-        ReplaceOwnedCollection(tracked.Experience, profile.Experience, _db);
-        ReplaceOwnedCollection(tracked.Education, profile.Education, _db);
-        ReplaceOwnedCollection(tracked.Projects, profile.Projects, _db);
+        ReplaceOwnedCollection(tracked.Experience, profile.Experience);
+        ReplaceOwnedCollection(tracked.Education, profile.Education);
+        ReplaceOwnedCollection(tracked.Projects, profile.Projects);
 
-        await _db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct);
     }
 
-    private static void ReplaceOwnedCollection<T>(ICollection<T> tracked, ICollection<T> updated, EnvoyDbContext db)
+    private static void ReplaceOwnedCollection<T>(ICollection<T> tracked, ICollection<T> updated)
     {
         tracked.Clear();
         foreach (var item in updated)
@@ -81,11 +85,12 @@ public class ProfileRepository : IProfileRepository
 
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {
-        var profile = await _db.MasterProfiles.FindAsync(new object[] { id }, ct);
+        using var db = _factory.CreateDbContext();
+        var profile = await db.MasterProfiles.FindAsync(new object[] { id }, ct);
         if (profile != null)
         {
-            _db.MasterProfiles.Remove(profile);
-            await _db.SaveChangesAsync(ct);
+            db.MasterProfiles.Remove(profile);
+            await db.SaveChangesAsync(ct);
         }
     }
 }
@@ -102,25 +107,27 @@ public interface ITailoredProfileRepository
 
 public class TailoredProfileRepository : ITailoredProfileRepository
 {
-    private readonly EnvoyDbContext _db;
+    private readonly IDbContextFactory<EnvoyDbContext> _factory;
     private readonly ILogger<TailoredProfileRepository> _log;
 
-    public TailoredProfileRepository(EnvoyDbContext db, ILogger<TailoredProfileRepository> log)
+    public TailoredProfileRepository(IDbContextFactory<EnvoyDbContext> factory, ILogger<TailoredProfileRepository> log)
     {
-        _db = db;
+        _factory = factory;
         _log = log;
     }
 
     public async Task<TailoredProfile?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        return await _db.TailoredProfiles
+        using var db = _factory.CreateDbContext();
+        return await db.TailoredProfiles
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == id, ct);
     }
 
     public async Task<List<TailoredProfile>> GetByMasterProfileIdAsync(Guid masterProfileId, CancellationToken ct = default)
     {
-        return await _db.TailoredProfiles
+        using var db = _factory.CreateDbContext();
+        return await db.TailoredProfiles
             .AsNoTracking()
             .Where(p => p.MasterProfileId == masterProfileId)
             .OrderByDescending(p => p.CreatedAt)
@@ -129,7 +136,8 @@ public class TailoredProfileRepository : ITailoredProfileRepository
 
     public async Task<List<TailoredProfile>> GetAllAsync(CancellationToken ct = default)
     {
-        return await _db.TailoredProfiles
+        using var db = _factory.CreateDbContext();
+        return await db.TailoredProfiles
             .AsNoTracking()
             .OrderByDescending(p => p.CreatedAt)
             .ToListAsync(ct);
@@ -137,24 +145,27 @@ public class TailoredProfileRepository : ITailoredProfileRepository
 
     public async Task AddAsync(TailoredProfile profile, CancellationToken ct = default)
     {
-        _db.TailoredProfiles.Add(profile);
-        await _db.SaveChangesAsync(ct);
+        using var db = _factory.CreateDbContext();
+        db.TailoredProfiles.Add(profile);
+        await db.SaveChangesAsync(ct);
     }
 
     public async Task UpdateAsync(TailoredProfile profile, CancellationToken ct = default)
     {
+        using var db = _factory.CreateDbContext();
         profile.UpdatedAt = DateTime.UtcNow;
-        _db.TailoredProfiles.Update(profile);
-        await _db.SaveChangesAsync(ct);
+        db.TailoredProfiles.Update(profile);
+        await db.SaveChangesAsync(ct);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {
-        var profile = await _db.TailoredProfiles.FindAsync(new object[] { id }, ct);
+        using var db = _factory.CreateDbContext();
+        var profile = await db.TailoredProfiles.FindAsync(new object[] { id }, ct);
         if (profile != null)
         {
-            _db.TailoredProfiles.Remove(profile);
-            await _db.SaveChangesAsync(ct);
+            db.TailoredProfiles.Remove(profile);
+            await db.SaveChangesAsync(ct);
         }
     }
 }
@@ -170,18 +181,19 @@ public interface IApplicationLogRepository
 
 public class ApplicationLogRepository : IApplicationLogRepository
 {
-    private readonly EnvoyDbContext _db;
+    private readonly IDbContextFactory<EnvoyDbContext> _factory;
     private readonly ILogger<ApplicationLogRepository> _log;
 
-    public ApplicationLogRepository(EnvoyDbContext db, ILogger<ApplicationLogRepository> log)
+    public ApplicationLogRepository(IDbContextFactory<EnvoyDbContext> factory, ILogger<ApplicationLogRepository> log)
     {
-        _db = db;
+        _factory = factory;
         _log = log;
     }
 
     public async Task<List<ApplicationLog>> GetAllAsync(CancellationToken ct = default)
     {
-        return await _db.ApplicationLogs
+        using var db = _factory.CreateDbContext();
+        return await db.ApplicationLogs
             .AsNoTracking()
             .OrderByDescending(l => l.StartedAt)
             .ToListAsync(ct);
@@ -189,26 +201,30 @@ public class ApplicationLogRepository : IApplicationLogRepository
 
     public async Task<ApplicationLog?> GetByIdAsync(Guid id, CancellationToken ct = default)
     {
-        return await _db.ApplicationLogs
+        using var db = _factory.CreateDbContext();
+        return await db.ApplicationLogs
             .AsNoTracking()
             .FirstOrDefaultAsync(l => l.Id == id, ct);
     }
 
     public async Task AddAsync(ApplicationLog log, CancellationToken ct = default)
     {
-        _db.ApplicationLogs.Add(log);
-        await _db.SaveChangesAsync(ct);
+        using var db = _factory.CreateDbContext();
+        db.ApplicationLogs.Add(log);
+        await db.SaveChangesAsync(ct);
     }
 
     public async Task UpdateAsync(ApplicationLog log, CancellationToken ct = default)
     {
-        _db.ApplicationLogs.Update(log);
-        await _db.SaveChangesAsync(ct);
+        using var db = _factory.CreateDbContext();
+        db.ApplicationLogs.Update(log);
+        await db.SaveChangesAsync(ct);
     }
 
     public async Task<ApplicationLog?> GetByTailoredProfileIdAsync(Guid tailoredProfileId, CancellationToken ct = default)
     {
-        return await _db.ApplicationLogs
+        using var db = _factory.CreateDbContext();
+        return await db.ApplicationLogs
             .AsNoTracking()
             .FirstOrDefaultAsync(l => l.TailoredProfileId == tailoredProfileId, ct);
     }
