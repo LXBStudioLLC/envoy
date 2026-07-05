@@ -54,6 +54,8 @@ public class ResumePdfGenerator : IResumePdfGenerator
     {
         container.Column(column =>
         {
+            BuildHeader(column.Item(), profile);
+
             if (!string.IsNullOrWhiteSpace(profile.Summary))
             {
                 column.Item().Text("SUMMARY").Bold().FontSize(11);
