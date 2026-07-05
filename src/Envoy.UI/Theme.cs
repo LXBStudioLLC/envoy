@@ -17,6 +17,7 @@ internal static class Theme
     public static readonly SolidColorBrush Muted = Freeze(new SolidColorBrush(Color.FromRgb(0x88, 0x92, 0xA4)));
     public static readonly SolidColorBrush TextFg = Freeze(new SolidColorBrush(Color.FromRgb(0xE0, 0xE6, 0xF0)));
     public static readonly SolidColorBrush Surface = Freeze(new SolidColorBrush(Color.FromRgb(0x11, 0x18, 0x27)));
+    public static readonly SolidColorBrush CardSurface = Freeze(new SolidColorBrush(Color.FromRgb(0x1A, 0x22, 0x35)));
     public static readonly SolidColorBrush Background = Freeze(new SolidColorBrush(Color.FromRgb(0x0A, 0x0E, 0x17)));
     public static readonly SolidColorBrush BorderColor = Freeze(new SolidColorBrush(Color.FromRgb(0x1A, 0x3A, 0x4A)));
     public static readonly SolidColorBrush NavActiveBg = Freeze(new SolidColorBrush(Color.FromArgb(40, 0, 240, 255)));

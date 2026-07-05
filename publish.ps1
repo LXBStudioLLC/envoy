@@ -85,7 +85,7 @@ if (Test-Path "THIRD-PARTY-NOTICES.md") {
 Write-Host "Creating launcher script..." -ForegroundColor Yellow
 $StartScriptContent = "@echo off`nchcp 65001 >nul`necho.`necho  Envoy Job Application Agent`necho.`necho  Starting Envoy...`necho.`n`n:: Check if Ollama is running (optional - only needed for local models)`ncurl -s http://localhost:11434 >nul 2>&1`nif errorlevel 1 (`n    echo  Note: Ollama is not running. That's fine if you only use cloud LLM providers.`n    echo  For local LLMs install Ollama: https://ollama.com/download`n    echo.`n)`n`n:: Start Envoy`nstart `"`" `"%~dp0Envoy.exe`""
 
-$StartScriptContent | Out-File -FilePath "$PublishPath/Start Envoy.bat" -Encoding UTF8
+$StartScriptContent | Out-File -FilePath "$PublishPath/Start Envoy.bat" -Encoding ascii
 
 # Create README
 Write-Host "Creating package README..." -ForegroundColor Yellow

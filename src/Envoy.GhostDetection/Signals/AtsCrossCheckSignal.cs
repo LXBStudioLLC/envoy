@@ -129,8 +129,6 @@ public class AtsCrossCheckSignal : IGhostSignal
             var segments = uri.Segments;
             for (int i = 0; i < segments.Length - 1; i++)
             {
-                if (segments[i].Trim('/').Equals("boards.greenhouse.io", StringComparison.OrdinalIgnoreCase))
-                    continue;
                 if (segments[i].Trim('/').Equals("jobs", StringComparison.OrdinalIgnoreCase))
                     return null;
                 var seg = segments[i].Trim('/');
@@ -152,8 +150,6 @@ public class AtsCrossCheckSignal : IGhostSignal
             for (int i = 0; i < segments.Length; i++)
             {
                 var seg = segments[i].Trim('/');
-                if (seg.Equals("jobs.lever.co", StringComparison.OrdinalIgnoreCase))
-                    continue;
                 if (!string.IsNullOrEmpty(seg))
                     return seg;
             }

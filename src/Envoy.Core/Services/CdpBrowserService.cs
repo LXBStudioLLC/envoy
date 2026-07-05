@@ -160,8 +160,8 @@ public class CdpBrowserService : ICdpCommandExecutor, IPageInteractor, IBrowserL
             int vkCode;
             if (char.IsLetter(ch))
             {
-                code = $"Key{char.ToUpper(ch)}";
-                vkCode = (int)char.ToUpper(ch);
+                code = $"Key{char.ToUpperInvariant(ch)}";
+                vkCode = (int)char.ToUpperInvariant(ch);
             }
             else if (char.IsDigit(ch))
             {
@@ -433,7 +433,7 @@ public class CdpBrowserService : ICdpCommandExecutor, IPageInteractor, IBrowserL
     private async Task ReceiveLoop(CancellationToken ct)
     {
         var buffer = new byte[131072];
-        var messageBuilder = new MemoryStream();
+        using var messageBuilder = new MemoryStream();
 
         while (!ct.IsCancellationRequested && _webSocket?.State == WebSocketState.Open)
         {

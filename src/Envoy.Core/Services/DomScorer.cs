@@ -71,7 +71,7 @@ public static class DomScorer
         foreach (var candidate in matchable)
         {
             var score = ScoreCandidate(fingerprint, candidate);
-            if (score >= bestScore)
+            if (score > bestScore)
             {
                 bestScore = score;
                 best = candidate;
