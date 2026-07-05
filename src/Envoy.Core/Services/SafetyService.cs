@@ -39,6 +39,11 @@ public class SafetyService
 
     public SafetyResult ValidateTailoredProfile(MasterProfile original, MasterProfile tailored, string jobDescription)
     {
+        // The tailored profile comes from LLM JSON, which can emit explicit nulls that
+        // overwrite the `= new()` collection initializers. Normalize so nothing below NREs.
+        Normalize(original);
+        Normalize(tailored);
+
         var result = new SafetyResult { Passed = true };
 
         CheckFactualIntegrity(original, tailored, result);
@@ -68,6 +73,16 @@ public class SafetyService
             result.Passed ? "PASSED" : "FAILED", result.Violations.Count);
 
         return result;
+    }
+
+    private static void Normalize(MasterProfile p)
+    {
+        p.Skills ??= new();
+        p.Experience ??= new();
+        p.Education ??= new();
+        p.Projects ??= new();
+        foreach (var e in p.Experience)
+            e.Bullets ??= new();
     }
 
     private void CheckFactualIntegrity(MasterProfile original, MasterProfile tailored, SafetyResult result)
@@ -102,7 +117,7 @@ public class SafetyService
 
                     if (!isDerivedFromOriginal)
                     {
-                        var longestOriginal = match.Bullets.Max(b => b.Length);
+                        var longestOriginal = match.Bullets.Count > 0 ? match.Bullets.Max(b => b.Length) : 0;
                         if (bullet.Length > longestOriginal * 1.5)
                         {
                             result.Violations.Add(new SafetyViolation
