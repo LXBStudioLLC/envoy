@@ -4,7 +4,19 @@
 
 Envoy is a privacy-first Windows desktop application that **scores how likely a job posting is a waste of your time** — with transparent evidence: a risk score, confidence level, and human-readable reasons. It reads only public, sanctioned data (company ATS feeds, optional official web search, the posting already in front of you) and never makes a binary "fake" verdict on a named company.
 
-The existing resume-tailoring + form-fill assistant remains as a **human-gated copilot** — Envoy prepares your application, but you review and submit it. There is no autonomous batch-apply loop and no CAPTCHA solving.
+The resume-tailoring + form-fill assistant is a **human-gated copilot** today — Envoy prepares your application, and you review and submit it. Fuller automation is on the roadmap, and by design it only ever runs on **employer-owned and ATS-hosted career sites**; aggregators like LinkedIn and Indeed stay copilot-only. Envoy never solves CAPTCHAs — if a site challenges it, control returns to you.
+
+## Download (beta)
+
+**[⬇ Download the latest release](https://github.com/LXBStudioLLC/envoy/releases/latest)** — Windows 10/11, 64-bit.
+
+- **Installer** (`Envoy-<version>-setup.exe`) — recommended. Digitally signed by **LXBSTUDIO LLC** (Azure Trusted Signing).
+- **Portable ZIP** (`Envoy-<version>-win-x64.zip`) — extract anywhere and run `Envoy.exe`; nothing to install.
+- **No .NET runtime required** — the build is self-contained.
+
+Every release ships a `SHA256SUMS.txt` so you can verify your download. The installer is signed, but because the app is new, Windows SmartScreen may still prompt the first few times while the signature builds reputation — the publisher will read **LXBSTUDIO LLC**, and the checksum confirms the rest.
+
+> **Zero-setup:** ghost detection and the **Find Jobs** view work immediately — no LLM, no Ollama, no API key. A local model (Ollama) is only needed for the resume-tailoring copilot.
 
 ## Ghost Detection
 
@@ -65,9 +77,9 @@ Envoy can also help you apply to individual jobs:
 - **Adaptive Parser:** Self-healing element locator uses structural fingerprints to recover from DOM changes.
 - **Ghost Risk panel:** The Apply view shows the posting's risk band, confidence, and evidence before you invest time tailoring a resume.
 
-**Before any form is submitted**, the submit click is **blocking in every execution mode** — Envoy fills the form, then stops and waits for your explicit **Confirm** or **Cancel**. The default Operation Mode is now **Safe**. (The optional Stealth mode only changes *how* text is typed; it never bypasses the submit confirmation.)
+**Before any form is submitted**, the submit click is **blocking in every execution mode** — Envoy fills the form, then stops and waits for your explicit **Confirm** or **Cancel**. The default Operation Mode is **Safe**. (The optional Stealth mode only changes *how* text is typed; it never bypasses the submit confirmation.)
 
-> **Note:** Auto-submitting job applications can violate a site's Terms of Service and may result in account bans. Envoy requires human review for every submission.
+> **Note:** Envoy requires your explicit review before every submission today. Fuller automation on the roadmap stays scoped to employer-owned and ATS-hosted career sites — never aggregators like LinkedIn or Indeed.
 
 ## Local by default. Cloud is opt-in.
 
@@ -86,12 +98,12 @@ Envoy runs entirely on your machine using Ollama and a local LLM — that's the 
 | **PDF Parsing** | PdfPig + local LLM post-processor |
 | **PDF Generation** | QuestPDF |
 | **Browser** | Raw WebSocket → Chrome DevTools Protocol |
-| **Form Fill** | Natural typing cadence + randomized mouse paths (review before submit) |
+| **Form Fill** | Plain synthetic input by default; optional human-cadence typing/mouse mode — never bypasses the submit confirmation |
 
 ## Requirements
 
 - **Windows 10/11 (64-bit).** Envoy is a WPF desktop application; macOS/Linux are not supported.
-- **Ollama** installed and running locally (skip if you only intend to use a cloud provider).
+- **Ollama** *(optional)* — only for the resume-tailoring copilot. Ghost detection and Find Jobs need no LLM at all. Skip it if you'll use a cloud provider or only want ghost detection.
 - **Google Chrome** or **Microsoft Edge** installed.
 - **GPU recommended:** 8GB+ VRAM for best local-LLM experience. CPU-only mode supported with smaller models.
 
@@ -122,15 +134,20 @@ Output: `artifacts/Envoy-v1.0.0-win-x64.zip`
 2. Compile `setup.iss`
 3. Output: `artifacts/Envoy-v1.0.0-setup.exe`
 
-### Windows (PowerShell Installer)
-Extract the ZIP and run:
+### Windows (PowerShell installer, from a clone)
+After building the ZIP, install to `%LOCALAPPDATA%\Envoy` with shortcuts:
 ```powershell
 .\install.ps1
 ```
+The portable ZIP itself contains `Envoy.exe` and `Start Envoy.bat` — just extract and run, no installer needed.
 
 ## Contributing
 
 The fastest way to help out is **authoring a ghost signal**. See [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) for the step-by-step guide. The framework auto-discovers signals at runtime — no manual registration needed.
+
+## Feedback & bug reports
+
+Found a bug or a false flag? [Open an issue](https://github.com/LXBStudioLLC/envoy/issues/new/choose). A good report includes your Envoy version, your Windows version, and — if it crashed — the log at `%LOCALAPPDATA%\Envoy\crash.log` (redact anything personal first). Envoy is precision-first, so a **real** job flagged as a possible ghost is the worst-case outcome — those reports are especially valuable.
 
 ## License
 
@@ -148,4 +165,5 @@ The fastest way to help out is **authoring a ghost signal**. See [CONTRIBUTING.m
 - [x] Vault UI for profile history and corrections
 - [x] Adaptive parser with self-healing element locator
 - [x] Cloud LLM providers (OpenAI, Anthropic, Gemini) — opt-in, DPAPI-encrypted keys
+- [ ] Full-auto apply for employer-owned & ATS career sites (aggregators always stay copilot-only)
 - [ ] Multi-resume / multi-profile workflows
