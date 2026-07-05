@@ -67,10 +67,10 @@
                                             <TextBlock FontSize="11" Foreground="#8892A4" FontFamily="{StaticResource CyberFontBody}" Margin="8,0,0,0" VerticalAlignment="Center" Text="{Binding Endpoint}"/>
                                         </StackPanel>
                                         <TextBlock FontSize="11" Foreground="#8892A4" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,2">
-                                            <Run Text="STATUS: "/><Run Text="{Binding StatusText}"/>
+                                            <Run Text="STATUS: "/><Run Text="{Binding StatusText, Mode=OneWay}"/>
                                         </TextBlock>
                                         <TextBlock FontSize="11" Foreground="#8892A4" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,2">
-                                            <Run Text="MODELS: "/><Run Text="{Binding ModelCountText}"/>
+                                            <Run Text="MODELS: "/><Run Text="{Binding ModelCountText, Mode=OneWay}"/>
                                         </TextBlock>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">

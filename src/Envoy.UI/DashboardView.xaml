@@ -52,14 +52,14 @@
                                 <StackPanel>
                                     <TextBlock Text="{Binding Name}" Foreground="#E0E6F0" FontSize="14" FontWeight="Bold" FontFamily="{StaticResource CyberFontBody}"/>
                                     <TextBlock Foreground="#8892A4" FontSize="11" FontFamily="{StaticResource CyberFontBody}">
-                                        <Run Text="{Binding Email}"/><Run Text=" | "/><Run Text="{Binding Phone}"/>
+                                        <Run Text="{Binding Email, Mode=OneWay}"/><Run Text=" | "/><Run Text="{Binding Phone, Mode=OneWay}"/>
                                     </TextBlock>
                                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                                         <TextBlock Foreground="#00F0FF" FontSize="11" FontFamily="{StaticResource CyberFontBody}">
-                                            <Run Text="&#x1F4BC; "/><Run Text="{Binding Experience.Count}"/><Run Text=" positions"/>
+                                            <Run Text="&#x1F4BC; "/><Run Text="{Binding Experience.Count, Mode=OneWay}"/><Run Text=" positions"/>
                                         </TextBlock>
                                         <TextBlock Foreground="#39FF14" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="12,0,0,0">
-                                            <Run Text="&#x1F3AF; "/><Run Text="{Binding Skills.Count}"/><Run Text=" skills"/>
+                                            <Run Text="&#x1F3AF; "/><Run Text="{Binding Skills.Count, Mode=OneWay}"/><Run Text=" skills"/>
                                         </TextBlock>
                                     </StackPanel>
                                 </StackPanel>
