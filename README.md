@@ -26,15 +26,16 @@ Envoy analyzes job postings through an extensible **signal framework**:
 - **Probabilistic signals** — strong correlational evidence (e.g. the posting has been live far longer than is typical for its seniority).
 - **Weak signals** — noisy indicators that add to the evidence list (e.g. the description is a near-duplicate of another company's post, or the same role is repeatedly reposted unchanged).
 
-**Five signals ship today, all wired into the running app and unit-tested:**
+**Four signals are active in the running app today, all unit-tested:**
 
 | Signal | Tier | Data |
 |---|---|---|
 | **ATS Cross-Check** | Deterministic | Network — public Greenhouse / Lever ATS APIs |
-| **Posting Age** | Probabilistic | Local |
-| **Duplicate JD** | Weak | Local |
-| **Repost Frequency** | Weak | Local |
+| **Posting Age** | Probabilistic | Local — posting date from the discovery feed |
+| **Duplicate JD** | Weak | Local — cross-company text match within a discovery batch |
 | **Scam Pattern** | Deterministic | Local regex — off-platform redirects, upfront fee/PII asks, crypto/gift-card payment, check/overpayment fraud |
+
+A fifth signal, **Repost Frequency** (Weak), is implemented and unit-tested but stays dormant until Envoy has collected listing history across sessions — persistence this build does not ship yet — so it does not fire today.
 
 Each `IGhostSignal` declares whether it `RequiresNetwork`, so callers can request local-only scoring when ranking many postings at once (e.g. the Find Jobs view) and reserve network calls for a closer look.
 
@@ -54,7 +55,7 @@ Envoy's signal framework is designed for **agent-driven contribution**: pick an 
 
 - **Reference signal**: [`AtsCrossCheckSignal`](src/Envoy.GhostDetection/Signals/AtsCrossCheckSignal.cs) — Greenhouse/Lever cross-check
 - **Dogfood example**: [`PostingAgeSignal`](src/Envoy.GhostDetection/Signals/PostingAgeSignal.cs) — built by following the runbook verbatim
-- **Shipped today**: ATS cross-check, posting age, duplicate JD, repost frequency, scam patterns
+- **Active today**: ATS cross-check, posting age, duplicate JD, scam patterns — plus repost frequency, implemented but dormant until cross-session listing history exists
 - **Open future lanes**: [hiring freeze](https://github.com/LXBStudioLLC/envoy/issues/5) and [PERM filings](https://github.com/LXBStudioLLC/envoy/issues/1) — grab the issue and hand the prompt to your agent
 
 ## Find Jobs

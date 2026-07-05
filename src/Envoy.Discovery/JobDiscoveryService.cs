@@ -1,3 +1,4 @@
+using Envoy.Discovery.Internal;
 using Envoy.Discovery.Models;
 using Envoy.Discovery.Sources;
 using Envoy.GhostDetection.Models;
@@ -67,9 +68,13 @@ public class JobDiscoveryService
 
         await Task.WhenAll(tasks);
 
+        var jobs = ApplyFilter(all, query, requireKeywords: true);
+        // Enrich with a same-batch corpus so DuplicateJdSignal can compare each posting
+        // against the others already fetched (sanctioned data in hand; no extra requests).
+        DuplicateJdCorpus.Attach(jobs);
         return new DiscoveryResult
         {
-            Jobs = ApplyFilter(all, query, requireKeywords: true),
+            Jobs = jobs,
             Errors = errors,
             TotalBeforeFilter = all.Count
         };
@@ -86,9 +91,11 @@ public class JobDiscoveryService
         try
         {
             var results = await _webSearch.SearchAsync(apiKey, query, Math.Clamp(filter.MaxResults, 1, 20), ct);
+            var jobs = ApplyFilter(results.ToList(), filter, requireKeywords: false);
+            DuplicateJdCorpus.Attach(jobs);
             return new DiscoveryResult
             {
-                Jobs = ApplyFilter(results.ToList(), filter, requireKeywords: false),
+                Jobs = jobs,
                 TotalBeforeFilter = results.Count
             };
         }
