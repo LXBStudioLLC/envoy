@@ -115,36 +115,14 @@ public class ApplicationOrchestrator
         if (tailored.SafetyResult.Passed)
         {
             var pdfBytes = _pdfGenerator.Generate(tailored);
-            var envoyDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Envoy");
-            // Company/JobTitle come from an untrusted job posting — sanitize each into a
-            // single filename component so they cannot inject path separators or ".." and
-            // steer the write outside the Envoy folder.
-            var fileName = SanitizeFileComponent(tailored.TailoredData.Name)
-                + "_" + SanitizeFileComponent(tailored.Company)
-                + "_" + SanitizeFileComponent(tailored.JobTitle) + ".pdf";
-            var pdfPath = Path.Combine(envoyDir, fileName);
-            Directory.CreateDirectory(envoyDir);
+            // Shared with TemplateEngine (the upload reader) so the paths always match;
+            // the untrusted Company/JobTitle are sanitized inside ResumeFilePath.
+            var pdfPath = ResumeFilePath.For(tailored.TailoredData.Name, tailored.Company, tailored.JobTitle);
+            Directory.CreateDirectory(Path.GetDirectoryName(pdfPath)!);
             await File.WriteAllBytesAsync(pdfPath, pdfBytes, ct);
         }
 
         return new PreparedApplication(tailored, jobDescription);
-    }
-
-    // Reduce an untrusted display string to a single safe filename component: replace
-    // any invalid file-name character (which on Windows includes '/' and '\\') and
-    // spaces with '_', trim leading/trailing dots and underscores (blocks '..'), and
-    // bound the length so a job posting cannot steer the file write elsewhere.
-    private static string SanitizeFileComponent(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return "unknown";
-        var invalid = Path.GetInvalidFileNameChars();
-        var sb = new System.Text.StringBuilder(value.Length);
-        foreach (var c in value)
-            sb.Append(c == ' ' ? '_' : (Array.IndexOf(invalid, c) >= 0 ? '_' : c));
-        var cleaned = sb.ToString().Trim('.', '_');
-        if (cleaned.Length == 0) return "unknown";
-        return cleaned.Length > 60 ? cleaned[..60] : cleaned;
     }
 
     public async Task<ApplicationLog> SubmitApplicationAsync(

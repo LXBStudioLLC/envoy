@@ -139,6 +139,7 @@ public partial class DashboardView : UserControl
             ChromeDetailLabel.Text = "Click below to retry launching.";
             ChromeDetailLabel.Foreground = Gray;
             BtnLaunchChrome.Content = "◈ LAUNCH BROWSER";
+            BtnLaunchChrome.IsEnabled = true;
         }
     }
 
