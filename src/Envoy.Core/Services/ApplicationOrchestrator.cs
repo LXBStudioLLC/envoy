@@ -1,3 +1,4 @@
+using Envoy.Core.Configuration;
 using Envoy.Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -14,6 +15,7 @@ public class ApplicationOrchestrator
     private readonly ITailoredProfileRepository _tailoredRepo;
     private readonly IApplicationLogRepository _logRepo;
     private readonly IBrowserLauncher _browserLauncher;
+    private readonly EnvoySettings _settings;
     private readonly ILogger<ApplicationOrchestrator> _log;
 
     public ApplicationOrchestrator(
@@ -26,6 +28,7 @@ public class ApplicationOrchestrator
         ITailoredProfileRepository tailoredRepo,
         IApplicationLogRepository logRepo,
         IBrowserLauncher browserLauncher,
+        EnvoySettings settings,
         ILogger<ApplicationOrchestrator> log)
     {
         _parser = parser;
@@ -37,6 +40,7 @@ public class ApplicationOrchestrator
         _tailoredRepo = tailoredRepo;
         _logRepo = logRepo;
         _browserLauncher = browserLauncher;
+        _settings = settings;
         _log = log;
     }
 
@@ -111,15 +115,36 @@ public class ApplicationOrchestrator
         if (tailored.SafetyResult.Passed)
         {
             var pdfBytes = _pdfGenerator.Generate(tailored);
-            var pdfPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Envoy",
-                $"{tailored.TailoredData.Name.Replace(" ", "_")}_{tailored.Company}_{tailored.JobTitle}.pdf");
-            Directory.CreateDirectory(Path.GetDirectoryName(pdfPath)!);
+            var envoyDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Envoy");
+            // Company/JobTitle come from an untrusted job posting — sanitize each into a
+            // single filename component so they cannot inject path separators or ".." and
+            // steer the write outside the Envoy folder.
+            var fileName = SanitizeFileComponent(tailored.TailoredData.Name)
+                + "_" + SanitizeFileComponent(tailored.Company)
+                + "_" + SanitizeFileComponent(tailored.JobTitle) + ".pdf";
+            var pdfPath = Path.Combine(envoyDir, fileName);
+            Directory.CreateDirectory(envoyDir);
             await File.WriteAllBytesAsync(pdfPath, pdfBytes, ct);
         }
 
         return new PreparedApplication(tailored, jobDescription);
+    }
+
+    // Reduce an untrusted display string to a single safe filename component: replace
+    // any invalid file-name character (which on Windows includes '/' and '\\') and
+    // spaces with '_', trim leading/trailing dots and underscores (blocks '..'), and
+    // bound the length so a job posting cannot steer the file write elsewhere.
+    private static string SanitizeFileComponent(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "unknown";
+        var invalid = Path.GetInvalidFileNameChars();
+        var sb = new System.Text.StringBuilder(value.Length);
+        foreach (var c in value)
+            sb.Append(c == ' ' ? '_' : (Array.IndexOf(invalid, c) >= 0 ? '_' : c));
+        var cleaned = sb.ToString().Trim('.', '_');
+        if (cleaned.Length == 0) return "unknown";
+        return cleaned.Length > 60 ? cleaned[..60] : cleaned;
     }
 
     public async Task<ApplicationLog> SubmitApplicationAsync(
@@ -183,8 +208,9 @@ public class ApplicationOrchestrator
 
             await _browser.NavigateAsync(tailored.JobUrl, ct);
 
-            // Capture before screenshot
-            log.BeforeScreenshot = await _browser.CaptureScreenshotAsync(ct);
+            // Capture before screenshot (honors the CaptureScreenshots opt-out)
+            if (_settings.CaptureScreenshots)
+                log.BeforeScreenshot = await _browser.CaptureScreenshotAsync(ct);
 
             // CAPTCHA check
             if (await _browser.DetectCaptchaAsync(ct))
@@ -224,8 +250,9 @@ public class ApplicationOrchestrator
                 return approved;
             }, ct);
 
-            // Final screenshot
-            log.AfterScreenshot = await _browser.CaptureScreenshotAsync(ct);
+            // Final screenshot (honors the CaptureScreenshots opt-out)
+            if (_settings.CaptureScreenshots)
+                log.AfterScreenshot = await _browser.CaptureScreenshotAsync(ct);
 
             if (log.Status != ApplicationStatus.SafeModeStopped)
             {
