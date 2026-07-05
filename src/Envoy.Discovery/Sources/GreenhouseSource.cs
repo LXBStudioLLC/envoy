@@ -32,6 +32,9 @@ public class GreenhouseSource : IAtsBoardSource
 
                 var location = Json.TryObj(j, "location", out var loc) ? Json.Str(loc, "name") : "";
                 var updated = Json.Str(j, "updated_at");
+                // Greenhouse exposes first_published for the original post date; use it
+                // for PostedAtUtc so posting-age and repost signals see the real age.
+                var firstPublished = Json.Str(j, "first_published");
 
                 jobs.Add(new JobPosting
                 {
@@ -41,7 +44,7 @@ public class GreenhouseSource : IAtsBoardSource
                     Location = location,
                     DescriptionText = HtmlText.Strip(Json.Str(j, "content")),
                     Url = Json.Str(j, "absolute_url"),
-                    PostedAtUtc = DateParsing.Iso(updated),
+                    PostedAtUtc = DateParsing.Iso(string.IsNullOrWhiteSpace(firstPublished) ? updated : firstPublished),
                     LastUpdatedUtc = DateParsing.Iso(updated),
                     RawSourceId = j.TryGetProperty("id", out var id) ? id.ToString() : null
                 });

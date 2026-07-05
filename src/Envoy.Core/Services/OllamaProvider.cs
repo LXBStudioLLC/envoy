@@ -19,12 +19,14 @@ public class OllamaProvider : ILLMProvider
     private readonly string _endpoint;
     private readonly string _defaultModel;
     private readonly ILogger<OllamaProvider> _log;
+    private readonly OllamaApiClient _apiClient;
 
     public OllamaProvider(string endpoint, string defaultModel, ILogger<OllamaProvider> log)
     {
         _endpoint = endpoint;
         _defaultModel = defaultModel;
         _log = log;
+        _apiClient = new OllamaApiClient(new Uri(endpoint));
     }
 
     public async Task<bool> IsAvailableAsync()
@@ -32,7 +34,7 @@ public class OllamaProvider : ILLMProvider
         try
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-            var response = await Http.GetAsync($"{_endpoint}/api/tags", cts.Token);
+            using var response = await Http.GetAsync($"{_endpoint}/api/tags", cts.Token);
             return response.IsSuccessStatusCode;
         }
         catch
@@ -46,7 +48,7 @@ public class OllamaProvider : ILLMProvider
         try
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-            var response = await Http.GetAsync($"{_endpoint}/api/tags", cts.Token);
+            using var response = await Http.GetAsync($"{_endpoint}/api/tags", cts.Token);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync(cts.Token);
 
@@ -94,13 +96,15 @@ public class OllamaProvider : ILLMProvider
     public async Task<string> CompleteAsync(string prompt, string systemPrompt, string? modelId, CancellationToken ct = default)
     {
         var model = modelId ?? _defaultModel;
-        using var apiClient = new OllamaApiClient(new Uri(_endpoint)) { SelectedModel = model };
+        // Reuse one OllamaApiClient (built in the ctor) instead of creating and
+        // disposing a fresh client, with its own HttpClient, on every call.
+        _apiClient.SelectedModel = model;
 
         try
         {
             var chat = string.IsNullOrWhiteSpace(systemPrompt)
-                ? new Chat(apiClient)
-                : new Chat(apiClient, systemPrompt);
+                ? new Chat(_apiClient)
+                : new Chat(_apiClient, systemPrompt);
 
             var sb = new StringBuilder();
             await foreach (var token in chat.SendAsync(prompt, ct))

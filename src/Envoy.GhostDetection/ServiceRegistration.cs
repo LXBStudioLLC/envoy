@@ -34,6 +34,7 @@ public static class ServiceRegistration
                     .Where(m => m.Name == "AddHttpClient" && m.IsGenericMethodDefinition)
                     .Select(m => new { Method = m, Params = m.GetParameters() })
                     .Where(x => x.Params.Length == 2
+                             && x.Method.GetGenericArguments().Length == 1
                              && x.Params[0].ParameterType == typeof(IServiceCollection)
                              && x.Params[1].ParameterType == typeof(Action<HttpClient>))
                     .Select(x => x.Method)
@@ -43,7 +44,12 @@ public static class ServiceRegistration
                     throw new InvalidOperationException("Could not locate AddHttpClient<T>(IServiceCollection, Action<HttpClient>) extension method.");
 
                 var generic = method.MakeGenericMethod(type);
-                generic.Invoke(null, new object[] { services, new Action<HttpClient>(c => c.Timeout = TimeSpan.FromSeconds(8)) });
+                generic.Invoke(null, new object[] { services, new Action<HttpClient>(c =>
+                {
+                    c.Timeout = TimeSpan.FromSeconds(8);
+                    c.DefaultRequestHeaders.UserAgent.ParseAdd("Envoy/1.0 (+https://github.com/LXBStudioLLC/envoy)");
+                    c.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+                }) });
 
                 // Resolve IGhostSignal THROUGH the typed-client registration so the configured
                 // 8s HttpClient is injected. Bare AddSingleton(typeof(IGhostSignal), type)

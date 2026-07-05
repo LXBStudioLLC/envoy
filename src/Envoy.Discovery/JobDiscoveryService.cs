@@ -55,6 +55,10 @@ public class JobDiscoveryService
                 var jobs = await source.FetchBoardAsync(b.Token, b.CompanyName, ct);
                 lock (all) all.AddRange(jobs);
             }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw; // honor cancellation instead of recording it as a board failure
+            }
             catch (Exception ex)
             {
                 _log.LogWarning(ex, "Discovery board {Ats}/{Token} failed", b.Ats, b.Token);
@@ -98,6 +102,10 @@ public class JobDiscoveryService
                 Jobs = jobs,
                 TotalBeforeFilter = results.Count
             };
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw; // honor cancellation instead of reporting it as a search failure
         }
         catch (Exception ex)
         {
