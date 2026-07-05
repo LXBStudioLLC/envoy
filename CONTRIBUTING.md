@@ -90,6 +90,8 @@ docs/
 
 Open a PR against `main` from a `feature/<name>` branch. The PR template will walk you through the summary, type, test plan, and AGPL agreement checkbox. CI runs `dotnet restore` / `build` / `test` on Windows for every PR — green CI is a prerequisite for review.
 
+**What to expect:** PRs are reviewed by [@LXBStudioLLC](https://github.com/LXBStudioLLC). We aim to give a first response within a few days — if it's been longer, a polite bump on the PR is welcome. **Draft PRs are encouraged** for work in progress or early feedback. If you want to sanity-check an approach *before* writing code, open (or comment on) the relevant [`signal:` issue](https://github.com/LXBStudioLLC/envoy/issues?q=is%3Aissue+label%3Asignal) first — that's cheaper than a rewrite.
+
 If your change adds a new ghost signal, include:
 - The signal name and intended data source
 - Fixture JSON files with labeled sample postings
