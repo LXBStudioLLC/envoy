@@ -96,13 +96,16 @@ public class LLMDetectionService
                 _loggerFactory.CreateLogger<LmStudioProvider>()),
             "openai" => CloudLLMProvider.OpenAI(
                 _settings.OpenAIApiKey ?? "",
-                _loggerFactory.CreateLogger<CloudLLMProvider>()),
+                _loggerFactory.CreateLogger<CloudLLMProvider>(),
+                activeModel),
             "anthropic" => CloudLLMProvider.Anthropic(
                 _settings.AnthropicApiKey ?? "",
-                _loggerFactory.CreateLogger<CloudLLMProvider>()),
+                _loggerFactory.CreateLogger<CloudLLMProvider>(),
+                activeModel),
             "gemini" => CloudLLMProvider.Gemini(
                 _settings.GeminiApiKey ?? "",
-                _loggerFactory.CreateLogger<CloudLLMProvider>()),
+                _loggerFactory.CreateLogger<CloudLLMProvider>(),
+                activeModel),
             _ => new OllamaProvider(
                 "http://localhost:11434",
                 "qwen2.5-coder:14b",

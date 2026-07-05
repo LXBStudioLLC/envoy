@@ -35,14 +35,14 @@ public class CloudLLMProvider : ILLMProvider
         _log = log;
     }
 
-    public static CloudLLMProvider OpenAI(string apiKey, ILogger<CloudLLMProvider> log)
-        => new("openai", "OpenAI", "GPT-4o, GPT-4o-mini via OpenAI API", apiKey, "https://api.openai.com", "gpt-4o-mini", log);
+    public static CloudLLMProvider OpenAI(string apiKey, ILogger<CloudLLMProvider> log, string? model = null)
+        => new("openai", "OpenAI", "GPT-4o / GPT-4o-mini (or your selected model) via OpenAI API", apiKey, "https://api.openai.com", string.IsNullOrWhiteSpace(model) ? "gpt-4o-mini" : model, log);
 
-    public static CloudLLMProvider Anthropic(string apiKey, ILogger<CloudLLMProvider> log)
-        => new("anthropic", "Anthropic", "Claude Opus 4.7, Sonnet 4.6, Haiku 4.5 via Anthropic API", apiKey, "https://api.anthropic.com", "claude-sonnet-4-6", log);
+    public static CloudLLMProvider Anthropic(string apiKey, ILogger<CloudLLMProvider> log, string? model = null)
+        => new("anthropic", "Anthropic", "Claude Opus / Sonnet / Haiku via Anthropic API", apiKey, "https://api.anthropic.com", string.IsNullOrWhiteSpace(model) ? "claude-sonnet-4-6" : model, log);
 
-    public static CloudLLMProvider Gemini(string apiKey, ILogger<CloudLLMProvider> log)
-        => new("gemini", "Google Gemini", "Gemini 1.5 Pro, Flash via Google AI API", apiKey, "https://generativelanguage.googleapis.com", "gemini-1.5-flash", log);
+    public static CloudLLMProvider Gemini(string apiKey, ILogger<CloudLLMProvider> log, string? model = null)
+        => new("gemini", "Google Gemini", "Gemini 2.5 Flash / Pro via Google AI API", apiKey, "https://generativelanguage.googleapis.com", string.IsNullOrWhiteSpace(model) ? "gemini-2.5-flash" : model, log);
 
     private void ApplyAuth(HttpRequestMessage req)
     {
@@ -132,7 +132,23 @@ public class CloudLLMProvider : ILLMProvider
             }
             if (ProviderId == "anthropic")
             {
-                return true;
+                // Anthropic has no public model-list endpoint, so probe with a
+                // minimal 1-token completion. A valid key returns 200 (or a
+                // non-auth error like 400/429); only 401/403 mean the key is bad.
+                var probeBody = JsonSerializer.Serialize(new Dictionary<string, object>
+                {
+                    ["model"] = _defaultModel,
+                    ["max_tokens"] = 1,
+                    ["messages"] = new[] { new { role = "user", content = "ping" } }
+                });
+                using var req = new HttpRequestMessage(HttpMethod.Post, "https://api.anthropic.com/v1/messages")
+                {
+                    Content = new StringContent(probeBody, Encoding.UTF8, "application/json")
+                };
+                ApplyAuth(req);
+                var resp = await Http.SendAsync(req, cts.Token);
+                return resp.StatusCode != HttpStatusCode.Unauthorized
+                    && resp.StatusCode != HttpStatusCode.Forbidden;
             }
             return false;
         }
@@ -214,14 +230,14 @@ public class CloudLLMProvider : ILLMProvider
             if (ProviderId == "anthropic")
             {
                 // Anthropic doesn't expose a public models endpoint, so we
-                // hand-maintain the current Claude 4.x line plus the most
-                // recent 3.5 fallback for users on legacy access tiers.
+                // hand-maintain the current Claude line. Keep in sync with
+                // https://platform.claude.com/docs/en/about-claude/models/overview
                 return new List<LLMModelInfo>
                 {
-                    new() { Id = "claude-opus-4-7", Name = "Claude Opus 4.7", Provider = ProviderId, IsLoaded = true },
+                    new() { Id = "claude-opus-4-8", Name = "Claude Opus 4.8", Provider = ProviderId, IsLoaded = true },
+                    new() { Id = "claude-sonnet-5", Name = "Claude Sonnet 5", Provider = ProviderId, IsLoaded = true },
                     new() { Id = "claude-sonnet-4-6", Name = "Claude Sonnet 4.6", Provider = ProviderId, IsLoaded = true },
-                    new() { Id = "claude-haiku-4-5-20251001", Name = "Claude Haiku 4.5", Provider = ProviderId, IsLoaded = true },
-                    new() { Id = "claude-3-5-sonnet-20241022", Name = "Claude 3.5 Sonnet (legacy)", Provider = ProviderId, IsLoaded = true }
+                    new() { Id = "claude-haiku-4-5-20251001", Name = "Claude Haiku 4.5", Provider = ProviderId, IsLoaded = true }
                 };
             }
 
