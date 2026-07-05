@@ -56,7 +56,6 @@ public class RelocationLogger
                 // to PR against. Surface it.
                 _log?.LogWarning(ex, "Failed to write relocation entry for template {TemplateId} field {Field}",
                     entry.TemplateId, entry.Field);
-                System.Diagnostics.Debug.WriteLine($"[RelocationLogger] Write failed: {ex.Message}");
             }
         });
     }

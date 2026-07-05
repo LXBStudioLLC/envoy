@@ -131,8 +131,8 @@ CRITICAL RULES:
 
     private double CalculateMatchScore(MasterProfile tailored, string jobDescription)
     {
-        var resumeText = System.Text.Json.JsonSerializer.Serialize(tailored).ToLower();
-        var jdWords = jobDescription.ToLower().Split(new[] { ' ', '\n', '\r', '.', ',' }, StringSplitOptions.RemoveEmptyEntries)
+        var resumeText = System.Text.Json.JsonSerializer.Serialize(tailored).ToLowerInvariant();
+        var jdWords = jobDescription.ToLowerInvariant().Split(new[] { ' ', '\n', '\r', '.', ',' }, StringSplitOptions.RemoveEmptyEntries)
             .Where(w => w.Length > 3)
             .Distinct()
             .ToList();

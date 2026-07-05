@@ -82,7 +82,7 @@ public class GhostScorer
         // ── TopEvidence: strongest lines, capped ─────────────────────────
         var topEvidence = results
             .OrderByDescending(r => r.Confidence * (r.Tier == SignalTier.Deterministic ? 10 : r.Tier == SignalTier.Probabilistic ? 3 : 1))
-            .SelectMany(r => r.Evidence)
+            .SelectMany(r => r.Evidence ?? Array.Empty<string>())
             .Distinct()
             .Take(6)
             .ToArray();

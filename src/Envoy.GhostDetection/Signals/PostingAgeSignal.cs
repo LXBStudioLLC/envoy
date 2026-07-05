@@ -55,7 +55,7 @@ public class PostingAgeSignal : IGhostSignal
 
     private static Seniority InferSeniority(string title)
     {
-        var t = title.ToLowerInvariant();
+        var t = (title ?? string.Empty).ToLowerInvariant();
 
         // Executive / very senior
         if (ContainsAny(t, "vice president", "head of") ||
