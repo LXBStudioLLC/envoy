@@ -56,9 +56,9 @@ if ($CreateDesktopShortcut) {
     Write-Host "Creating desktop shortcut..." -ForegroundColor Yellow
     $WshShell = New-Object -ComObject WScript.Shell
     $Shortcut = $WshShell.CreateShortcut("$env:USERPROFILE\Desktop\Envoy.lnk")
-    $Shortcut.TargetPath = "$InstallPath\Envoy.UI.exe"
+    $Shortcut.TargetPath = "$InstallPath\Envoy.exe"
     $Shortcut.WorkingDirectory = $InstallPath
-    $Shortcut.IconLocation = "$InstallPath\Envoy.UI.exe,0"
+    $Shortcut.IconLocation = "$InstallPath\Envoy.exe,0"
     $Shortcut.Description = "Envoy - Job Application Agent"
     $Shortcut.Save()
 }
@@ -70,9 +70,9 @@ if ($CreateStartMenuShortcut) {
     
     $WshShell = New-Object -ComObject WScript.Shell
     $Shortcut = $WshShell.CreateShortcut("$StartMenuPath\Envoy.lnk")
-    $Shortcut.TargetPath = "$InstallPath\Envoy.UI.exe"
+    $Shortcut.TargetPath = "$InstallPath\Envoy.exe"
     $Shortcut.WorkingDirectory = $InstallPath
-    $Shortcut.IconLocation = "$InstallPath\Envoy.UI.exe,0"
+    $Shortcut.IconLocation = "$InstallPath\Envoy.exe,0"
     $Shortcut.Description = "Envoy - Job Application Agent"
     $Shortcut.Save()
 }
@@ -88,13 +88,13 @@ Set-ItemProperty -Path $UninstallRegPath -Name "DisplayName" -Value "Envoy"
 Set-ItemProperty -Path $UninstallRegPath -Name "DisplayVersion" -Value $Version
 Set-ItemProperty -Path $UninstallRegPath -Name "Publisher" -Value "LXB Studio LLC"
 Set-ItemProperty -Path $UninstallRegPath -Name "InstallLocation" -Value $InstallPath
-Set-ItemProperty -Path $UninstallRegPath -Name "DisplayIcon" -Value "$InstallPath\Envoy.UI.exe,0"
+Set-ItemProperty -Path $UninstallRegPath -Name "DisplayIcon" -Value "$InstallPath\Envoy.exe,0"
 Set-ItemProperty -Path $UninstallRegPath -Name "NoModify" -Value 1 -Type DWord
 Set-ItemProperty -Path $UninstallRegPath -Name "NoRepair" -Value 1 -Type DWord
 
-# Cleanup
-if ($TempExtract) {
-    Remove-Item -Path (Split-Path -Parent $TempExtract) -Recurse -Force -ErrorAction SilentlyContinue
+# Cleanup — remove only our own extract dir, never its parent (%TEMP%)
+if ($TempExtract -and (Test-Path $TempExtract)) {
+    Remove-Item -Path $TempExtract -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 Write-Host ""
@@ -111,5 +111,5 @@ Write-Host ""
 # Ask to launch
 $launch = Read-Host "Launch Envoy now? (Y/N)"
 if ($launch -eq 'Y' -or $launch -eq 'y') {
-    Start-Process -FilePath "$InstallPath\Envoy.UI.exe"
+    Start-Process -FilePath "$InstallPath\Envoy.exe"
 }
