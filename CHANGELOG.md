@@ -5,7 +5,7 @@ All notable changes to Envoy are documented in this file. Format is based on [Ke
 ## [Unreleased]
 
 ### Fixed
-- **Ghost signals — honest activity.** `DuplicateJdSignal` was inert at runtime: its comparison corpus (`Extra["dupcheck.corpus"]`) was never populated outside tests, so it always returned null. It is now fed a **same-batch corpus** built from the other postings in each discovery run (sanctioned data already in hand — no extra requests), so it fires on cross-company near-duplicate descriptions. Docs corrected to state that **four** signals are active in the running app (ATS Cross-Check, Posting Age, Duplicate JD, Scam Pattern). **Repost Frequency** remains implemented and unit-tested but dormant until cross-session listing history is persisted, which this build does not ship. Known limitation: Posting Age is active in the Find Jobs list but not yet in the Apply panel (which does not capture a posting date).
+- **Ghost signals: honest activity.** `DuplicateJdSignal` was inert at runtime: its comparison corpus (`Extra["dupcheck.corpus"]`) was never populated outside tests, so it always returned null. It is now fed a **same-batch corpus** built from the other postings in each discovery run (sanctioned data already in hand, no extra requests), so it fires on cross-company near-duplicate descriptions. Docs corrected to state that **four** signals are active in the running app (ATS Cross-Check, Posting Age, Duplicate JD, Scam Pattern). **Repost Frequency** remains implemented and unit-tested but dormant until cross-session listing history is persisted, which this build does not ship. Known limitation: Posting Age is active in the Find Jobs list but not yet in the Apply panel (which does not capture a posting date).
 - **Data-source audit.** Verified every discovery endpoint (Greenhouse, Lever, Ashby, Workable, Recruitee, Brave) is a current, public, sanctioned API used without scraping or anti-bot evasion.
 - `install.ps1` no longer risks deleting the user's `%TEMP%` during cleanup, and targets the correct `Envoy.exe`.
 
@@ -17,22 +17,22 @@ All notable changes to Envoy are documented in this file. Format is based on [Ke
 ### Changed
 - Single-sourced the version via `Directory.Build.props`; the built `Envoy.exe` now carries the real version (previously always stamped 1.0.0.0).
 
-## [1.0.0] — 2026-06-23
+## [1.0.0] - 2026-06-23
 
 Go-live release. Ghost-job detection is now a first-class, in-app feature, and Envoy can discover jobs from sanctioned public sources.
 
 ### Added
-- **Ghost detection wired into the app.** `AddEnvoyGhostDetection()` runs at startup; every prepared application shows a **Ghost Risk** panel — risk band + confidence + human-readable evidence — in the Apply view.
-- **Find Jobs view + `Envoy.Discovery` module.** Sanctioned job discovery that reads **public, unauthenticated ATS board APIs** (Greenhouse, Lever, Ashby, Workable, Recruitee) and an **official, key-gated web-search API** (Brave Search — you supply your own key, stored DPAPI-encrypted). No scraping behind authentication, no anti-bot evasion, no CAPTCHA bypass. Every discovered posting is ghost-scored and shown with a risk badge.
+- **Ghost detection wired into the app.** `AddEnvoyGhostDetection()` runs at startup; every prepared application shows a **Ghost Risk** panel (risk band, confidence, and human-readable evidence) in the Apply view.
+- **Find Jobs view + `Envoy.Discovery` module.** Sanctioned job discovery that reads **public, unauthenticated ATS board APIs** (Greenhouse, Lever, Ashby, Workable, Recruitee) and an **official, key-gated web-search API** (Brave Search, where you supply your own key, stored DPAPI-encrypted). No scraping behind authentication, no anti-bot evasion, no CAPTCHA bypass. Every discovered posting is ghost-scored and shown with a risk badge.
 - **Scam Pattern signal** (Deterministic, local regex): flags off-platform interview redirects (Telegram/WhatsApp), upfront fee / PII asks, crypto / gift-card payment demands, and check / overpayment fraud. Precision-first; evidence describes the pattern, never a verdict on a named company.
 - `IGhostSignal.RequiresNetwork` so callers can request fast, local-only scoring when ranking many postings at once (e.g. the Find Jobs list).
 
 ### Changed
 - **Human-gated submit is now truly blocking.** The final submit click waits for an explicit Confirm / Cancel decision in every execution mode; the default Operation Mode is now **Safe**.
 - **Stealth input emulation is now a guarded, off-by-default opt-in.** Human-cadence typing / mouse movement only runs after you explicitly enable it in the Browser view behind an acknowledgement (`StealthModeEnabled`); otherwise the form is filled with plain input and only Safe mode is offered. It never bypasses CAPTCHAs and is never used for discovery / scraping.
-- Removed the inert `HiringFreezeSignal` and `PermFilingSignal` stubs from the shipped build; they remain tracked as future signals (issues #5 and #1). Envoy ships **five signals**; ATS Cross-Check, Posting Age, and Scam Pattern are active at runtime. (Duplicate JD and Repost Frequency shipped but were not yet fed runtime data — corrected under Unreleased.)
+- Removed the inert `HiringFreezeSignal` and `PermFilingSignal` stubs from the shipped build; they remain tracked as future signals (issues #5 and #1). Envoy ships **five signals**; ATS Cross-Check, Posting Age, and Scam Pattern are active at runtime. (Duplicate JD and Repost Frequency shipped but were not yet fed runtime data; corrected under Unreleased.)
 
-## [0.2.0-beta] — 2026-06-08
+## [0.2.0-beta] - 2026-06-08
 
 Ghost-job detection preview.
 
@@ -41,7 +41,7 @@ Ghost-job detection preview.
 - Signals: ATS Cross-Check (Deterministic, public Greenhouse/Lever APIs), Posting Age (Probabilistic), Duplicate JD (Weak), Repost Frequency (Weak).
 - Fixture-backed xUnit tests with no network calls; reflection-based signal auto-registration.
 
-## [0.1.0] — 2026-05-12
+## [0.1.0] - 2026-05-12
 
 Initial foundation: local-first resume tailoring + human-assisted apply.
 
