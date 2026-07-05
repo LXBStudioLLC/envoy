@@ -9,20 +9,21 @@ public class TailoringEngine
 {
     private readonly OllamaService _ollama;
     private readonly SafetyService _safety;
-    private readonly EnvoyDbContext _db;
+    private readonly IDbContextFactory<EnvoyDbContext> _factory;
     private readonly ILogger<TailoringEngine> _log;
 
-    public TailoringEngine(OllamaService ollama, SafetyService safety, EnvoyDbContext db, ILogger<TailoringEngine> log)
+    public TailoringEngine(OllamaService ollama, SafetyService safety, IDbContextFactory<EnvoyDbContext> dbFactory, ILogger<TailoringEngine> log)
     {
         _ollama = ollama;
         _safety = safety;
-        _db = db;
+        _factory = dbFactory;
         _log = log;
     }
 
     public async Task<TailoredProfile> TailorAsync(Guid masterProfileId, string jobUrl, string jobDescription, CancellationToken ct = default)
     {
-        var master = await _db.MasterProfiles
+        using var db = _factory.CreateDbContext();
+        var master = await db.MasterProfiles
             .Include(p => p.Experience)
             .Include(p => p.Education)
             .Include(p => p.Projects)
@@ -56,8 +57,8 @@ public class TailoringEngine
                 MatchScore = 0,
                 ChangesMade = new List<string> { "Original profile returned (LLM tailoring failed)" }
             };
-            _db.TailoredProfiles.Add(failedResult);
-            await _db.SaveChangesAsync(ct);
+            db.TailoredProfiles.Add(failedResult);
+            await db.SaveChangesAsync(ct);
             return failedResult;
         }
 
@@ -84,8 +85,8 @@ public class TailoringEngine
         _log.LogInformation("Tailoring complete: Safety={Passed}, Match={Score:F1}%, Changes={ChangeCount}",
             safetyResult.Passed ? "PASSED" : "FAILED", result.MatchScore, result.ChangesMade.Count);
 
-        _db.TailoredProfiles.Add(result);
-        await _db.SaveChangesAsync(ct);
+        db.TailoredProfiles.Add(result);
+        await db.SaveChangesAsync(ct);
 
         return result;
     }

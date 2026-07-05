@@ -8,7 +8,8 @@ public static class DatabaseInitializer
     public static async Task InitializeAsync(IServiceProvider serviceProvider)
     {
         using var scope = serviceProvider.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<EnvoyDbContext>();
+        var factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<EnvoyDbContext>>();
+        using var context = factory.CreateDbContext();
 
         try
         {
