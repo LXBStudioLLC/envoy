@@ -102,7 +102,8 @@ public partial class FindJobsView : UserControl
     {
         if (string.IsNullOrEmpty(key) || key == _settings.BraveSearchApiKey)
             return true;
-        _settings.BraveSearchApiKey = key;
+        try { _settings.BraveSearchApiKey = key; }
+        catch { return false; } // DPAPI encrypt failure surfaces as a failed save
         return _settings.Save();
     }
 

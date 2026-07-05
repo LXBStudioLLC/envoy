@@ -19,6 +19,8 @@ public class CdpBrowserService : ICdpCommandExecutor, IPageInteractor, IBrowserL
     private readonly EnvoySettings _settings;
     private readonly ILogger<CdpBrowserService> _log;
     private readonly object _lock = new();
+    // ClientWebSocket.SendAsync is not thread-safe; serialize concurrent sends.
+    private readonly SemaphoreSlim _sendLock = new(1, 1);
     private Task? _receiveLoopTask;
     private readonly CancellationTokenSource _receiveCts = new();
     private bool _disposed;
@@ -344,7 +346,15 @@ public class CdpBrowserService : ICdpCommandExecutor, IPageInteractor, IBrowserL
 
         var json = JsonSerializer.Serialize(messageDict);
         var bytes = Encoding.UTF8.GetBytes(json);
-        await _webSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, ct);
+        await _sendLock.WaitAsync(ct);
+        try
+        {
+            await _webSocket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, ct);
+        }
+        finally
+        {
+            _sendLock.Release();
+        }
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(TimeSpan.FromSeconds(30));
@@ -505,6 +515,7 @@ public class CdpBrowserService : ICdpCommandExecutor, IPageInteractor, IBrowserL
         }
         await CloseAsync(CancellationToken.None);
         _receiveCts.Dispose();
+        _sendLock.Dispose();
     }
 
     // Synchronous disposal for DI containers that don't honor IAsyncDisposable
@@ -516,7 +527,9 @@ public class CdpBrowserService : ICdpCommandExecutor, IPageInteractor, IBrowserL
         if (_disposed) return;
         try
         {
-            DisposeAsync().AsTask().GetAwaiter().GetResult();
+            // Run on the thread pool so DisposeAsync's continuations don't marshal back
+            // to a blocked UI thread (App.OnExit disposes this on the WPF dispatcher).
+            Task.Run(() => DisposeAsync().AsTask()).GetAwaiter().GetResult();
         }
         catch (Exception ex)
         {
