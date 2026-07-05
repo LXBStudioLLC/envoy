@@ -67,6 +67,10 @@ public class AtsCrossCheckSignal : IGhostSignal
                 Tier = Tier
             };
         }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw; // caller cancelled: honor it instead of reporting "ATS unreachable"
+        }
         catch (HttpRequestException)
         {
             return null; // ATS unreachable — no opinion
