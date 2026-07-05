@@ -198,11 +198,18 @@ public partial class MainWindow : Window
         catch { }
     }
 
+    private bool _isTransitioning;
+
     public void NavigateTo(UserControl view)
     {
+        // Drop rapid nav clicks during the fade-out so overlapping animations can't
+        // leave a view half-faded.
+        if (_isTransitioning) return;
+
         var oldContent = ContentArea.Children.OfType<UserControl>().FirstOrDefault();
         if (oldContent != null)
         {
+            _isTransitioning = true;
             var fadeOut = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(120));
             fadeOut.Completed += (_, _) =>
             {
@@ -210,6 +217,7 @@ public partial class MainWindow : Window
                 view.Opacity = 0;
                 view.RenderTransform = new TranslateTransform(20, 0);
                 ContentArea.Children.Add(view);
+                _isTransitioning = false;
 
                 var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200));
                 var slideIn = new DoubleAnimation(20, 0, TimeSpan.FromMilliseconds(200));
