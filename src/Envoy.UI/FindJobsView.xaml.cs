@@ -28,8 +28,13 @@ public partial class FindJobsView : UserControl
 
     private void FindJobsView_Loaded(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrEmpty(TxtBraveKey.Text) && !string.IsNullOrEmpty(_settings.BraveSearchApiKey))
-            TxtBraveKey.Text = _settings.BraveSearchApiKey;
+        // Don't render the decrypted key on screen. If one is stored, tell the user it
+        // will be reused unless they type a replacement.
+        if (!string.IsNullOrEmpty(_settings.BraveSearchApiKeyEncrypted))
+        {
+            StatusText.Text = "✓ Brave key saved — leave blank to reuse it, or enter a new key to replace.";
+            StatusText.Foreground = Gray;
+        }
     }
 
     private DiscoveryQuery BuildQuery() => new()
@@ -54,8 +59,11 @@ public partial class FindJobsView : UserControl
 
     private async void BtnWebSearch_Click(object sender, RoutedEventArgs e)
     {
-        var key = TxtBraveKey.Text?.Trim() ?? "";
-        SaveKeyIfChanged(key);
+        var typed = TxtBraveKey.Password?.Trim() ?? "";
+        if (!string.IsNullOrEmpty(typed)) SaveKeyIfChanged(typed);
+        // Use the typed key if provided, otherwise the stored key — so search works
+        // without re-displaying the key on screen.
+        var key = !string.IsNullOrEmpty(typed) ? typed : (_settings.BraveSearchApiKey ?? "");
         SetBusy(true, "SEARCHING THE WEB...");
         try
         {
@@ -68,18 +76,34 @@ public partial class FindJobsView : UserControl
 
     private void BtnSaveKey_Click(object sender, RoutedEventArgs e)
     {
-        SaveKeyIfChanged(TxtBraveKey.Text?.Trim() ?? "");
-        StatusText.Text = "✓ BRAVE KEY SAVED";
-        StatusText.Foreground = Green;
+        var key = TxtBraveKey.Password?.Trim() ?? "";
+        if (string.IsNullOrEmpty(key))
+        {
+            StatusText.Text = "Enter a key first.";
+            StatusText.Foreground = Yellow;
+            return;
+        }
+        if (SaveKeyIfChanged(key))
+        {
+            TxtBraveKey.Clear();
+            StatusText.Text = "✓ BRAVE KEY SAVED";
+            StatusText.Foreground = Green;
+        }
+        else
+        {
+            StatusText.Text = "✕ Could not save — settings.json may be locked; key NOT stored.";
+            StatusText.Foreground = Red;
+        }
     }
 
-    private void SaveKeyIfChanged(string key)
+    // Returns true if the key was persisted or there was nothing to persist; false only
+    // when a genuine change failed to save.
+    private bool SaveKeyIfChanged(string key)
     {
-        if (!string.IsNullOrEmpty(key) && key != _settings.BraveSearchApiKey)
-        {
-            _settings.BraveSearchApiKey = key;
-            _settings.Save();
-        }
+        if (string.IsNullOrEmpty(key) || key == _settings.BraveSearchApiKey)
+            return true;
+        _settings.BraveSearchApiKey = key;
+        return _settings.Save();
     }
 
     private async Task RenderAsync(DiscoveryResult result)

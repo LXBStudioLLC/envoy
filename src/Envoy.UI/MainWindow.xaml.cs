@@ -1,4 +1,6 @@
 ﻿using Envoy.Core.Services;
+using System.Diagnostics;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -91,8 +93,48 @@ public partial class MainWindow : Window
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
+        VersionText.Text = $" SOVEREIGN JOB AGENT  v{GetAppVersion()}";
         UpdateHardwareStatus();
         StartStatusPolling();
+    }
+
+    private static string GetAppVersion()
+    {
+        var asm = Assembly.GetExecutingAssembly();
+        var info = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        if (!string.IsNullOrWhiteSpace(info))
+        {
+            var plus = info.IndexOf('+');
+            return plus >= 0 ? info[..plus] : info;
+        }
+        return asm.GetName().Version?.ToString(3) ?? "1.0.0";
+    }
+
+    private void BtnAbout_Click(object sender, RoutedEventArgs e)
+    {
+        var choice = MessageBox.Show(
+            $"Envoy v{GetAppVersion()}\nLXB Studio LLC\n\n" +
+            "Ghost-job detection + a human-gated apply copilot.\n\n" +
+            "Found a bug, or a real job flagged as a possible ghost? " +
+            "Those reports are especially valuable.\n\n" +
+            "Your data and logs stay on this PC in %LOCALAPPDATA%\\Envoy\n\n" +
+            "Open the issue tracker to file a report?",
+            "About Envoy",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Information);
+
+        if (choice == MessageBoxResult.Yes)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "https://github.com/LXBStudioLLC/envoy/issues/new/choose",
+                    UseShellExecute = true
+                });
+            }
+            catch { /* best-effort; the user can navigate manually */ }
+        }
     }
 
     private async void UpdateHardwareStatus()

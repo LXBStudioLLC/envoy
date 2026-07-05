@@ -69,6 +69,9 @@ public class CdpBrowserService : ICdpCommandExecutor, IPageInteractor, IBrowserL
         {
             _sessionId = sid.GetString();
             _log.LogInformation("Attached to page session {SessionId}", _sessionId);
+            // Enable the Page domain so navigation lifecycle events (Page.loadEventFired)
+            // are dispatched. Without this, NavigateAsync's wait always times out.
+            await SendCommandAsync("Page.enable", new { }, ct);
             return true;
         }
         _log.LogWarning("Failed to attach to page - no sessionId in response");
@@ -93,8 +96,12 @@ public class CdpBrowserService : ICdpCommandExecutor, IPageInteractor, IBrowserL
 
     public async Task NavigateAsync(string url, CancellationToken ct = default)
     {
+        // Register the load-event waiter BEFORE navigating so a fast page load can't
+        // fire Page.loadEventFired between the navigate ack and the wait registration.
+        // (The Page domain is enabled in AttachToPageAsync so the event is dispatched.)
+        var loaded = WaitForEventAsync("Page.loadEventFired", TimeSpan.FromSeconds(30), ct);
         await SendCommandAsync("Page.navigate", new { url }, ct);
-        await WaitForEventAsync("Page.loadEventFired", TimeSpan.FromSeconds(30), ct);
+        await loaded;
     }
 
     public async Task<string?> QuerySelectorAsync(string selector, CancellationToken ct = default)

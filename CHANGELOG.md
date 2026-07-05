@@ -4,6 +4,19 @@ All notable changes to Envoy are documented in this file. Format is based on [Ke
 
 ## [Unreleased]
 
+### Fixed
+- **Ghost signals — honest activity.** `DuplicateJdSignal` was inert at runtime: its comparison corpus (`Extra["dupcheck.corpus"]`) was never populated outside tests, so it always returned null. It is now fed a **same-batch corpus** built from the other postings in each discovery run (sanctioned data already in hand — no extra requests), so it fires on cross-company near-duplicate descriptions. Docs corrected to state that **four** signals are active in the running app (ATS Cross-Check, Posting Age, Duplicate JD, Scam Pattern). **Repost Frequency** remains implemented and unit-tested but dormant until cross-session listing history is persisted, which this build does not ship. Known limitation: Posting Age is active in the Find Jobs list but not yet in the Apply panel (which does not capture a posting date).
+- **Data-source audit.** Verified every discovery endpoint (Greenhouse, Lever, Ashby, Workable, Recruitee, Brave) is a current, public, sanctioned API used without scraping or anti-bot evasion.
+- `install.ps1` no longer risks deleting the user's `%TEMP%` during cleanup, and targets the correct `Envoy.exe`.
+
+### Added
+- Rolling file logging to `%LOCALAPPDATA%\Envoy\logs` and user-visible crash dialogs (failures were silent before).
+- About / report-a-bug affordance in the title bar, showing the real app version.
+- Full canonical AGPL-3.0 `LICENSE` text and a `THIRD-PARTY-NOTICES.md` (NuGet licenses + bundled-font OFL texts), shipped alongside the binary.
+
+### Changed
+- Single-sourced the version via `Directory.Build.props`; the built `Envoy.exe` now carries the real version (previously always stamped 1.0.0.0).
+
 ## [1.0.0] — 2026-06-23
 
 Go-live release. Ghost-job detection is now a first-class, in-app feature, and Envoy can discover jobs from sanctioned public sources.
@@ -17,7 +30,7 @@ Go-live release. Ghost-job detection is now a first-class, in-app feature, and E
 ### Changed
 - **Human-gated submit is now truly blocking.** The final submit click waits for an explicit Confirm / Cancel decision in every execution mode; the default Operation Mode is now **Safe**.
 - **Stealth input emulation is now a guarded, off-by-default opt-in.** Human-cadence typing / mouse movement only runs after you explicitly enable it in the Browser view behind an acknowledgement (`StealthModeEnabled`); otherwise the form is filled with plain input and only Safe mode is offered. It never bypasses CAPTCHAs and is never used for discovery / scraping.
-- Removed the inert `HiringFreezeSignal` and `PermFilingSignal` stubs from the shipped build; they remain tracked as future signals (issues #5 and #1). Envoy now ships **5 working signals** — ATS Cross-Check, Posting Age, Duplicate JD, Repost Frequency, Scam Pattern — none inert.
+- Removed the inert `HiringFreezeSignal` and `PermFilingSignal` stubs from the shipped build; they remain tracked as future signals (issues #5 and #1). Envoy ships **five signals**; ATS Cross-Check, Posting Age, and Scam Pattern are active at runtime. (Duplicate JD and Repost Frequency shipped but were not yet fed runtime data — corrected under Unreleased.)
 
 ## [0.2.0-beta] — 2026-06-08
 

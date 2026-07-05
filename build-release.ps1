@@ -13,7 +13,7 @@
 #       -SignFileScript  C:\tools\Sign-File.ps1
 
 param(
-    [string]$Version        = "1.0.0",
+    [string]$Version        = "",
     [string]$Configuration  = "Release",
     [string]$Runtime        = "win-x64",
     [string]$OutputPath     = "artifacts",
@@ -27,6 +27,13 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+# Single-source the version from Directory.Build.props unless explicitly overridden.
+if (-not $Version) {
+    $propsPath = Join-Path $ScriptDir "Directory.Build.props"
+    if (Test-Path $propsPath) { $Version = ([xml](Get-Content $propsPath -Raw)).Project.PropertyGroup.Version }
+    if (-not $Version) { $Version = "1.0.0" }
+}
 
 Push-Location $ScriptDir
 try {

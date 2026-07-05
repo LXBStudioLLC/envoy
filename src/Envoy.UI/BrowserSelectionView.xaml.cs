@@ -46,6 +46,7 @@ public partial class BrowserSelectionView : UserControl
     private async void BrowserSelectionView_Loaded(object sender, RoutedEventArgs e)
     {
         RefreshStealthStatus();
+        RefreshScreenshotStatus();
         try
         {
             await ScanBrowsersAsync();
@@ -178,7 +179,34 @@ public partial class BrowserSelectionView : UserControl
             _settings.StealthModeEnabled = false;
         }
 
-        _settings.Save();
+        if (!_settings.Save())
+            MessageBox.Show("Could not save the setting — settings.json may be locked. Your change was not stored.",
+                "Save failed", MessageBoxButton.OK, MessageBoxImage.Warning);
         RefreshStealthStatus();
+    }
+
+    private void RefreshScreenshotStatus()
+    {
+        if (_settings.CaptureScreenshots)
+        {
+            ScreenshotStatusText.Text = "ENABLED";
+            ScreenshotStatusText.Foreground = Green;
+            BtnToggleScreenshots.Content = "DISABLE SCREENSHOTS";
+        }
+        else
+        {
+            ScreenshotStatusText.Text = "DISABLED";
+            ScreenshotStatusText.Foreground = Gray;
+            BtnToggleScreenshots.Content = "ENABLE SCREENSHOTS";
+        }
+    }
+
+    private void BtnToggleScreenshots_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.CaptureScreenshots = !_settings.CaptureScreenshots;
+        if (!_settings.Save())
+            MessageBox.Show("Could not save the setting — settings.json may be locked. Your change was not stored.",
+                "Save failed", MessageBoxButton.OK, MessageBoxImage.Warning);
+        RefreshScreenshotStatus();
     }
 }
