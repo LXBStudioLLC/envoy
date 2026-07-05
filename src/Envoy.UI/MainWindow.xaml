@@ -30,9 +30,10 @@
                             <DropShadowEffect Color="#00F0FF" BlurRadius="10" ShadowDepth="0" Opacity="0.5"/>
                         </TextBlock.Effect>
                     </TextBlock>
-                    <TextBlock Text=" SOVEREIGN JOB AGENT v1.0" FontSize="11" Foreground="#8892A4" FontFamily="{StaticResource CyberFontBody}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                    <TextBlock x:Name="VersionText" Text=" SOVEREIGN JOB AGENT" FontSize="11" Foreground="#8892A4" FontFamily="{StaticResource CyberFontBody}" VerticalAlignment="Center" Margin="8,0,0,0"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,4,0">
+                    <Button x:Name="BtnAbout" Content="?" Width="36" Height="36" Click="BtnAbout_Click" Background="Transparent" Foreground="#8892A4" BorderThickness="0" FontSize="14" FontFamily="{StaticResource CyberFontBody}" AutomationProperties.Name="About and report a bug" ToolTip="About / Report a bug"/>
                     <Button x:Name="BtnMinimize" Content="&#x2500;" Width="36" Height="36" Click="BtnMinimize_Click" Background="Transparent" Foreground="#8892A4" BorderThickness="0" FontSize="14" FontFamily="{StaticResource CyberFontBody}" AutomationProperties.Name="Minimize window" ToolTip="Minimize"/>
                     <Button x:Name="BtnClose" Content="&#x2715;" Width="36" Height="36" Click="BtnClose_Click" Background="Transparent" Foreground="#FF073A" BorderThickness="0" FontSize="14" FontFamily="{StaticResource CyberFontBody}" AutomationProperties.Name="Close window" ToolTip="Close"/>
                 </StackPanel>

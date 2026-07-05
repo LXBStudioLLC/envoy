@@ -6,7 +6,7 @@ param(
     [string]$Runtime = "win-x64",
     [switch]$SelfContained = $true,
     [string]$OutputPath = "artifacts",
-    [string]$Version = "1.0.0",
+    [string]$Version = "",
     [switch]$Sign,
     [string]$SignScript = $env:LXB_SIGN_SCRIPT,
     [string]$ProductName = "Envoy",
@@ -14,6 +14,13 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# Single-source the version from Directory.Build.props unless explicitly overridden.
+if (-not $Version) {
+    $propsPath = Join-Path $PSScriptRoot "Directory.Build.props"
+    if (Test-Path $propsPath) { $Version = ([xml](Get-Content $propsPath -Raw)).Project.PropertyGroup.Version }
+    if (-not $Version) { $Version = "1.0.0" }
+}
 
 Write-Host "Envoy Publish Script" -ForegroundColor Cyan
 Write-Host ""
@@ -44,6 +51,8 @@ $publishArgs = @(
     "-p:PublishSingleFile=true",
     "-p:PublishTrimmed=false",
     "-p:IncludeNativeLibrariesForSelfExtract=true",
+    "-p:Version=$Version",
+    "-p:InformationalVersion=$Version",
     "-o", $PublishPath
 )
 
