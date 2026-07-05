@@ -74,6 +74,13 @@ $DocsDest = "$PublishPath/docs"
 New-Item -ItemType Directory -Path $DocsDest -Force | Out-Null
 Copy-Item -Path "$DocsPath/*" -Destination $DocsDest -Force -Recurse
 
+# Ship the license + third-party notices alongside the binary (AGPL conveyance + OFL font terms)
+Write-Host "Copying license and third-party notices..." -ForegroundColor Yellow
+Copy-Item -Path "LICENSE" -Destination "$PublishPath/LICENSE.txt" -Force
+if (Test-Path "THIRD-PARTY-NOTICES.md") {
+    Copy-Item -Path "THIRD-PARTY-NOTICES.md" -Destination "$PublishPath/THIRD-PARTY-NOTICES.md" -Force
+}
+
 # Create start script
 Write-Host "Creating launcher script..." -ForegroundColor Yellow
 $StartScriptContent = "@echo off`nchcp 65001 >nul`necho.`necho  Envoy Job Application Agent`necho.`necho  Starting Envoy...`necho.`n`n:: Check if Ollama is running (optional - only needed for local models)`ncurl -s http://localhost:11434 >nul 2>&1`nif errorlevel 1 (`n    echo  Note: Ollama is not running. That's fine if you only use cloud LLM providers.`n    echo  For local LLMs install Ollama: https://ollama.com/download`n    echo.`n)`n`n:: Start Envoy`nstart `"`" `"%~dp0Envoy.exe`""
