@@ -44,7 +44,7 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBox x:Name="TxtBraveKey" Grid.Column="0" Style="{StaticResource CyberTextBox}" Margin="0,0,12,0" AutomationProperties.Name="Brave Search API key"/>
+                        <PasswordBox x:Name="TxtBraveKey" Grid.Column="0" Background="#0D1321" Foreground="#E0E6F0" BorderBrush="#1A3A4A" BorderThickness="1" Padding="8,6" FontFamily="{StaticResource CyberFontBody}" FontSize="12" Margin="0,0,12,0" AutomationProperties.Name="Brave Search API key"/>
                         <Button x:Name="BtnSaveKey" Grid.Column="1" Content="SAVE KEY" Click="BtnSaveKey_Click" Style="{StaticResource CyberButton}" Padding="14,8"/>
                     </Grid>
                     <TextBlock Text="Get a free key at api-dashboard.search.brave.com. Stored encrypted on this machine." Foreground="#5A6678" FontSize="10" FontFamily="{StaticResource CyberFontBody}" TextWrapping="Wrap" Margin="0,6,0,0"/>

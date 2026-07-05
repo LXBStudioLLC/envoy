@@ -113,7 +113,8 @@ public class EnvoySettings
         }
     }
 
-    public void Save()
+    /// <summary>Persists settings. Returns false (and logs to envoy.log) if the write failed.</summary>
+    public bool Save()
     {
         try
         {
@@ -131,6 +132,7 @@ public class EnvoySettings
                 File.Replace(tmp, SettingsPath, SettingsPath + ".bak");
             else
                 File.Move(tmp, SettingsPath, overwrite: true);
+            return true;
         }
         catch (Exception ex)
         {
@@ -138,6 +140,7 @@ public class EnvoySettings
             // the calling flow. Debug.WriteLine is invisible in Release builds, so record the
             // failure to a log file next to settings where the user can find it after the fact.
             TryLog($"Save to {SettingsPath} failed: {ex.Message}");
+            return false;
         }
     }
 
