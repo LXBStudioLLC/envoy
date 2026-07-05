@@ -92,7 +92,7 @@
                                                     <StackPanel Grid.Column="0">
                                                         <TextBlock FontSize="11" FontWeight="Bold" Foreground="#E0E6F0" FontFamily="{StaticResource CyberFontBody}" Text="{Binding DisplayName}"/>
                                                         <TextBlock FontSize="10" Foreground="#8892A4" FontFamily="{StaticResource CyberFontBody}">
-                                                            <Run Text="{Binding SizeDisplay}"/><Run Text=" | "/><Run Text="{Binding Quantization, StringFormat='Q: {0}'}"/><Run Text="{Binding Family, StringFormat=' | {0}'}"/>
+                                                            <Run Text="{Binding SizeDisplay, Mode=OneWay}"/><Run Text=" | "/><Run Text="{Binding Quantization, StringFormat='Q: {0}'}"/><Run Text="{Binding Family, StringFormat=' | {0}'}"/>
                                                         </TextBlock>
                                                     </StackPanel>
                                                     <TextBlock Grid.Column="1" FontSize="9" Foreground="#8892A4" FontFamily="{StaticResource CyberFontBody}" Text="{Binding Recommendation}" TextWrapping="Wrap" MaxWidth="250" VerticalAlignment="Center"/>
