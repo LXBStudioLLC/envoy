@@ -74,12 +74,25 @@ public class EnvoySettings
 
     public static EnvoySettings Load()
     {
+        if (!File.Exists(SettingsPath))
+            return new EnvoySettings();
+
+        string json;
         try
         {
-            if (!File.Exists(SettingsPath))
-                return new EnvoySettings();
+            json = File.ReadAllText(SettingsPath);
+        }
+        catch (Exception ex)
+        {
+            // Transient read failure (file locked by sync/AV/another instance). Do NOT
+            // treat this as corruption — the on-disk file is intact and will load next
+            // launch. Return session defaults without touching it.
+            TryLog($"Load read from {SettingsPath} failed: {ex.Message}");
+            return new EnvoySettings();
+        }
 
-            var json = File.ReadAllText(SettingsPath);
+        try
+        {
             var settings = JsonSerializer.Deserialize<EnvoySettings>(json, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
@@ -90,46 +103,77 @@ public class EnvoySettings
 
             return settings;
         }
-        catch
+        catch (Exception ex)
         {
+            // settings.json exists but won't parse (corruption, partial write, manual
+            // edit). Preserve the original so the user's DPAPI-encrypted keys can be
+            // recovered instead of being silently reset and then overwritten.
+            TryPreserveCorrupt(json, ex);
             return new EnvoySettings();
         }
     }
 
-    public void Save()
+    /// <summary>Persists settings. Returns false (and logs to envoy.log) if the write failed.</summary>
+    public bool Save()
     {
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath)!);
+            var dir = Path.GetDirectoryName(SettingsPath)!;
+            Directory.CreateDirectory(dir);
             var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(SettingsPath, json);
+
+            // Write to a temp file then atomically swap it into place. A crash, power
+            // loss, or disk-full mid-write can never truncate the live settings.json
+            // (which would silently lose every stored API key). File.Replace keeps the
+            // previous version as a .bak for recovery.
+            var tmp = SettingsPath + ".tmp";
+            File.WriteAllText(tmp, json);
+            if (File.Exists(SettingsPath))
+                File.Replace(tmp, SettingsPath, SettingsPath + ".bak");
+            else
+                File.Move(tmp, SettingsPath, overwrite: true);
+            return true;
         }
         catch (Exception ex)
         {
             // File can be locked by antivirus / OneDrive / another Envoy instance. Don't crash
             // the calling flow. Debug.WriteLine is invisible in Release builds, so record the
             // failure to a log file next to settings where the user can find it after the fact.
-            TryLogSaveFailure(ex);
+            TryLog($"Save to {SettingsPath} failed: {ex.Message}");
+            return false;
         }
     }
 
-    // Best-effort failure log. Save() can fail when settings.json is locked by OneDrive,
-    // antivirus, or a second Envoy instance; this records it without crashing the calling
-    // flow. Never throws — logging must not become its own failure path.
-    private static void TryLogSaveFailure(Exception ex)
+    // Best-effort diagnostic log next to settings.json. Records save/load/crypto
+    // failures without crashing the calling flow. Never throws — logging must not
+    // become its own failure path.
+    private static void TryLog(string message)
     {
         try
         {
             var dir = Path.GetDirectoryName(SettingsPath)!;
             Directory.CreateDirectory(dir);
             var logPath = Path.Combine(dir, "envoy.log");
-            var line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [EnvoySettings] Save to {SettingsPath} failed: {ex.Message}{Environment.NewLine}";
+            var line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [EnvoySettings] {message}{Environment.NewLine}";
             File.AppendAllText(logPath, line);
         }
         catch
         {
             // Logging is best-effort; swallow everything.
         }
+    }
+
+    private static void TryPreserveCorrupt(string json, Exception ex)
+    {
+        try
+        {
+            File.WriteAllText(SettingsPath + ".corrupt", json);
+        }
+        catch
+        {
+            // best-effort
+        }
+        TryLog($"Load parse of {SettingsPath} failed ({ex.Message}); backed up to {SettingsPath}.corrupt and reset to defaults");
     }
 
     private static bool TryMigrateLegacyKeys(string json, EnvoySettings settings)
@@ -198,8 +242,9 @@ public class EnvoySettings
         {
             throw;
         }
-        catch
+        catch (Exception ex)
         {
+            TryLog($"API key encryption (DPAPI Protect) failed: {ex.Message}");
             return null;
         }
     }
@@ -215,8 +260,9 @@ public class EnvoySettings
             var bytes = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.CurrentUser);
             return Encoding.UTF8.GetString(bytes);
         }
-        catch
+        catch (Exception ex)
         {
+            TryLog($"API key decryption (DPAPI Unprotect) failed — key present but unreadable on this user/machine: {ex.Message}");
             return null;
         }
     }

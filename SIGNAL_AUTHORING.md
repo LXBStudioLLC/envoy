@@ -198,7 +198,7 @@ public class MyNetworkSignal : IGhostSignal
 
 ## Need Help?
 
-- Read the reference signal: [`AtsCrossCheckSignal.cs`](../src/Envoy.GhostDetection/Signals/AtsCrossCheckSignal.cs)
-- Read the aggregator: [`GhostScorer.cs`](../src/Envoy.GhostDetection/GhostScorer.cs)
-- Read the test examples: [`AtsCrossCheckSignalTests.cs`](../tests/Envoy.GhostDetection.Tests/AtsCrossCheckSignalTests.cs)
-- Open a draft PR and tag `@maintainer` for review.
+- Read the reference signal: [`AtsCrossCheckSignal.cs`](src/Envoy.GhostDetection/Signals/AtsCrossCheckSignal.cs)
+- Read the aggregator: [`GhostScorer.cs`](src/Envoy.GhostDetection/GhostScorer.cs)
+- Read the test examples: [`AtsCrossCheckSignalTests.cs`](tests/Envoy.GhostDetection.Tests/AtsCrossCheckSignalTests.cs)
+- Open a draft PR and tag `@LXBStudioLLC` for review.

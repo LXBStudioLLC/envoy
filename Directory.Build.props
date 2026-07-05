@@ -1,0 +1,17 @@
+<Project>
+
+  <!--
+    Single source of truth for the product version and assembly metadata across
+    every project. Release scripts (publish.ps1 / build-release.ps1) read <Version>
+    from here so the installer filename, the Inno Setup metadata, and the compiled
+    Envoy.exe can never drift apart. Override at build time with -p:Version=X.Y.Z.
+  -->
+  <PropertyGroup>
+    <Version>1.0.1</Version>
+    <Company>LXB Studio LLC</Company>
+    <Product>Envoy</Product>
+    <Authors>LXB Studio LLC</Authors>
+    <Copyright>Copyright (C) 2026 LXB Studio LLC</Copyright>
+  </PropertyGroup>
+
+</Project>

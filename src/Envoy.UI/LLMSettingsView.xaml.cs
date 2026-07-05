@@ -325,7 +325,13 @@ public partial class LLMSettingsView : UserControl
             _settings.AnthropicApiKey = AnthropicKeyBox.Password;
             _settings.GeminiApiKey = GeminiKeyBox.Password;
 
-            _settings.Save();
+            if (!_settings.Save())
+            {
+                ConfigSaveStatus.Text = "Could not save — settings.json may be locked. Your changes were NOT stored.";
+                ConfigSaveStatus.Foreground = Red;
+                ConfigSaveStatus.Visibility = Visibility.Visible;
+                return;
+            }
 
             ConfigSaveStatus.Text = "Configuration saved. Rescanning...";
             ConfigSaveStatus.Foreground = Green;

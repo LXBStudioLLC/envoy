@@ -2,6 +2,7 @@ using Envoy.Discovery;
 using Envoy.Discovery.Models;
 using Envoy.Discovery.Sources;
 using Envoy.GhostDetection.Models;
+using Envoy.GhostDetection.Signals;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -33,6 +34,18 @@ public class JobDiscoveryServiceTests
 
     private static JobPosting Job(string title, string company, string location, string url) =>
         new() { JobTitle = title, CompanyName = company, Location = location, Url = url, DescriptionText = title };
+
+    // A description long enough (>=400 chars, >=60 tokens) for DuplicateJdSignal to compare.
+    private const string LongJd =
+        "We are seeking a senior backend engineer to design and operate large-scale distributed systems. " +
+        "You will build resilient services, own reliability, mentor engineers, and collaborate across teams. " +
+        "Requirements include deep experience with cloud infrastructure, databases, message queues, observability, " +
+        "and a strong track record shipping production software. We value ownership, curiosity, and pragmatism. " +
+        "Responsibilities span architecture, code review, incident response, capacity planning, and performance tuning. " +
+        "This role offers competitive compensation, remote flexibility, and meaningful equity in a growing company.";
+
+    private static JobPosting JobWithDesc(string title, string company, string url, string description) =>
+        new() { JobTitle = title, CompanyName = company, Location = "Remote", Url = url, DescriptionText = description };
 
     private static JobDiscoveryService Service(params IAtsBoardSource[] sources) =>
         new(sources, new FakeWebSearch(), NullLogger<JobDiscoveryService>.Instance);
@@ -105,5 +118,48 @@ public class JobDiscoveryServiceTests
     {
         var service = Service();
         Assert.NotEmpty(service.DefaultBoards);
+    }
+
+    [Fact]
+    public async Task SearchBoards_WiresDuplicateJdCorpus_SoDuplicateSignalFires()
+    {
+        var src = new FakeAtsSource(JobSource.Greenhouse, new[]
+        {
+            JobWithDesc("Backend Engineer", "Acme", "https://x/1", LongJd),
+            JobWithDesc("Backend Engineer", "Globex", "https://x/2", LongJd),
+        });
+        var service = Service(src);
+
+        var result = await service.SearchBoardsAsync(
+            new[] { new AtsBoardRef { Ats = JobSource.Greenhouse, Token = "acme" } },
+            new DiscoveryQuery { MaxResults = 25 });
+
+        Assert.Equal(2, result.Jobs.Count);
+        // Every posting now carries the same-batch corpus that no runtime code populated before.
+        Assert.All(result.Jobs, j => Assert.True(j.Extra.ContainsKey("dupcheck.corpus")));
+
+        // The previously-inert signal now actually fires on a cross-company near-duplicate.
+        var signal = new DuplicateJdSignal();
+        var acme = result.Jobs.First(j => j.CompanyName == "Acme");
+        var outcome = await signal.EvaluateAsync(acme);
+        Assert.NotNull(outcome);
+        Assert.Equal("Duplicate JD", outcome!.SignalName);
+    }
+
+    [Fact]
+    public async Task SearchBoards_SinglePosting_GetsNoDuplicateCorpus()
+    {
+        var src = new FakeAtsSource(JobSource.Greenhouse, new[]
+        {
+            JobWithDesc("Backend Engineer", "Acme", "https://x/1", LongJd),
+        });
+        var service = Service(src);
+
+        var result = await service.SearchBoardsAsync(
+            new[] { new AtsBoardRef { Ats = JobSource.Greenhouse, Token = "acme" } },
+            new DiscoveryQuery { MaxResults = 25 });
+
+        var job = Assert.Single(result.Jobs);
+        Assert.False(job.Extra.ContainsKey("dupcheck.corpus"));
     }
 }

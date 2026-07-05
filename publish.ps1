@@ -6,7 +6,7 @@ param(
     [string]$Runtime = "win-x64",
     [switch]$SelfContained = $true,
     [string]$OutputPath = "artifacts",
-    [string]$Version = "1.0.0",
+    [string]$Version = "",
     [switch]$Sign,
     [string]$SignScript = $env:LXB_SIGN_SCRIPT,
     [string]$ProductName = "Envoy",
@@ -14,6 +14,13 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# Single-source the version from Directory.Build.props unless explicitly overridden.
+if (-not $Version) {
+    $propsPath = Join-Path $PSScriptRoot "Directory.Build.props"
+    if (Test-Path $propsPath) { $Version = ([xml](Get-Content $propsPath -Raw)).Project.PropertyGroup.Version }
+    if (-not $Version) { $Version = "1.0.0" }
+}
 
 Write-Host "Envoy Publish Script" -ForegroundColor Cyan
 Write-Host ""
@@ -44,6 +51,8 @@ $publishArgs = @(
     "-p:PublishSingleFile=true",
     "-p:PublishTrimmed=false",
     "-p:IncludeNativeLibrariesForSelfExtract=true",
+    "-p:Version=$Version",
+    "-p:InformationalVersion=$Version",
     "-o", $PublishPath
 )
 
@@ -64,6 +73,13 @@ Write-Host "Copying documentation..." -ForegroundColor Yellow
 $DocsDest = "$PublishPath/docs"
 New-Item -ItemType Directory -Path $DocsDest -Force | Out-Null
 Copy-Item -Path "$DocsPath/*" -Destination $DocsDest -Force -Recurse
+
+# Ship the license + third-party notices alongside the binary (AGPL conveyance + OFL font terms)
+Write-Host "Copying license and third-party notices..." -ForegroundColor Yellow
+Copy-Item -Path "LICENSE" -Destination "$PublishPath/LICENSE.txt" -Force
+if (Test-Path "THIRD-PARTY-NOTICES.md") {
+    Copy-Item -Path "THIRD-PARTY-NOTICES.md" -Destination "$PublishPath/THIRD-PARTY-NOTICES.md" -Force
+}
 
 # Create start script
 Write-Host "Creating launcher script..." -ForegroundColor Yellow
