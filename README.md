@@ -1,13 +1,13 @@
 <p align="center">
-  <!-- HERO BANNER SLOT — assets/banner.png (~1280px wide wordmark + tagline). assets/ is currently empty; drop the final in here. -->
+  <!-- Banner. Swap assets/banner.png for a real wordmark when you have one. -->
   <img src="assets/banner.png" alt="Envoy" width="640">
 </p>
 
 <h1 align="center">Envoy</h1>
 
 <p align="center">
-  <strong>See through ghost jobs, tailor your resume, and skip the busywork — all on your own PC.</strong><br>
-  Evidence, not verdicts. Your data never leaves your machine.
+  <strong>Envoy scores how likely a job posting is a waste of your time, and shows you why.</strong><br>
+  It runs on your own Windows PC. Your resume and data never leave it.
 </p>
 
 <p align="center">
@@ -19,155 +19,155 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/LXBStudioLLC/envoy/releases/latest"><img src="https://img.shields.io/badge/%E2%AC%87%20Download%20Envoy-Windows%2010%2F11%20x64-2ea44f?style=for-the-badge" alt="Download Envoy"></a>
+  <a href="https://github.com/LXBStudioLLC/envoy/releases/latest"><img src="https://img.shields.io/badge/Download%20Envoy-Windows%2010%2F11%20x64-2ea44f?style=for-the-badge" alt="Download Envoy"></a>
 </p>
 
 <p align="center">
-  <a href="#-download">Download</a> ·
-  <a href="#-ghost-detection">How it works</a> ·
-  <a href="#-find-jobs">Find Jobs</a> ·
-  <a href="#-apply-copilot">Apply Copilot</a> ·
-  <a href="#-privacy">Privacy</a> ·
-  <a href="#-for-developers">Contributing</a>
+  <a href="#download">Download</a> ·
+  <a href="#ghost-detection">How it works</a> ·
+  <a href="#find-jobs">Find Jobs</a> ·
+  <a href="#apply-copilot">Apply Copilot</a> ·
+  <a href="#privacy">Privacy</a> ·
+  <a href="#for-developers">Contributing</a>
 </p>
 
 ---
 
-You tailor the resume. You fill the same fields for the tenth time. You hit **submit** — and nothing comes back. Some of those postings were never real openings. **Envoy helps you spot them before you spend an hour on them.**
+You tailor the resume, fill out the same fields again, hit submit, and never hear back. Some of those postings were never real openings. Envoy helps you spot them before you waste the afternoon.
 
-## TL;DR
+## What it does
 
-- **👻 Ghost-job risk, with receipts.** Envoy scores how likely a posting is a waste of your time — and shows you *why*: a risk score, a confidence level, and plain-English reasons. Never a bare "fake" label on a company; when it's unsure, it stays neutral.
-- **🆓 Free, local, zero-setup.** Ghost detection and job discovery work the moment you open the app — no account, no API key, no cloud. Your resume and data stay on your PC.
-- **🤖 A copilot that respects the submit button.** Envoy tailors your resume and fills the application, then stops and waits for **you** to review and click submit — in every mode.
-- **🪟 Windows 10/11, self-contained.** Signed installer or portable ZIP. No .NET runtime to install.
+- Scores how likely a posting is a ghost job and lists the actual reasons behind the score. It won't call a company a fraud. When the evidence is thin, it stays neutral.
+- Ghost detection and job search work the second you open it. No account, no API key, no cloud. Your resume stays on your machine.
+- It can also tailor your resume and fill out an application for you, but you read it over and click submit yourself. Always.
+- Windows 10/11. Signed installer or a portable zip. Nothing else to install.
 
 <p align="center">
-  <!-- SCREENSHOT SLOT 1 (hero) — assets/ghost-score.png (~1600px wide): the Ghost Risk panel showing a risk band (Neutral / Elevated / High), the confidence level, and the expanded human-readable evidence lines. This is the most important image — it proves "evidence, not verdict." -->
-  <img src="assets/ghost-score.png" alt="Envoy Ghost Risk panel showing risk band, confidence, and evidence lines" width="820">
+  <!-- Swap assets/ghost-score.png for the Ghost Risk panel (band, confidence, evidence lines). -->
+  <img src="assets/ghost-score.png" alt="Envoy Ghost Risk panel showing risk band, confidence, and evidence" width="820">
 </p>
-<p align="center"><em>The Ghost Risk panel — risk band, confidence, and the reasons behind the score. (Screenshot coming soon.)</em></p>
+<p align="center"><em>The Ghost Risk panel: the band, the confidence, and the reasons behind the score. (Real screenshot coming soon.)</em></p>
 
 ---
 
-## ⬇️ Download
+## Download
 
-**[Download the latest release](https://github.com/LXBStudioLLC/envoy/releases/latest)** — Windows 10/11, 64-bit.
+[Grab the latest release](https://github.com/LXBStudioLLC/envoy/releases/latest) for Windows 10/11, 64-bit.
 
 | Option | File | Notes |
 |---|---|---|
-| **Installer** *(recommended)* | `Envoy-<version>-setup.exe` | Digitally signed by **LXBSTUDIO LLC** (Azure Trusted Signing). |
-| **Portable ZIP** | `Envoy-<version>-win-x64.zip` | Extract anywhere and run `Envoy.exe` — nothing to install. |
+| Installer (recommended) | `Envoy-<version>-setup.exe` | Signed by LXBSTUDIO LLC (Azure Trusted Signing). |
+| Portable zip | `Envoy-<version>-win-x64.zip` | Unzip anywhere and run `Envoy.exe`. Nothing to install. |
 
-- **No .NET runtime required** — the build is self-contained.
-- Every release ships a **`SHA256SUMS.txt`** so you can verify your download.
-- The installer is signed, but because the app is new, Windows **SmartScreen** may prompt the first few times while the signature builds reputation. The publisher will read **LXBSTUDIO LLC**, and the checksum confirms the rest.
+The build is self-contained, so you don't need the .NET runtime. Every release includes a `SHA256SUMS.txt` if you want to check your download.
 
-> 💡 **Zero setup:** ghost detection and **Find Jobs** work immediately — no LLM, no Ollama, no API key. A local model is only needed for the resume-tailoring copilot.
+The installer is signed, but since the app is new, Windows SmartScreen may warn you the first couple of times until the signature earns some reputation. The publisher will read LXBSTUDIO LLC, and the checksum confirms the rest.
+
+> Ghost detection and Find Jobs work right away with no LLM, no Ollama, and no API key. You only need a local model for the resume-tailoring copilot.
 
 ---
 
-## 👻 Ghost Detection
+## Ghost Detection
 
-This is the heart of Envoy. It analyzes each posting through an extensible **signal framework**, where every signal returns a **score + confidence + evidence lines** rather than a yes/no verdict.
+Envoy checks each posting with a handful of independent signals. Every signal returns a number, a confidence level, and a plain-English reason, and the app rolls those up into one risk band. There's no bare "fake" stamp on anyone.
 
 Signals come in three tiers:
 
-- **Deterministic** — hard evidence (e.g. the role is open on an aggregator but already closed on the company's own ATS, or the text contains a textbook scam pattern).
-- **Probabilistic** — strong correlational evidence (e.g. the posting has been live far longer than is typical for its seniority).
-- **Weak** — noisy indicators that add to the evidence list (e.g. the description is a near-duplicate of another company's post).
+- **Deterministic** is hard evidence. For example, the role is open on a job aggregator but already closed on the company's own ATS, or the text matches a known scam pattern.
+- **Probabilistic** is a strong correlation. For example, the posting has been live far longer than most roles at its level.
+- **Weak** is a softer hint that still counts for something. For example, the description is a near-duplicate of another company's post.
 
-**Four signals are active in the running app, all unit-tested:**
+Four signals run in the app today, all unit-tested:
 
 | Signal | Tier | Data |
 |---|---|---|
-| **ATS Cross-Check** | Deterministic | Network — public Greenhouse / Lever ATS APIs |
-| **Posting Age** | Probabilistic | Local — posting date from the discovery feed |
-| **Duplicate JD** | Weak | Local — cross-company text match within a discovery batch |
-| **Scam Pattern** | Deterministic | Local regex — off-platform redirects, upfront fee/PII asks, crypto/gift-card payment, check/overpayment fraud |
+| ATS Cross-Check | Deterministic | Network (public Greenhouse and Lever APIs) |
+| Posting Age | Probabilistic | Local (posting date from the discovery feed) |
+| Duplicate JD | Weak | Local (cross-company text match within a batch) |
+| Scam Pattern | Deterministic | Local regex (off-platform redirects, upfront fee or PII asks, crypto and gift-card payment, check and overpayment fraud) |
 
-> A fifth signal, **Repost Frequency** (Weak), is implemented and unit-tested but stays **dormant** until Envoy persists listing history across sessions — storage this build doesn't ship yet — so it does not fire.
+A fifth signal, Repost Frequency, is written and tested but stays off until Envoy remembers listings across sessions, which this build doesn't do yet. So it never fires today.
 
-Each signal declares whether it needs the network, so Envoy can do fast **local-only** scoring when ranking many postings at once (the Find Jobs view) and reserve network calls for a closer look.
+Each signal says whether it needs the network. That lets Envoy score a whole list locally in the Find Jobs view and save the network calls for when you open a single posting.
 
 ### Risk bands
 
-The aggregator (`GhostScorer`) combines every signal's output into one of three bands:
+`GhostScorer` combines the signals into one of three bands:
 
 | Band | Meaning | When it triggers |
 |---|---|---|
-| **Neutral** | No strong ghost signals. | Default when signals are absent or weak. |
-| **Elevated** | Multiple converging signals suggest caution. | 2+ probabilistic signals scoring ≥ 0.60. |
-| **High** | Strong deterministic evidence this posting may waste your time. | A deterministic signal scoring ≥ 0.80 with confidence ≥ 0.70. |
+| Neutral | No strong ghost signals. | The default when signals are absent or weak. |
+| Elevated | A few signals line up and suggest caution. | Two or more probabilistic signals at 0.60 or higher. |
+| High | Strong deterministic evidence that this one may waste your time. | A deterministic signal at 0.80 or higher, with confidence 0.70 or higher. |
 
-> **Bias for precision over recall:** flagging a real job is worse than missing a ghost, so when Envoy is unsure it stays **Neutral**. The **Elevated** band becomes reachable once a second probabilistic signal ships; with today's active set (one probabilistic signal, Posting Age), postings resolve to **Neutral** or **High**.
+Envoy leans toward precision. Flagging a real job is worse than missing a ghost, so when it isn't sure, it stays Neutral. Worth knowing: the Elevated band needs two probabilistic signals, and only Posting Age is active right now, so in practice a posting lands on Neutral or High.
 
 ---
 
-## 🔎 Find Jobs
+## Find Jobs
 
-Envoy ships a sanctioned **job-discovery layer** (`Envoy.Discovery`), surfaced in the **Find Jobs** view. It reads only **public, unauthenticated** sources:
+Envoy has a built-in job search (`Envoy.Discovery`) in the Find Jobs view. It only reads public, unauthenticated sources:
 
-- **Public ATS board APIs** — Greenhouse, Lever, Ashby, Workable, and Recruitee.
-- **Optional web search** — the official, key-gated **Brave Search** API. Supply your own key (stored DPAPI-encrypted); without it, discovery falls back to the ATS feeds alone.
+- Public ATS APIs from Greenhouse, Lever, Ashby, Workable, and Recruitee.
+- An optional web search through the official Brave Search API. You bring your own key, stored encrypted; without one, search just uses the ATS feeds.
 
-**Every discovered posting is ghost-scored before it reaches you**, so risk bands and evidence appear right in the results list. There is **no scraping behind authentication, no anti-bot evasion, and no CAPTCHA bypass** — discovery stays within publicly sanctioned endpoints.
+Every posting is scored before it hits your list, so the risk band and the reasons show up right in the results. No scraping behind a login, no bot-evasion, no CAPTCHA solving. Search stays on public endpoints.
 
 <p align="center">
-  <!-- SCREENSHOT SLOT 2 — assets/find-jobs.png: the discovery results list with a ghost risk band rendered inline on each posting, showing scoring happens before results reach the user. -->
-  <img src="assets/find-jobs.png" alt="Find Jobs results list with a ghost risk band on each posting" width="820">
+  <!-- Swap assets/find-jobs.png for the results list with a risk band on each posting. -->
+  <img src="assets/find-jobs.png" alt="Find Jobs results list with a risk band on each posting" width="820">
 </p>
-<p align="center"><em>Find Jobs — every result carries its own risk band before you click. (Screenshot coming soon.)</em></p>
+<p align="center"><em>Find Jobs: every result carries its own risk band before you click. (Real screenshot coming soon.)</em></p>
 
 ---
 
-## 🤖 Apply Copilot
+## Apply Copilot
 
-Once you've found a posting worth your time, Envoy helps you apply:
+Once you find a posting worth your time, Envoy can help you apply:
 
-- **Drop-in resume parsing** — drop a PDF; Envoy extracts and structures it automatically using a local LLM.
-- **AI-powered tailoring** — your resume is rewritten to match the specific job description.
-- **Safety guardrails** — multi-layer validation catches hallucinations, keyword stuffing, and date inconsistencies.
-- **Site templates** — modular JSON templates for common job boards; community-updatable.
-- **Adaptive parser** — a self-healing element locator uses structural fingerprints to recover from DOM changes.
-- **Ghost Risk panel** — the Apply view shows the posting's risk band, confidence, and evidence before you invest time tailoring.
+- Drop in a resume PDF and it reads and structures the contents with a local LLM.
+- It rewrites the resume to fit the specific job description.
+- Guardrails catch made-up claims, keyword stuffing, and dates that don't add up.
+- Job boards are handled by JSON templates that anyone can update.
+- An adaptive parser uses structural fingerprints to keep working when a page's layout shifts.
+- The Apply view shows the posting's risk band and reasons before you spend time tailoring anything.
 
-**You always press submit.** Envoy fills the form, then stops and waits for your explicit **Confirm** or **Cancel** — the submit click is blocking in every execution mode, and the default Operation Mode is **Safe**. (The optional Stealth mode only changes *how* text is typed; it never bypasses the confirmation.)
+You always press submit. Envoy fills the form and then stops and waits for you to click Confirm or Cancel. That gate holds in every mode, and the default mode is Safe. (Stealth mode only changes how the text is typed. It never skips the confirmation.)
 
-> **Scope, stated once:** fuller automation is on the roadmap, and by design it only ever runs on **employer-owned and ATS-hosted career sites** — aggregators like LinkedIn and Indeed stay copilot-only. Envoy never solves CAPTCHAs; if a site challenges it, control returns to you.
+Fuller automation is on the roadmap, and by design it only runs on employer-owned and ATS career sites. Aggregators like LinkedIn and Indeed stay copilot-only. Envoy doesn't solve CAPTCHAs; if a site puts one up, it hands control back to you.
 
 <p align="center">
-  <!-- SCREENSHOT SLOT 3 — assets/apply-copilot.png: the Apply view showing the Ghost Risk panel alongside a filled form paused at the Confirm / Cancel submit gate, proving the "we stop and wait for you" claim. -->
-  <img src="assets/apply-copilot.png" alt="Apply view with a filled form paused at the Confirm / Cancel submit gate" width="820">
+  <!-- Swap assets/apply-copilot.png for the Apply view paused at the Confirm / Cancel gate. -->
+  <img src="assets/apply-copilot.png" alt="Apply view with a filled form paused at the Confirm or Cancel submit gate" width="820">
 </p>
-<p align="center"><em>The Apply Copilot pauses at the submit gate — nothing is sent until you confirm. (Screenshot coming soon.)</em></p>
+<p align="center"><em>The copilot fills the form and stops at the gate. Nothing is sent until you confirm. (Real screenshot coming soon.)</em></p>
 
 ---
 
-## 🔒 Privacy
+## Privacy
 
-**Local by default. Cloud is opt-in.** Envoy runs entirely on your machine using Ollama and a local LLM — that's the default and the recommended posture. If you'd rather use a hosted model, Envoy can talk to OpenAI, Anthropic, or Google Gemini instead. Any API keys you supply are encrypted with **Windows DPAPI** under your user account before they're written to disk, and cloud calls happen only when you select a cloud provider in LLM Settings.
+Envoy runs locally by default, using Ollama and a local model. That's the setup we recommend. If you'd rather use a hosted model, it can talk to OpenAI, Anthropic, or Google Gemini instead. Any key you enter is encrypted with Windows DPAPI under your account before it touches disk, and cloud calls only happen when you pick a cloud provider in settings.
 
-## 📋 Requirements
+## Requirements
 
-- **Windows 10/11 (64-bit).** Envoy is a WPF desktop app; macOS/Linux are not supported.
-- **Ollama** *(optional)* — only for the resume-tailoring copilot. Ghost detection and Find Jobs need no LLM at all.
-- **Google Chrome** or **Microsoft Edge** installed (for the Apply Copilot).
-- **GPU recommended** — 8GB+ VRAM for the best local-LLM experience; CPU-only mode works with smaller models.
+- Windows 10 or 11, 64-bit. Envoy is a WPF desktop app, so macOS and Linux aren't supported.
+- Ollama, optional, only for the resume copilot. Ghost detection and Find Jobs need no LLM at all.
+- Google Chrome or Microsoft Edge installed, for the Apply Copilot.
+- A GPU with 8GB or more of VRAM gives the best local-model experience. CPU-only works with smaller models.
 
 ---
 
-## 🛠️ For developers
+## For developers
 
-Envoy is built on **.NET 8 WPF**, and the ghost-signal framework is designed to be **agent-contributable** — you can open a signal file, see exactly why it fired, or write a sharper one and send a PR.
+Envoy is a .NET 8 WPF app. The ghost-signal framework is built to be easy to extend, including with a coding agent: open a signal, read exactly why it fired, or write a better one and send a PR.
 
-**Author a signal in ~15 minutes:** pick an open [`signal:` issue](https://github.com/LXBStudioLLC/envoy/issues?q=is%3Aissue+label%3Asignal), copy the prompt from [`SIGNAL_AUTHORING.md`](SIGNAL_AUTHORING.md), hand it to your coding agent, review the diff, and open a PR. The framework **auto-discovers** every `IGhostSignal` at runtime — zero wiring, zero DI registration.
+To add a signal, grab an open [`signal:` issue](https://github.com/LXBStudioLLC/envoy/issues?q=is%3Aissue+label%3Asignal), copy the prompt from [SIGNAL_AUTHORING.md](SIGNAL_AUTHORING.md), hand it to your agent, check the diff, and open a PR. The app finds every `IGhostSignal` at runtime, so there's nothing to wire up.
 
-- **Reference signal:** [`AtsCrossCheckSignal`](src/Envoy.GhostDetection/Signals/AtsCrossCheckSignal.cs) — Greenhouse/Lever cross-check.
-- **Dogfood example:** [`PostingAgeSignal`](src/Envoy.GhostDetection/Signals/PostingAgeSignal.cs) — built by following the runbook verbatim.
-- **Open future lanes:** [hiring freeze](https://github.com/LXBStudioLLC/envoy/issues/5) and [PERM filings](https://github.com/LXBStudioLLC/envoy/issues/1).
+- Reference signal: [`AtsCrossCheckSignal`](src/Envoy.GhostDetection/Signals/AtsCrossCheckSignal.cs), the Greenhouse and Lever cross-check.
+- Worked example: [`PostingAgeSignal`](src/Envoy.GhostDetection/Signals/PostingAgeSignal.cs), built straight from the runbook.
+- Open lanes: [hiring freeze](https://github.com/LXBStudioLLC/envoy/issues/5) and [PERM filings](https://github.com/LXBStudioLLC/envoy/issues/1).
 
-Full build, architecture, and packaging details live in **[CONTRIBUTING.md](CONTRIBUTING.md)** and **[AGENTS.md](AGENTS.md)**.
+Build, architecture, and packaging notes live in [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md).
 
 <details>
 <summary><strong>Build from source</strong></summary>
@@ -177,11 +177,11 @@ dotnet restore
 dotnet build -c Release
 dotnet test
 
-# Run the desktop app (opens a Windows window)
+# Run the app (opens a Windows window)
 dotnet run --project src/Envoy.UI
 ```
 
-Install Ollama and pull a model first if you want the resume copilot:
+If you want the resume copilot, install Ollama and pull a model first:
 
 ```powershell
 ollama pull qwen2.5-coder:14b
@@ -194,60 +194,58 @@ ollama pull qwen2.5-coder:14b
 
 | Layer | Technology |
 |-------|------------|
-| **UI** | .NET 8 WPF + HandyControl |
-| **Database** | SQLite + EF Core |
-| **Ghost Detection** | Extensible signal framework (Deterministic / Probabilistic / Weak tiers) |
-| **Job Discovery** | `Envoy.Discovery` — public ATS feeds (Greenhouse, Lever, Ashby, Workable, Recruitee) + optional Brave Search |
-| **Local LLM** | Ollama via [OllamaSharp](https://github.com/awaescher/OllamaSharp) |
-| **Cloud LLM (optional)** | OpenAI / Anthropic / Gemini via raw HTTP |
-| **PDF Parsing** | PdfPig + local LLM post-processor |
-| **PDF Generation** | QuestPDF |
-| **Browser** | Raw WebSocket → Chrome DevTools Protocol |
-| **Form Fill** | Plain synthetic input by default; optional human-cadence typing/mouse mode — never bypasses the submit confirmation |
+| UI | .NET 8 WPF + HandyControl |
+| Database | SQLite + EF Core |
+| Ghost detection | Signal framework (Deterministic / Probabilistic / Weak) |
+| Job discovery | `Envoy.Discovery`: public ATS feeds (Greenhouse, Lever, Ashby, Workable, Recruitee) + optional Brave Search |
+| Local LLM | Ollama via [OllamaSharp](https://github.com/awaescher/OllamaSharp) |
+| Cloud LLM (optional) | OpenAI / Anthropic / Gemini over HTTP |
+| PDF parsing | PdfPig + local LLM cleanup |
+| PDF generation | QuestPDF |
+| Browser | WebSocket to the Chrome DevTools Protocol |
+| Form fill | Plain synthetic input by default; optional human-cadence typing that never skips the confirmation |
 
 </details>
 
 <details>
-<summary><strong>Packaging &amp; release</strong></summary>
+<summary><strong>Packaging and release</strong></summary>
 
-**One-command release** (recommended) — reads `<Version>` from `Directory.Build.props` and emits the ZIP, the signed installer, and `SHA256SUMS.txt`:
+One command, which reads the version from `Directory.Build.props` and produces the zip, the signed installer, and `SHA256SUMS.txt`:
 
 ```powershell
 .\build-release.ps1
 ```
 
-**Manual steps** (alternative):
+Or the manual steps:
 
 ```powershell
-.\publish.ps1     # -> artifacts/Envoy-<version>-win-x64.zip
-# Compile setup.iss with Inno Setup -> artifacts/Envoy-<version>-setup.exe
-.\install.ps1     # installs the built ZIP to %LOCALAPPDATA%\Envoy with shortcuts
+.\publish.ps1     # writes artifacts/Envoy-<version>-win-x64.zip
+# compile setup.iss with Inno Setup for artifacts/Envoy-<version>-setup.exe
+.\install.ps1     # installs the built zip to %LOCALAPPDATA%\Envoy with shortcuts
 ```
-
-The version is sourced from `Directory.Build.props`, so nothing here needs a hardcoded number.
 
 </details>
 
 ---
 
-## 🐞 Feedback & bug reports
+## Feedback and bug reports
 
-Found a bug or a false flag? **[Open an issue](https://github.com/LXBStudioLLC/envoy/issues/new/choose).** A good report includes your Envoy version, your Windows version, and — if it crashed — the log at `%LOCALAPPDATA%\Envoy\crash.log` (redact anything personal first). Envoy is precision-first, so a **real** job flagged as a possible ghost is the worst-case outcome — those reports are especially valuable.
+Hit a bug or a bad flag? [Open an issue](https://github.com/LXBStudioLLC/envoy/issues/new/choose). Useful reports include your Envoy version, your Windows version, and, if it crashed, the log at `%LOCALAPPDATA%\Envoy\crash.log` (scrub anything personal first). Envoy is tuned for precision, so a real job flagged as a possible ghost is the worst case, and those reports help the most.
 
-## 🗺️ Roadmap
+## Roadmap
 
-- [x] Ghost-job detection signal framework (wired into the running app)
-- [x] **Four active signals:** ATS cross-check, posting age, duplicate JD, scam pattern
-- [ ] **Repost frequency signal** — implemented and unit-tested; dormant until cross-session listing history persists
-- [x] Job discovery via public ATS feeds + optional Brave Search, every posting ghost-scored
-- [ ] Future signals: hiring freeze ([#5](https://github.com/LXBStudioLLC/envoy/issues/5)), PERM filings ([#1](https://github.com/LXBStudioLLC/envoy/issues/1))
-- [x] Windows ZIP package + signed installer (Inno Setup + PowerShell)
-- [x] Vault UI for profile history and corrections
-- [x] Adaptive parser with self-healing element locator
-- [x] Cloud LLM providers (OpenAI, Anthropic, Gemini) — opt-in, DPAPI-encrypted keys
-- [ ] Full-auto apply for employer-owned & ATS career sites (aggregators always stay copilot-only)
-- [ ] Multi-resume / multi-profile workflows
+- [x] Ghost-detection signal framework, wired into the app
+- [x] Four active signals: ATS cross-check, posting age, duplicate JD, scam pattern
+- [ ] Repost frequency signal (written and tested; off until listing history persists across sessions)
+- [x] Job search over public ATS feeds plus optional Brave Search, every posting scored
+- [ ] More signals: hiring freeze ([#5](https://github.com/LXBStudioLLC/envoy/issues/5)), PERM filings ([#1](https://github.com/LXBStudioLLC/envoy/issues/1))
+- [x] Windows zip and signed installer
+- [x] Vault view for profile history and corrections
+- [x] Adaptive parser with a self-healing element locator
+- [x] Cloud LLM providers (OpenAI, Anthropic, Gemini), opt-in, keys encrypted
+- [ ] Full-auto apply for employer and ATS sites (aggregators stay copilot-only)
+- [ ] Multi-resume and multi-profile support
 
-## 📄 License
+## License
 
 [AGPL-3.0](LICENSE). Your data stays on your machine.
