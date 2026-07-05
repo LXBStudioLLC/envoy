@@ -58,9 +58,9 @@ public partial class VaultView : UserControl
             {
                 var border = new Border
                 {
-                    Background = new SolidColorBrush(Color.FromRgb(0x1A, 0x22, 0x35)),
+                    Background = CardSurface,
                     CornerRadius = new CornerRadius(3),
-                    BorderBrush = new SolidColorBrush(Color.FromRgb(0x1A, 0x3A, 0x4A)),
+                    BorderBrush = BorderColor,
                     BorderThickness = new Thickness(1),
                     Padding = new Thickness(12),
                     Margin = new Thickness(0, 0, 0, 8),
@@ -83,7 +83,7 @@ public partial class VaultView : UserControl
                 ? string.Join("\n", _profile.Anomalies.Select(a => $"⚠ {a.Field}: {a.Message} [{a.Severity}]"))
                 : "✓ NO ANOMALIES DETECTED";
             AnomaliesText.Foreground = _profile.Anomalies.Any()
-                ? new SolidColorBrush(Color.FromRgb(0xFF, 0xE6, 0x00))
+                ? Yellow
                 : Green;
 
             SaveStatus.Text = "";

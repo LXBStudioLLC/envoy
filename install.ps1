@@ -68,6 +68,7 @@ if ($CreateDesktopShortcut) {
     $Shortcut.IconLocation = "$InstallPath\Envoy.exe,0"
     $Shortcut.Description = "Envoy - Job Application Agent"
     $Shortcut.Save()
+    [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($WshShell)
 }
 
 if ($CreateStartMenuShortcut) {
@@ -82,6 +83,7 @@ if ($CreateStartMenuShortcut) {
     $Shortcut.IconLocation = "$InstallPath\Envoy.exe,0"
     $Shortcut.Description = "Envoy - Job Application Agent"
     $Shortcut.Save()
+    [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($WshShell)
 }
 
 # Create uninstall registry entry

@@ -25,16 +25,16 @@ public class DiscoveryContainerResolutionTests
         var discovery = provider.GetRequiredService<JobDiscoveryService>();
         Assert.NotNull(discovery);
 
-        var sources = provider.GetServices<IAtsBoardSource>().ToList();
-        Assert.Equal(5, sources.Count);
-
         var expected = new[] { JobSource.Greenhouse, JobSource.Lever, JobSource.Ashby, JobSource.Workable, JobSource.Recruitee };
+
+        var sources = provider.GetServices<IAtsBoardSource>().ToList();
+        Assert.Equal(expected.Length, sources.Count);
         Assert.All(expected, ats => Assert.Contains(sources, s => s.Ats == ats));
 
         var web = provider.GetRequiredService<IWebSearchSource>();
         Assert.Equal("Brave Search", web.Name);
 
         Assert.NotEmpty(discovery.DefaultBoards);
-        Assert.Equal(5, discovery.SupportedAts.Count);
+        Assert.Equal(expected.Length, discovery.SupportedAts.Count);
     }
 }
