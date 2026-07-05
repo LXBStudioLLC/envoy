@@ -5,7 +5,7 @@ param(
     [string]$InstallPath = "$env:LOCALAPPDATA\Envoy",
     [switch]$CreateDesktopShortcut = $true,
     [switch]$CreateStartMenuShortcut = $true,
-    [string]$Version = "1.0.0"
+    [string]$Version = "1.0.1"
 )
 
 $ErrorActionPreference = "Stop"
