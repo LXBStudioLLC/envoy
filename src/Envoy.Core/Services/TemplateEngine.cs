@@ -204,10 +204,9 @@ public class TemplateEngine
             case "company": return data.Experience.FirstOrDefault()?.Company ?? "";
             case "resume_file":
             case "generated_pdf_path":
-                return Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "Envoy",
-                    $"{name.Replace(" ", "_")}_{profile.Company}_{profile.JobTitle}.pdf");
+                // Same sanitized path the PDF was written to, so the upload always finds
+                // it and untrusted Company/JobTitle can't inject a traversal.
+                return ResumeFilePath.For(name, profile.Company, profile.JobTitle);
         }
 
         // Unknown field — log so template authors can debug typos rather than
