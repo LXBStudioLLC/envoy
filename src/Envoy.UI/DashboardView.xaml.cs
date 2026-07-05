@@ -98,7 +98,7 @@ public partial class DashboardView : UserControl
             {
                 ChromeStatusLabel.Text = $"◉ Launching {browserName} with debug bridge...";
                 ChromeStatusLabel.Foreground = Cyan;
-                ChromeDetailLabel.Text = $"Envoy needs {browserName} with remote debugging for stealth automation.";
+                ChromeDetailLabel.Text = $"Envoy launches {browserName} with remote debugging for the apply copilot — it fills forms in your own browser session, and you review before anything is submitted.";
                 ChromeDetailLabel.Foreground = Gray;
                 BtnLaunchChrome.IsEnabled = false;
 
