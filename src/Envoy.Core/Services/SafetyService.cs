@@ -236,7 +236,7 @@ public class SafetyService
 
         if (resumeWords.Length == 0) return;
 
-        var matchCount = jdWords.Count(jd => resumeWords.Any(r => r.Contains(jd, StringComparison.OrdinalIgnoreCase)));
+        var matchCount = jdWords.Count(jd => resumeWords.Any(r => r.Equals(jd, StringComparison.OrdinalIgnoreCase)));
         var density = (double)matchCount / jdWords.Count;
 
         // 30% threshold catches LLM-driven stuffing without flagging the natural
@@ -318,7 +318,7 @@ public class SafetyService
     {
         var words = text.Split(new[] { ' ', '\n', '\r', '.', ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
         var stopWords = new HashSet<string> { "the", "and", "for", "with", "you", "are", "will", "must", "have", "this", "that" };
-        return words.Where(w => w.Length > 3 && !stopWords.Contains(w.ToLower())).ToList();
+        return words.Where(w => w.Length > 3 && !stopWords.Contains(w.ToLowerInvariant())).ToList();
     }
 
     private static string SerializeResume(MasterProfile profile)

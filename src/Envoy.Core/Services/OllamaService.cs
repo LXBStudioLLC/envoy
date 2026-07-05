@@ -22,6 +22,7 @@ public class OllamaService
 
     public void SwitchProvider(ILLMProvider newProvider)
     {
+        ArgumentNullException.ThrowIfNull(newProvider);
         _activeProvider = newProvider;
         _log.LogInformation("Switched LLM provider to {Provider} ({ProviderId})", newProvider.DisplayName, newProvider.ProviderId);
     }

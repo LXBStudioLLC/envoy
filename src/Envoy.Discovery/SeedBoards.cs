@@ -43,12 +43,12 @@ public static class SeedBoards
         return Default;
     }
 
-    public static readonly IReadOnlyList<AtsBoardRef> Default = new[]
+    public static readonly IReadOnlyList<AtsBoardRef> Default = Array.AsReadOnly(new[]
     {
         new AtsBoardRef { Ats = JobSource.Ashby,    Token = "openai",     CompanyName = "OpenAI" },
         new AtsBoardRef { Ats = JobSource.Lever,    Token = "matchgroup", CompanyName = "Match Group" },
         new AtsBoardRef { Ats = JobSource.Lever,    Token = "gopuff",     CompanyName = "Gopuff" },
         new AtsBoardRef { Ats = JobSource.Lever,    Token = "veeva",      CompanyName = "Veeva Systems" },
         new AtsBoardRef { Ats = JobSource.Workable, Token = "viva",       CompanyName = "Viva.com" },
-    };
+    });
 }

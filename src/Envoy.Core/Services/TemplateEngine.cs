@@ -93,7 +93,7 @@ public class TemplateEngine
         {
             ct.ThrowIfCancellationRequested();
 
-            switch (step.Action.ToLower())
+            switch (step.Action.ToLowerInvariant())
             {
                 case "wait_for":
                     await WaitForElementAsync(browser, step, ct);
@@ -186,7 +186,7 @@ public class TemplateEngine
         var data = profile.TailoredData;
         var name = data.Name ?? "";
         var nameParts = name.Split(' ', 2);
-        var key = (field ?? "").ToLower();
+        var key = (field ?? "").ToLowerInvariant();
 
         switch (key)
         {
