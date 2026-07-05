@@ -244,8 +244,11 @@ public class EnvoySettings
         }
         catch (Exception ex)
         {
+            // Surface the failure instead of silently dropping the key. The settings
+            // save flow catches this and tells the user the save failed, rather than
+            // reporting success while the key is quietly lost.
             TryLog($"API key encryption (DPAPI Protect) failed: {ex.Message}");
-            return null;
+            throw;
         }
     }
 

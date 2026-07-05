@@ -85,15 +85,21 @@ internal sealed class FileLogger : ILogger
     {
         if (!IsEnabled(logLevel)) return;
 
-        var message = formatter(state, exception);
-        if (string.IsNullOrEmpty(message) && exception is null) return;
+        // Logging must never throw into the app: a bad formatter or a failing writer
+        // is swallowed (the class contract is that every path is guarded).
+        try
+        {
+            var message = formatter(state, exception);
+            if (string.IsNullOrEmpty(message) && exception is null) return;
 
-        var sb = new StringBuilder();
-        sb.Append('[').Append(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")).Append("] ");
-        sb.Append(ShortLevel(logLevel)).Append(' ');
-        sb.Append(_category).Append(" - ").Append(message).Append('\n');
-        if (exception is not null) sb.Append(exception).Append('\n');
-        _write(sb.ToString());
+            var sb = new StringBuilder();
+            sb.Append('[').Append(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")).Append("] ");
+            sb.Append(ShortLevel(logLevel)).Append(' ');
+            sb.Append(_category).Append(" - ").Append(message).Append('\n');
+            if (exception is not null) sb.Append(exception).Append('\n');
+            _write(sb.ToString());
+        }
+        catch { /* never let logging crash the caller */ }
     }
 
     private static string ShortLevel(LogLevel level) => level switch

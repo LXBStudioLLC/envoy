@@ -62,6 +62,13 @@ public partial class ApplyView : UserControl
             return;
         }
 
+        if (_profileId == Guid.Empty)
+        {
+            StatusText.Text = "⚠ SELECT A PROFILE ON THE DASHBOARD FIRST";
+            StatusText.Foreground = Yellow;
+            return;
+        }
+
         if (!Uri.TryCreate(jobUrl, UriKind.Absolute, out var uri)
             || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {

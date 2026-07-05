@@ -5,10 +5,17 @@ param(
     [string]$InstallPath = "$env:LOCALAPPDATA\Envoy",
     [switch]$CreateDesktopShortcut = $true,
     [switch]$CreateStartMenuShortcut = $true,
-    [string]$Version = "1.0.1"
+    [string]$Version = ""
 )
 
 $ErrorActionPreference = "Stop"
+
+# Single-source the version from Directory.Build.props (like publish/build-release).
+if (-not $Version) {
+    $propsPath = Join-Path $PSScriptRoot "Directory.Build.props"
+    if (Test-Path $propsPath) { $Version = ([xml](Get-Content $propsPath -Raw)).Project.PropertyGroup.Version }
+    if (-not $Version) { $Version = "1.0.0" }
+}
 
 Write-Host "Envoy Installer v$Version" -ForegroundColor Cyan
 Write-Host ""

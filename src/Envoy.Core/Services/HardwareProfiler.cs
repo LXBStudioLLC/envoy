@@ -57,11 +57,15 @@ public class HardwareProfiler
         try
         {
             using var searcher = new System.Management.ManagementObjectSearcher("SELECT * FROM Win32_VideoController");
-            foreach (System.Management.ManagementObject obj in searcher.Get())
+            using var results = searcher.Get();
+            foreach (System.Management.ManagementObject obj in results)
             {
-                var adapterRam = Convert.ToUInt64(obj["AdapterRAM"]);
-                profile.TotalVramMB += (int)(adapterRam / (1024 * 1024));
-                profile.GpuName = obj["Name"]?.ToString() ?? "Unknown";
+                using (obj)
+                {
+                    var adapterRam = Convert.ToUInt64(obj["AdapterRAM"]);
+                    profile.TotalVramMB += (int)(adapterRam / (1024 * 1024));
+                    profile.GpuName = obj["Name"]?.ToString() ?? "Unknown";
+                }
             }
             profile.HasGpu = profile.TotalVramMB > 0;
         }
@@ -75,7 +79,7 @@ public class HardwareProfiler
     {
         try
         {
-            var process = new System.Diagnostics.Process
+            using var process = new System.Diagnostics.Process
             {
                 StartInfo = new System.Diagnostics.ProcessStartInfo
                 {
@@ -117,7 +121,7 @@ public class HardwareProfiler
     {
         try
         {
-            var process = new System.Diagnostics.Process
+            using var process = new System.Diagnostics.Process
             {
                 StartInfo = new System.Diagnostics.ProcessStartInfo
                 {

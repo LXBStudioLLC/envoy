@@ -46,11 +46,11 @@ public static class DomScorer
         ["class"] = 0.5,
     };
 
-    public static double WeightAttributes = 0.30;
-    public static double WeightLabel = 0.30;
-    public static double WeightAncestor = 0.15;
-    public static double WeightSibling = 0.15;
-    public static double WeightPosition = 0.10;
+    public static readonly double WeightAttributes = 0.30;
+    public static readonly double WeightLabel = 0.30;
+    public static readonly double WeightAncestor = 0.15;
+    public static readonly double WeightSibling = 0.15;
+    public static readonly double WeightPosition = 0.10;
 
     public static CandidateScoreResult? FindBestMatch(
         Fingerprint fingerprint,

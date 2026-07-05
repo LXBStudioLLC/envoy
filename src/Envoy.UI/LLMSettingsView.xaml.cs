@@ -201,11 +201,19 @@ public partial class LLMSettingsView : UserControl
             ProviderList.ItemsSource = null;
             ProviderList.ItemsSource = _cards;
 
-            _settings.Save();
+            var saved = _settings.Save();
             SwitchActiveProvider();
 
-            ConnectionStatusLabel.Text = $"Switched to {card?.ProviderName ?? providerId}";
-            ConnectionStatusLabel.Foreground = Green;
+            if (saved)
+            {
+                ConnectionStatusLabel.Text = $"Switched to {card?.ProviderName ?? providerId}";
+                ConnectionStatusLabel.Foreground = Green;
+            }
+            else
+            {
+                ConnectionStatusLabel.Text = $"Switched to {card?.ProviderName ?? providerId} for now, but could not save (settings.json may be locked).";
+                ConnectionStatusLabel.Foreground = Yellow;
+            }
         }
     }
 
@@ -286,7 +294,11 @@ public partial class LLMSettingsView : UserControl
                 ProviderList.ItemsSource = null;
                 ProviderList.ItemsSource = _cards;
 
-                _settings.Save();
+                if (!_settings.Save())
+                {
+                    ConnectionStatusLabel.Text = "Model selected for now, but could not save (settings.json may be locked).";
+                    ConnectionStatusLabel.Foreground = Yellow;
+                }
                 SwitchActiveProvider();
             }
         }

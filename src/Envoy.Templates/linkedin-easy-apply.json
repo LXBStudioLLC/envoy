@@ -1,7 +1,7 @@
 {
   "id": "linkedin-easy-apply",
   "name": "LinkedIn Easy Apply",
-  "urlMatch": "linkedin.com/jobs/view/*",
+  "url_match": "linkedin.com/jobs/view/*",
   "version": "1.0.0",
   "steps": [
     {

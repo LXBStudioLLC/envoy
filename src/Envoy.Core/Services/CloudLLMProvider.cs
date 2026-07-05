@@ -120,14 +120,14 @@ public class CloudLLMProvider : ILLMProvider
             {
                 using var req = new HttpRequestMessage(HttpMethod.Get, "https://api.openai.com/v1/models");
                 ApplyAuth(req);
-                var resp = await Http.SendAsync(req, cts.Token);
+                using var resp = await Http.SendAsync(req, cts.Token);
                 return resp.IsSuccessStatusCode;
             }
             if (ProviderId == "gemini")
             {
                 using var req = new HttpRequestMessage(HttpMethod.Get, "https://generativelanguage.googleapis.com/v1beta/models");
                 ApplyAuth(req);
-                var resp = await Http.SendAsync(req, cts.Token);
+                using var resp = await Http.SendAsync(req, cts.Token);
                 return resp.IsSuccessStatusCode;
             }
             if (ProviderId == "anthropic")
@@ -146,7 +146,7 @@ public class CloudLLMProvider : ILLMProvider
                     Content = new StringContent(probeBody, Encoding.UTF8, "application/json")
                 };
                 ApplyAuth(req);
-                var resp = await Http.SendAsync(req, cts.Token);
+                using var resp = await Http.SendAsync(req, cts.Token);
                 return resp.StatusCode != HttpStatusCode.Unauthorized
                     && resp.StatusCode != HttpStatusCode.Forbidden;
             }
@@ -170,7 +170,7 @@ public class CloudLLMProvider : ILLMProvider
             {
                 using var req = new HttpRequestMessage(HttpMethod.Get, "https://api.openai.com/v1/models");
                 ApplyAuth(req);
-                var resp = await Http.SendAsync(req, cts.Token);
+                using var resp = await Http.SendAsync(req, cts.Token);
                 resp.EnsureSuccessStatusCode();
                 var json = await resp.Content.ReadAsStringAsync(cts.Token);
                 var doc = JsonDocument.Parse(json);
@@ -200,7 +200,7 @@ public class CloudLLMProvider : ILLMProvider
             {
                 using var req = new HttpRequestMessage(HttpMethod.Get, "https://generativelanguage.googleapis.com/v1beta/models");
                 ApplyAuth(req);
-                var resp = await Http.SendAsync(req, cts.Token);
+                using var resp = await Http.SendAsync(req, cts.Token);
                 resp.EnsureSuccessStatusCode();
                 var json = await resp.Content.ReadAsStringAsync(cts.Token);
                 var doc = JsonDocument.Parse(json);
@@ -212,7 +212,21 @@ public class CloudLLMProvider : ILLMProvider
                     {
                         var name = m.TryGetProperty("name", out var nameEl) ? nameEl.GetString() ?? "" : "";
                         var displayName = m.TryGetProperty("displayName", out var dispEl) ? dispEl.GetString() ?? name : name;
-                        if (name.Contains("generateContent", StringComparison.OrdinalIgnoreCase))
+                        // "generateContent" is an entry in the supportedGenerationMethods
+                        // array, not part of the model name. Filter on that array.
+                        var supportsGenerate = false;
+                        if (m.TryGetProperty("supportedGenerationMethods", out var methodsEl) && methodsEl.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (var method in methodsEl.EnumerateArray())
+                            {
+                                if (string.Equals(method.GetString(), "generateContent", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    supportsGenerate = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (supportsGenerate)
                         {
                             models.Add(new LLMModelInfo
                             {
