@@ -2,7 +2,16 @@
 
 All notable changes to Envoy are documented in this file. Format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.2] - 2026-07-05
+
+### Fixed
+- Ollama settings crash. Model-list bindings to read-only properties threw when the LLM settings view rendered (`Run.Text` binds two-way by default); all such bindings are now `OneWay`.
+- A full code-review pass fixed 53 verified bugs. Highlights: resume PDFs now include the contact header (name, email, phone) that was being omitted; the LinkedIn template matches URLs again; Google Gemini returns its model list; the safety gate no longer crashes on unusual LLM output; settings and DPAPI key-save failures surface in the UI instead of failing silently; the browser bridge disposes cleanly and serializes its sends; and a captive `DbContext` (unbounded growth, concurrent-access crash) was replaced with a per-operation context factory. Also: cancellation is honored in job discovery, Greenhouse posting dates feed the age signals correctly, keyword-density matching no longer counts "java" inside "javascript", plus a batch of null guards, culture-invariant casing (Turkish-locale safe), and resource-leak fixes.
+
+### Added
+- The application, its window, the installer, and the shortcuts now carry the Envoy ghost icon.
+
+## [1.0.1] - 2026-07-05
 
 ### Fixed
 - **Ghost signals: honest activity.** `DuplicateJdSignal` was inert at runtime: its comparison corpus (`Extra["dupcheck.corpus"]`) was never populated outside tests, so it always returned null. It is now fed a **same-batch corpus** built from the other postings in each discovery run (sanctioned data already in hand, no extra requests), so it fires on cross-company near-duplicate descriptions. Docs corrected to state that **four** signals are active in the running app (ATS Cross-Check, Posting Age, Duplicate JD, Scam Pattern). **Repost Frequency** remains implemented and unit-tested but dormant until cross-session listing history is persisted, which this build does not ship. Known limitation: Posting Age is active in the Find Jobs list but not yet in the Apply panel (which does not capture a posting date).
@@ -69,6 +78,7 @@ Initial foundation: local-first resume tailoring + human-assisted apply.
 ### Security
 - Cloud LLM API keys encrypted with DPAPI at rest. Plaintext keys from pre-DPAPI builds are automatically migrated on first launch.
 
-[Unreleased]: https://github.com/LXBStudioLLC/envoy/compare/v1.0.0...HEAD
+[1.0.2]: https://github.com/LXBStudioLLC/envoy/compare/v1.0.1...v1.0.2
+[1.0.1]: https://github.com/LXBStudioLLC/envoy/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/LXBStudioLLC/envoy/releases/tag/v1.0.0
 [0.2.0-beta]: https://github.com/LXBStudioLLC/envoy/releases/tag/v0.2.0-beta
