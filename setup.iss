@@ -3,10 +3,10 @@
 
 #define MyAppName "Envoy"
 #ifndef MyAppVersion
-  #define MyAppVersion "1.0.1"
+  #define MyAppVersion "1.0.2"
 #endif
 #ifndef MyAppVersionInfo
-  #define MyAppVersionInfo "1.0.1.0"
+  #define MyAppVersionInfo "1.0.2.0"
 #endif
 #define MyAppPublisher "LXB Studio LLC"
 #define MyAppURL "https://github.com/LXBStudioLLC/envoy"
