@@ -8,6 +8,9 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>Envoy</AssemblyName>
     <RootNamespace>Envoy.UI</RootNamespace>
+    <!-- Embeds the ghost icon as the exe's Win32 icon; WPF uses it for the window
+         title bar and taskbar too, and Start-menu/desktop shortcuts inherit it. -->
+    <ApplicationIcon>Envoy.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
