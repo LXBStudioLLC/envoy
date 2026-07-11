@@ -155,7 +155,10 @@
         </Style.Triggers>
     </Style>
 
-    <Style TargetType="ComboBox" x:Key="CyberComboBox">
+    <!-- BasedOn the HandyControl dark template: the default WPF ComboBox chrome
+         ignores Background and renders a light system-theme bar, which left the
+         selected text unreadable (light-on-light) in the Apply view. -->
+    <Style TargetType="ComboBox" x:Key="CyberComboBox" BasedOn="{StaticResource ComboBoxBaseStyle}">
         <Setter Property="Background" Value="{StaticResource BgInputBrush}"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource BorderGlowBrush}"/>
