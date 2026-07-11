@@ -1,5 +1,4 @@
 <p align="center">
-  <!-- Banner. Swap assets/banner.png for a real wordmark when you have one. -->
   <img src="assets/banner.png" alt="Envoy" width="640">
 </p>
 
@@ -12,7 +11,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" alt="License: AGPL-3.0">
-  <img src="https://img.shields.io/badge/release-v1.0.1-2ea44f" alt="Latest release v1.0.1">
+  <img src="https://img.shields.io/github/v/release/LXBStudioLLC/envoy?color=2ea44f&label=release" alt="Latest release">
   <img src="https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-0078D6" alt="Platform: Windows 10/11 x64">
   <img src="https://img.shields.io/badge/installer-Authenticode%20signed-4c1" alt="Signed installer">
   <img src="https://img.shields.io/badge/built%20with-.NET%208-512BD4" alt="Built with .NET 8">
@@ -43,10 +42,9 @@ You tailor the resume, fill out the same fields again, hit submit, and never hea
 - Windows 10/11. Signed installer or a portable zip. Nothing else to install.
 
 <p align="center">
-  <!-- Swap assets/ghost-score.png for the Ghost Risk panel (band, confidence, evidence lines). -->
-  <img src="assets/ghost-score.png" alt="Envoy Ghost Risk panel showing risk band, confidence, and evidence" width="820">
+  <img src="assets/ghost-score.png" alt="Envoy Ghost Risk panel showing the risk band, score, and evidence lines" width="820">
 </p>
-<p align="center"><em>The Ghost Risk panel: the band, the confidence, and the reasons behind the score. (Real screenshot coming soon.)</em></p>
+<p align="center"><em>The Ghost Risk panel: the band, the score, and the reasons behind it. Demo data shown; company and posting are fictional.</em></p>
 
 ---
 
@@ -114,10 +112,9 @@ Envoy has a built-in job search (`Envoy.Discovery`) in the Find Jobs view. It on
 Every posting is scored before it hits your list, so the risk band and the reasons show up right in the results. No scraping behind a login, no bot-evasion, no CAPTCHA solving. Search stays on public endpoints.
 
 <p align="center">
-  <!-- Swap assets/find-jobs.png for the results list with a risk band on each posting. -->
   <img src="assets/find-jobs.png" alt="Find Jobs results list with a risk band on each posting" width="820">
 </p>
-<p align="center"><em>Find Jobs: every result carries its own risk band before you click. (Real screenshot coming soon.)</em></p>
+<p align="center"><em>Find Jobs: every result carries its own risk band before you click. Demo data shown; companies and postings are fictional.</em></p>
 
 ---
 
@@ -137,10 +134,9 @@ You always press submit. Envoy fills the form and then stops and waits for you t
 Fuller automation is on the roadmap, and by design it only runs on employer-owned and ATS career sites. Aggregators like LinkedIn and Indeed stay copilot-only. Envoy doesn't solve CAPTCHAs; if a site puts one up, it hands control back to you.
 
 <p align="center">
-  <!-- Swap assets/apply-copilot.png for the Apply view paused at the Confirm / Cancel gate. -->
-  <img src="assets/apply-copilot.png" alt="Apply view with a filled form paused at the Confirm or Cancel submit gate" width="820">
+  <img src="assets/apply-copilot.png" alt="Apply view paused at the Confirm or Cancel submit gate" width="820">
 </p>
-<p align="center"><em>The copilot fills the form and stops at the gate. Nothing is sent until you confirm. (Real screenshot coming soon.)</em></p>
+<p align="center"><em>The copilot fills the form and stops at the gate. Nothing is sent until you confirm. Demo data shown; company and posting are fictional.</em></p>
 
 ---
 
