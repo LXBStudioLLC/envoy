@@ -15,7 +15,7 @@ Envoy is a **.NET 8 WPF Windows desktop app** with two pillars:
 2. **Full-Auto is scoped to company-owned and ATS-hosted career sites.** Aggregators (LinkedIn, Indeed, Glassdoor, ZipRecruiter, Monster, Dice, etc.) are **Copilot-only by product choice**, enforced **in code** via a site classifier — not just documented.
 3. **On a hard block, hand off — don't fight it.** CAPTCHA, bot-check, or rate-limit → surface to the user and log it. **No CAPTCHA-solving, and no techniques whose purpose is to defeat a site's bot-detection.** Full-Auto fails gracefully and yields to the human.
 4. **Data layers read public data and don't bypass authentication.** Ghost detection and job discovery use public ATS JSON APIs, key-gated search APIs (e.g. Brave Search), public government datasets, and the posting in front of the user. **No scraping behind a login.**
-5. Ghost detection outputs **RISK SCORE + CONFIDENCE + EVIDENCE** — an assessment with reasons, defaulting to neutral, not a bare "FAKE"/"GHOST" label on a named company. (Kept as the differentiator and defamation cover; precision-vs-recall is a tunable default, not a hard rule.)
+5. Ghost detection outputs **RISK SCORE + CONFIDENCE + EVIDENCE** — an assessment with reasons, defaulting to neutral, not a bare "FAKE"/"GHOST" label on a named company. (Kept as the differentiator and the fairness posture toward named companies; precision-vs-recall is a tunable default, not a hard rule.)
 6. **.NET 8**, nullable enabled, file-scoped namespaces, match existing patterns. Do **NOT** blanket-add `ConfigureAwait(false)`.
 7. Work on a `feature/<name>` branch created off `main`. Do **NOT** push directly to `main`. Do **NOT** force-push.
 

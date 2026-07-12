@@ -10,12 +10,12 @@ Real brand assets (generated in the app's dark theme; swap for designer versions
 | `banner.png` | Wordmark at the top of the README | 1280 by 360 |
 | `social-preview.png` | Link-share card. Upload it in GitHub Settings, then General, then Social preview | 1280 by 640 |
 
-Placeholders (replace with real screenshots at the same paths; the README picks them up with no markdown change):
+Screenshots (real app captures, staged with fictional demo data so no real company or personal detail appears next to a risk band):
 
-| File | Used for | Size |
+| File | Shows | Size |
 |---|---|---|
-| `ghost-score.png` | Ghost Risk panel: band, confidence, evidence lines (the important one) | about 1640 by 920, shown at 820px |
-| `find-jobs.png` | Find Jobs results with a risk band on each posting | about 1640 by 920 |
-| `apply-copilot.png` | Apply view paused at the Confirm or Cancel gate | about 1640 by 920 |
+| `ghost-score.png` | Ghost Risk panel: band, score, evidence lines | 1600 by 820, shown at 820px |
+| `find-jobs.png` | Find Jobs results with a risk band on each posting | 1600 by 1260 |
+| `apply-copilot.png` | Apply view paused at the Confirm or Cancel gate | 1600 by 950 |
 
-Tips: keep one app theme, keep personal details out of frame (use a sample resume), and compress the PNGs before committing. A short GIF of dropping a resume, tailoring it, and reviewing before submit works well too.
+If you retake them: keep one app theme, use fictional data only (no real companies beside a risk band, no personal details), and compress the PNGs before committing. A short GIF of dropping a resume, tailoring it, and reviewing before submit works well too.
