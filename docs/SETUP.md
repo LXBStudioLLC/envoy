@@ -2,21 +2,21 @@
 
 ## Requirements
 
-- **Windows 10/11 (64-bit).** Envoy is a WPF desktop application — macOS/Linux are not supported at v1.
+- **Windows 10/11 (64-bit).** Envoy is a WPF desktop application; macOS/Linux are not supported at v1.
 - [Ollama](https://ollama.com) installed and running (only required if you want to use a local model; you can run Envoy with a cloud provider instead).
 - Google Chrome or Microsoft Edge installed.
 
 ## Installation
 
 ### Inno Setup installer (recommended)
-1. Download `Envoy-v1.0.0-setup.exe` from [Releases](../../releases).
+1. Download `Envoy-<version>-setup.exe` from [Releases](../../releases).
 2. Run the installer.
 3. Launch Envoy from the Start Menu or desktop shortcut.
 
 ### ZIP package
-1. Download `Envoy-v1.0.0-win-x64.zip` from [Releases](../../releases).
+1. Download `Envoy-<version>-win-x64.zip` from [Releases](../../releases).
 2. Extract anywhere (e.g. `C:\Tools\Envoy\`).
-3. Double-click `Envoy.exe` (or `Envoy.UI.exe`, depending on the build).
+3. Double-click `Envoy.exe`.
 
 ### PowerShell installer
 From inside the extracted ZIP, run:
@@ -43,13 +43,13 @@ This copies the app to `%LOCALAPPDATA%\Envoy`, adds desktop + Start Menu shortcu
 
 ## Chrome Remote Debugging
 
-For the stealth browser to work, Chrome must be launched with:
+For the apply copilot's browser bridge to work, Chrome must be launched with:
 
 ```
 --remote-debugging-port=9222
 ```
 
-Envoy will handle this automatically — it relaunches Chrome with the right flag if a debug session isn't already running.
+Envoy handles this automatically and relaunches Chrome with the right flag if a debug session isn't already running.
 
 ## Troubleshooting
 
@@ -67,4 +67,4 @@ Envoy will handle this automatically — it relaunches Chrome with the right fla
 - Ensure your GPU drivers are up to date.
 
 **"Cloud API key not accepted after I copied my settings to another PC"**
-- API keys are encrypted with Windows DPAPI under the `CurrentUser` scope — they cannot be decrypted by a different Windows user account or on a different machine. Re-enter the key on the new machine.
+- API keys are encrypted with Windows DPAPI under the `CurrentUser` scope, so they cannot be decrypted by a different Windows user account or on a different machine. Re-enter the key on the new machine.
