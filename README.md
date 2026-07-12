@@ -12,6 +12,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" alt="License: AGPL-3.0">
   <img src="https://img.shields.io/github/v/release/LXBStudioLLC/envoy?color=2ea44f&label=release" alt="Latest release">
+  <img src="https://img.shields.io/badge/status-early%20beta-ff8c00" alt="Status: early beta">
   <img src="https://img.shields.io/badge/platform-Windows%2010%2F11%20x64-0078D6" alt="Platform: Windows 10/11 x64">
   <img src="https://img.shields.io/badge/installer-Authenticode%20signed-4c1" alt="Signed installer">
   <img src="https://img.shields.io/badge/built%20with-.NET%208-512BD4" alt="Built with .NET 8">
@@ -23,6 +24,7 @@
 
 <p align="center">
   <a href="#download">Download</a> ·
+  <a href="#early-beta-testers-and-contributors-wanted">Help wanted</a> ·
   <a href="#ghost-detection">How it works</a> ·
   <a href="#find-jobs">Find Jobs</a> ·
   <a href="#apply-copilot">Apply Copilot</a> ·
@@ -45,6 +47,17 @@ You tailor the resume, fill out the same fields again, hit submit, and never hea
   <img src="assets/ghost-score.png" alt="Envoy Ghost Risk panel showing the risk band, score, and evidence lines" width="820">
 </p>
 <p align="center"><em>The Ghost Risk panel: the band, the score, and the reasons behind it. Demo data shown; company and posting are fictional.</em></p>
+
+---
+
+## Early beta: testers and contributors wanted
+
+Envoy is in early beta. It works end to end and every release is signed, but so far it has run on a small number of machines against a limited slice of real postings. That is the gap you can close.
+
+- **Test it.** Install it, run your real searches, and open an issue for anything that looks wrong: a real job flagged as risky, an obvious ghost scored OK, a crash, a screen that confused you. A five-minute report genuinely moves the project.
+- **Contribute.** Five starter issues are open, graded easy to moderate, including two self-contained ghost signals and a new job-board source. [CONTRIBUTING.md](CONTRIBUTING.md) has the step-by-step, including how to hand a signal spec to a coding agent.
+
+Everyone who helps gets credited. Merged PRs are listed in the notes of the release they ship in, and so are the people whose bug reports and test sessions led to a fix. If you would rather not be named, say so in your issue or PR.
 
 ---
 
@@ -84,7 +97,7 @@ Four signals run in the app today, all unit-tested:
 | Duplicate JD | Weak | Local (cross-company text match within a batch) |
 | Scam Pattern | Deterministic | Local regex (off-platform redirects, upfront fee or PII asks, crypto and gift-card payment, check and overpayment fraud) |
 
-A fifth signal, Repost Frequency, is written and tested but stays off until Envoy remembers listings across sessions, which this build doesn't do yet. So it never fires today.
+A fifth signal, Repost Frequency, watches for listings that get re-posted to look new. Its stronger path needs listing history across sessions, which this build doesn't keep yet, but a timestamp fallback can already fire when a posting's own dates show it was bumped long after it first went up.
 
 Each signal says whether it needs the network. That lets Envoy score a whole list locally in the Find Jobs view and save the network calls for when you open a single posting.
 
@@ -232,7 +245,7 @@ Hit a bug or a bad flag? [Open an issue](https://github.com/LXBStudioLLC/envoy/i
 
 - [x] Ghost-detection signal framework, wired into the app
 - [x] Four active signals: ATS cross-check, posting age, duplicate JD, scam pattern
-- [ ] Repost frequency signal (written and tested; off until listing history persists across sessions)
+- [ ] Repost frequency signal, full history-backed detection (the timestamp fallback ships today; the stronger path needs listing history across sessions)
 - [x] Job search over public ATS feeds plus optional Brave Search, every posting scored
 - [ ] More signals: hiring freeze ([#5](https://github.com/LXBStudioLLC/envoy/issues/5)), PERM filings ([#1](https://github.com/LXBStudioLLC/envoy/issues/1))
 - [x] Windows zip and signed installer

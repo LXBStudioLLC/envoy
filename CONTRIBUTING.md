@@ -2,6 +2,8 @@
 
 Thanks for thinking about a contribution. Envoy is a Windows-only WPF desktop app built mainly around ghost-job detection: scoring how likely a job posting is a waste of an applicant's time, with transparent evidence. The resume-tailoring and form-fill flow is a human-gated copilot.
 
+Envoy is in early beta. Running it on a real machine and reporting what breaks is worth as much as code right now, and both get credited the same way (see [Credit](#credit)).
+
 ## The best way to help: write a ghost signal (and hand it to your agent)
 
 Ghost detection is built on a signal framework (`src/Envoy.GhostDetection/`). Each signal is an `IGhostSignal` that looks at a `JobPosting` and returns a `SignalResult`, or `null` for no opinion. Signals run in parallel, and `GhostScorer` combines them into a risk band (Neutral, Elevated, or High) with human-readable evidence.
@@ -75,7 +77,6 @@ docs/
   ADAPTIVE_PARSER.md       adaptive parser scoring, fingerprints, relocation
   TEMPLATE_AUTHORING.md    walk-through for adding new job-board templates
   SETUP.md                 user-facing install and first-launch
-  internal/                internal design notes (not user-facing)
 ```
 
 ## Branch and commit conventions
@@ -107,6 +108,10 @@ If your change adds a new job-board template, include:
 - `ConfigureAwait(false)` is left out on purpose. Envoy.Core is used only by Envoy.UI, in-process, and nothing else depends on it. The WPF side wants its continuations back on the UI thread for status updates. Don't blanket-add `ConfigureAwait(false)` to existing awaits; it would marshal work back to the UI thread anyway and just clutters the call sites. If you ever split Envoy.Core into a separately consumed library (say, a service worker), revisit this.
 - File-scoped namespaces everywhere. It matches the existing code and the rule in `.editorconfig`.
 - Static frozen brushes live in `src/Envoy.UI/Theme.cs`. Don't redeclare `Color.FromRgb(...)` literals per view. Pull from `Theme` with `using static Envoy.UI.Theme;`.
+
+## Credit
+
+Everyone who helps gets credited. Merged PRs appear in the contributor graph and get a line in the notes of the release they ship in. Bug reports, test sessions, and template captures that lead to a change are credited by name in those same notes. If you would rather not be named, say so in your issue or PR and it stays out.
 
 ## License
 
