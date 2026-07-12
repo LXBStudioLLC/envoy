@@ -9,7 +9,6 @@ packages are listed separately and are **not** distributed with the app.
 | Package | Version | License |
 |---|---|---|
 | HandyControl | 3.5.1 | MIT |
-| Microsoft.EntityFrameworkCore.Design | 8.0.0 | MIT |
 | Microsoft.EntityFrameworkCore.Sqlite | 8.0.0 | MIT |
 | Microsoft.Extensions.DependencyInjection | 8.0.1 | MIT |
 | Microsoft.Extensions.Hosting | 8.0.1 | MIT |
@@ -25,10 +24,11 @@ packages are listed separately and are **not** distributed with the app.
 **QuestPDF note:** QuestPDF is dual-licensed. The free **Community** license
 covers organizations with under US $1M annual gross revenue and open-source
 projects; larger organizations require a paid license. Anyone forking Envoy
-should confirm their own eligibility — see https://www.questpdf.com/license/ .
+should confirm their own eligibility; see https://www.questpdf.com/license/ .
 
-### Test-only packages (NOT shipped with the application)
+### Build-time and test-only packages (NOT shipped with the application)
 
+Microsoft.EntityFrameworkCore.Design 8.0.0 (MIT, build-time only),
 xunit 2.6.6 (Apache-2.0), xunit.runner.visualstudio 2.5.6 (Apache-2.0 / MIT),
 Moq 4.20.70 (BSD-3-Clause), Microsoft.NET.Test.Sdk 17.8.0 (MIT).
 
@@ -38,9 +38,9 @@ Envoy embeds the following fonts, each licensed under the SIL Open Font
 License, Version 1.1 (full text below). Per-font copies also live in
 `src/Envoy.UI/Fonts/`.
 
-- **JetBrains Mono** — Copyright 2020 The JetBrains Mono Project Authors
+- **JetBrains Mono**, Copyright 2020 The JetBrains Mono Project Authors
   (https://github.com/JetBrains/JetBrainsMono)
-- **Orbitron** — Copyright 2018 The Orbitron Project Authors
+- **Orbitron**, Copyright 2018 The Orbitron Project Authors
   (https://github.com/theleagueof/orbitron), with Reserved Font Name: "Orbitron"
 
 ---
