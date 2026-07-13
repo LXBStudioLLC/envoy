@@ -33,6 +33,11 @@ project.lock.json
 *.p12
 *.key
 
+# === Agent-local files (AGENTS.md is the public canonical doc) ===
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+
 # === Secrets / env ===
 appsettings.Local.json
 appsettings.*.Development.json
