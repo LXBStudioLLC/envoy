@@ -7,7 +7,7 @@
     Envoy.exe can never drift apart. Override at build time with -p:Version=X.Y.Z.
   -->
   <PropertyGroup>
-    <Version>1.0.2</Version>
+    <Version>1.0.3</Version>
     <Company>LXB Studio LLC</Company>
     <Product>Envoy</Product>
     <Authors>LXB Studio LLC</Authors>
