@@ -165,14 +165,15 @@ public partial class ApplyView : UserControl
         if (_tailored == null) return;
 
         BtnExecute.IsEnabled = false;
-        var mode = ((ComboBoxItem)CmbMode.SelectedItem).Content.ToString() == "Stealth"
-            ? ExecutionMode.Stealth : ExecutionMode.Safe;
-
-        StatusText.Text = "ESTABLISHING CONNECTION...";
-        StatusText.Foreground = Cyan;
 
         try
         {
+            var mode = (CmbMode.SelectedItem as ComboBoxItem)?.Content?.ToString() == "Stealth"
+                ? ExecutionMode.Stealth : ExecutionMode.Safe;
+
+            StatusText.Text = "ESTABLISHING CONNECTION...";
+            StatusText.Foreground = Cyan;
+
             var log = await _orchestrator.SubmitApplicationAsync(
                 _tailored.Id, mode, RequestSubmitConfirmationAsync);
 

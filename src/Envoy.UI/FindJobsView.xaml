@@ -8,6 +8,7 @@
             <TextBlock Text="&#x25C8; FIND JOBS" Style="{StaticResource CyberHeading}" Margin="0,0,0,4"/>
             <TextBlock Text="SANCTIONED DISCOVERY &#x2014; PUBLIC ATS FEEDS + WEB SEARCH, GHOST-SCORED" Style="{StaticResource CyberSubheading}" Margin="0,0,0,20"/>
 
+            <!-- Search Controls -->
             <Border Background="#111827" CornerRadius="3" BorderBrush="#1A3A4A" BorderThickness="1" Padding="20" Margin="0,0,0,16">
                 <Border.Effect>
                     <DropShadowEffect Color="#00F0FF" BlurRadius="12" ShadowDepth="0" Opacity="0.15"/>
@@ -32,10 +33,79 @@
                         <Button x:Name="BtnScanBoards" Content="&#x25C8; SCAN BOARDS" Click="BtnScanBoards_Click" Style="{StaticResource CyberButton}" Padding="20,10" Margin="0,0,12,0" AutomationProperties.Name="Scan public ATS boards"/>
                         <Button x:Name="BtnWebSearch" Content="&#x2316; WEB SEARCH" Click="BtnWebSearch_Click" Style="{StaticResource CyberButton}" Padding="20,10" AutomationProperties.Name="Search the web via Brave"/>
                     </StackPanel>
+
+                    <Grid Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="SCAN BOARDS reads public company ATS feeds (no key). WEB SEARCH uses your Brave Search API key." Foreground="#5A6678" FontSize="10" FontFamily="{StaticResource CyberFontBody}" TextWrapping="Wrap" Grid.Column="0"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Margin="12,0,0,0">
+                            <TextBlock Text="SORT: " Foreground="#5A6678" FontSize="10" FontFamily="{StaticResource CyberFontBody}" VerticalAlignment="Center"/>
+                            <ComboBox x:Name="CmbSort" Style="{StaticResource CyberComboBox}" SelectionChanged="CmbSort_SelectionChanged" AutomationProperties.Name="Sort results">
+                                <ComboBoxItem Content="Newest first" IsSelected="True"/>
+                                <ComboBoxItem Content="Ghost score (high to low)"/>
+                                <ComboBoxItem Content="Company (A-Z)"/>
+                            </ComboBox>
+                        </StackPanel>
+                    </Grid>
                     <TextBlock Text="SCAN BOARDS reads public company ATS feeds (no key). WEB SEARCH uses your Brave Search API key." Foreground="#5A6678" FontSize="10" FontFamily="{StaticResource CyberFontBody}" TextWrapping="Wrap" Margin="0,8,0,0"/>
                 </StackPanel>
             </Border>
 
+            <!-- Add Company -->
+            <Border Background="#111827" CornerRadius="3" BorderBrush="#1A3A4A" BorderThickness="1" Padding="16" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="&#x25C8; ADD COMPANY" Foreground="#00F0FF" FontSize="12" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,8"/>
+                    <TextBlock Text="Type a company name. Envoy probes 6 ATS platforms (Greenhouse, Lever, Ashby, Workable, Recruitee, SmartRecruiters) to find their public job board." Foreground="#5A6678" FontSize="10" FontFamily="{StaticResource CyberFontBody}" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="TxtAddCompany" Style="{StaticResource CyberTextBox}" Grid.Column="0" Margin="0,0,12,0" AutomationProperties.Name="Company name to discover"/>
+                        <Button x:Name="BtnAddCompany" Content="&#x25C8; FIND BOARD" Click="BtnAddCompany_Click" Style="{StaticResource CyberButton}" Grid.Column="1" Padding="16,8"/>
+                    </Grid>
+                    <TextBlock x:Name="AddCompanyStatus" Text="" Foreground="#8892A4" FontSize="10" FontFamily="{StaticResource CyberFontBody}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Board List -->
+            <Border Background="#0D1117" CornerRadius="3" BorderBrush="#1A3A4A" BorderThickness="1" Padding="16" Margin="0,0,0,16">
+                <StackPanel>
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="&#x25C8; SCANNED BOARDS" Foreground="#00F0FF" FontSize="12" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}"/>
+                        <TextBlock x:Name="BoardCountLabel" Text="0 boards" Grid.Column="1" Foreground="#5A6678" FontSize="10" FontFamily="{StaticResource CyberFontBody}" VerticalAlignment="Center"/>
+                    </Grid>
+                    <ItemsControl x:Name="BoardList" Margin="0,0,0,8">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#111827" CornerRadius="2" Padding="8,4" Margin="0,0,0,3">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock FontSize="11" Foreground="#E0E6F0" FontFamily="{StaticResource CyberFontBody}">
+                                                <Run Text="{Binding Company, Mode=OneWay}"/><Run Text="  (" Foreground="#5A6678"/><Run Text="{Binding Ats, Mode=OneWay}" Foreground="#00F0FF"/><Run Text=")" Foreground="#5A6678"/>
+                                            </TextBlock>
+                                        </StackPanel>
+                                        <Button Content="&#x2715;" Click="BtnRemoveBoard_Click" Tag="{Binding Id, Mode=OneWay}" Grid.Column="1" Background="Transparent" Foreground="#FF073A" BorderThickness="0" FontSize="10" Padding="6,2" Margin="4,0,0,0" AutomationProperties.Name="Remove this board"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock x:Name="NoBoardsLabel" Text="No boards loaded. Built-in defaults will be used." Foreground="#5A6678" FontSize="10" FontFamily="{StaticResource CyberFontBody}" Visibility="Collapsed" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Brave Search API Key -->
             <Border Background="#0D1117" CornerRadius="3" BorderBrush="#1A3A4A" BorderThickness="1" Padding="16" Margin="0,0,0,16">
                 <StackPanel>
                     <TextBlock Text="&#x25C8; BRAVE SEARCH API KEY (OPTIONAL)" Foreground="#8892A4" FontSize="10" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,6"/>

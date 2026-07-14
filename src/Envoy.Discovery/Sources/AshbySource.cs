@@ -62,4 +62,17 @@ public class AshbySource : IAtsBoardSource
             summary = Json.Str(comp, "compensationTierSummary");
         return string.IsNullOrWhiteSpace(summary) ? null : summary;
     }
+
+    public async Task<bool> BoardExistsAsync(string token, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(token)) return false;
+        try
+        {
+            var url = $"https://api.ashbyhq.com/posting-api/job-board/{Uri.EscapeDataString(token)}?limit=1";
+            var jsonText = await _http.GetStringAsync(url, ct);
+            using var doc = JsonDocument.Parse(jsonText);
+            return doc.RootElement.TryGetProperty("jobs", out var arr) && arr.ValueKind == JsonValueKind.Array && arr.GetArrayLength() >= 0;
+        }
+        catch { return false; }
+    }
 }

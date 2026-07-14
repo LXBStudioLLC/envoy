@@ -15,10 +15,12 @@ namespace Envoy.Discovery;
 public class JobDiscoveryService
 {
     private const int MaxBoardConcurrency = 4;
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
 
     private readonly IReadOnlyDictionary<JobSource, IAtsBoardSource> _ats;
     private readonly IWebSearchSource _webSearch;
     private readonly ILogger<JobDiscoveryService> _log;
+    private readonly Dictionary<string, (DateTime Expiry, IReadOnlyList<JobPosting> Jobs)> _cache = new();
 
     public JobDiscoveryService(IEnumerable<IAtsBoardSource> sources, IWebSearchSource webSearch, ILogger<JobDiscoveryService> log)
     {
@@ -46,6 +48,14 @@ public class JobDiscoveryService
             await sem.WaitAsync(ct);
             try
             {
+                // Check cache first
+                var cacheKey = $"{b.Ats}:{b.Token}";
+                if (_cache.TryGetValue(cacheKey, out var entry) && entry.Expiry > DateTime.UtcNow)
+                {
+                    lock (all) all.AddRange(entry.Jobs);
+                    return;
+                }
+
                 if (!_ats.TryGetValue(b.Ats, out var source))
                 {
                     lock (errors) errors.Add($"{b.Ats} {b.Token}: no source registered for this ATS");
@@ -53,6 +63,7 @@ public class JobDiscoveryService
                 }
 
                 var jobs = await source.FetchBoardAsync(b.Token, b.CompanyName, ct);
+                _cache[cacheKey] = (DateTime.UtcNow + CacheTtl, jobs);
                 lock (all) all.AddRange(jobs);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -127,8 +138,7 @@ public class JobDiscoveryService
 
         if (!string.IsNullOrWhiteSpace(q.Location))
             result = result.Where(j =>
-                j.Location.Contains(q.Location!, StringComparison.OrdinalIgnoreCase) ||
-                j.Location.Contains("remote", StringComparison.OrdinalIgnoreCase));
+                j.Location.Contains(q.Location!, StringComparison.OrdinalIgnoreCase));
 
         if (q.RemoteOnly)
             result = result.Where(j => j.Location.Contains("remote", StringComparison.OrdinalIgnoreCase));
@@ -140,5 +150,45 @@ public class JobDiscoveryService
             .OrderByDescending(j => j.PostedAtUtc ?? DateTime.MinValue)
             .Take(Math.Max(1, q.MaxResults))
             .ToList();
+    }
+
+    /// <summary>
+    /// Probe each registered ATS to find a public board for the given company name/token.
+    /// Tries the slug as-is and with common transformations (lowercase, no spaces).
+    /// Returns the first board that confirms it exists, or null if none found.
+    /// </summary>
+    public async Task<AtsBoardRef?> DiscoverBoardAsync(string companyName, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(companyName)) return null;
+
+        // Generate candidate slugs from the company name
+        var baseName = companyName.Trim();
+        var slug = baseName.ToLowerInvariant().Replace(" ", "").Replace("&", "").Replace("-", "").Replace(".", "");
+        var slugWithDash = baseName.ToLowerInvariant().Replace(" ", "-").Replace("&", "");
+        var slugNoSuffix = slug.Replace("inc", "").Replace("llc", "").Replace("corp", "").TrimEnd('-');
+
+        var candidates = new[] { slug, slugWithDash, slugNoSuffix, baseName.ToLowerInvariant() }
+            .Where(s => !string.IsNullOrWhiteSpace(s) && s.Length >= 2)
+            .Distinct()
+            .ToList();
+
+        foreach (var (ats, source) in _ats)
+        {
+            foreach (var candidate in candidates)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (await source.BoardExistsAsync(candidate, ct))
+                {
+                    return new AtsBoardRef
+                    {
+                        Ats = ats,
+                        Token = candidate,
+                        CompanyName = baseName
+                    };
+                }
+            }
+        }
+
+        return null;
     }
 }
