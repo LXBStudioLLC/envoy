@@ -72,6 +72,15 @@ Everyone who helps gets credited. Merged PRs are listed in the notes of the rele
 
 The build is self-contained, so you don't need the .NET runtime. Every release includes a `SHA256SUMS.txt` if you want to check your download.
 
+Prefer a package manager? [Scoop](https://scoop.sh/) works today:
+
+```powershell
+scoop bucket add lxb https://github.com/LXBStudioLLC/scoop-bucket
+scoop install lxb/envoy
+```
+
+A winget package is under review in the community repo.
+
 The installer is signed, but since the app is new, Windows SmartScreen may warn you the first couple of times until the signature earns some reputation. The publisher will read LXBSTUDIO LLC, and the checksum confirms the rest.
 
 > Ghost detection and Find Jobs work right away with no LLM, no Ollama, and no API key. You only need a local model for the resume-tailoring copilot.
