@@ -1,0 +1,2 @@
+1e88fa1fd9e58b91fb9703cf988c9bbd5f9b093836eb14b57f41406ece1f125d  Envoy-v1.0.2-win-x64.zip
+e1e6ea48fa1fe2310d8ed28c03d3587c7d6597494b0d39620eed827ed476aade  Envoy-v1.0.2-setup.exe

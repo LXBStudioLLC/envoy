@@ -17,9 +17,9 @@ public static class ServiceRegistration
         // access crash.
         services.AddDbContextFactory<EnvoyDbContext>();
 
-        services.AddScoped<IProfileRepository, ProfileRepository>();
-        services.AddScoped<ITailoredProfileRepository, TailoredProfileRepository>();
-        services.AddScoped<IApplicationLogRepository, ApplicationLogRepository>();
+        services.AddSingleton<IProfileRepository, ProfileRepository>();
+        services.AddSingleton<ITailoredProfileRepository, TailoredProfileRepository>();
+        services.AddSingleton<IApplicationLogRepository, ApplicationLogRepository>();
         services.AddSingleton<IOcrService, TesseractOcrService>();
 
         services.AddSingleton<HardwareProfiler>();
@@ -47,9 +47,9 @@ public static class ServiceRegistration
                 Path.Combine(AppContext.BaseDirectory, "Templates"),
                 sp.GetRequiredService<IElementLocator>()));
 
-        services.AddScoped<ResumeParserService>();
-        services.AddScoped<TailoringEngine>();
-        services.AddScoped<ApplicationOrchestrator>();
+        services.AddSingleton<ResumeParserService>();
+        services.AddSingleton<TailoringEngine>();
+        services.AddSingleton<ApplicationOrchestrator>();
 
         return services;
     }

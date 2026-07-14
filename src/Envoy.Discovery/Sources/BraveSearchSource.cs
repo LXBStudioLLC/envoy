@@ -21,7 +21,20 @@ public class BraveSearchSource : IWebSearchSource
             throw new InvalidOperationException("Brave Search API key is required.");
 
         count = Math.Clamp(count, 1, 20);
-        var url = $"https://api.search.brave.com/res/v1/web/search?q={Uri.EscapeDataString(query)}&count={count}";
+
+        // If the user didn't already include site: operators, augment the query to bias
+        // toward ATS-hosted job boards. This makes web search return structured job
+        // postings on known ATS domains rather than random web pages.
+        var augmentedQuery = query;
+        if (!augmentedQuery.Contains("site:", StringComparison.OrdinalIgnoreCase))
+        {
+            // Append site: operators so Brave prioritizes ATS-hosted boards. Brave Search
+            // supports OR'd site: filters — this produces results dominated by actual
+            // job postings on Greenhouse, Lever, Ashby, Workable, Recruitee, SmartRecruiters.
+            augmentedQuery += " (site:boards.greenhouse.io OR site:jobs.lever.co OR site:api.ashbyhq.com OR site:apply.workable.com OR site:smartrecruiters.com)";
+        }
+
+        var url = $"https://api.search.brave.com/res/v1/web/search?q={Uri.EscapeDataString(augmentedQuery)}&count={count}";
 
         using var req = new HttpRequestMessage(HttpMethod.Get, url);
         req.Headers.Add("X-Subscription-Token", apiKey);

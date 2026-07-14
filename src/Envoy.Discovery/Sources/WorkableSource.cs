@@ -73,4 +73,17 @@ public class WorkableSource : IAtsBoardSource
             loc = string.IsNullOrWhiteSpace(loc) ? "Remote" : $"Remote · {loc}";
         return loc;
     }
+
+    public async Task<bool> BoardExistsAsync(string token, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(token)) return false;
+        try
+        {
+            var url = $"https://apply.workable.com/api/v1/widget/accounts/{Uri.EscapeDataString(token)}?details=true";
+            var jsonText = await _http.GetStringAsync(url, ct);
+            using var doc = JsonDocument.Parse(jsonText);
+            return doc.RootElement.TryGetProperty("jobs", out _);
+        }
+        catch { return false; }
+    }
 }

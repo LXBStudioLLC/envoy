@@ -104,7 +104,7 @@ public class ApplicationOrchestrator
             }
             finally
             {
-                await _browser.CloseAsync(ct);
+                await _browser.CloseAsync(CancellationToken.None);
             }
         }
 
@@ -245,8 +245,8 @@ public class ApplicationOrchestrator
         finally
         {
             log.CompletedAt = DateTime.UtcNow;
-            await _logRepo.UpdateAsync(log, ct);
-            await _browser.CloseAsync(ct);
+            await _logRepo.UpdateAsync(log, CancellationToken.None);
+            await _browser.CloseAsync(CancellationToken.None);
         }
 
         return log;
