@@ -43,6 +43,15 @@ public class CdpBrowserService : ICdpCommandExecutor, IPageInteractor, IBrowserL
 
             await CloseAsync(ct);
 
+            // Await the old receive loop so it has fully exited before we create a new
+            // WebSocket and start a new loop. Without this, the old loop can briefly
+            // observe the new socket and read from it concurrently.
+            if (_receiveLoopTask != null)
+            {
+                try { await _receiveLoopTask; } catch { }
+                _receiveLoopTask = null;
+            }
+
             _webSocket = new ClientWebSocket();
             var uri = new Uri($"ws://localhost:{port}/devtools/browser");
             await _webSocket.ConnectAsync(uri, ct);

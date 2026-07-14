@@ -17,6 +17,7 @@ public partial class FindJobsView : UserControl
     private readonly GhostScorer _scorer;
     private readonly EnvoySettings _settings;
     private List<AtsBoardRef> _boards = new();
+    private List<DiscoveredJobItem> _lastItems = new();
 
     public FindJobsView(JobDiscoveryService discovery, GhostScorer scorer, EnvoySettings settings)
     {
@@ -120,6 +121,7 @@ public partial class FindJobsView : UserControl
                 {
                     _boards.Add(board);
                     RefreshBoardList();
+                    SeedBoards.Save(_boards);
                     AddCompanyStatus.Text = $"✓ Found {companyName} on {board.Ats} (token: {board.Token}). Added to your boards.";
                     AddCompanyStatus.Foreground = Green;
                     TxtAddCompany.Clear();
@@ -151,6 +153,7 @@ public partial class FindJobsView : UserControl
             {
                 _boards.RemoveAll(b => b.Ats == ats && b.Token == parts[1]);
                 RefreshBoardList();
+                SeedBoards.Save(_boards);
             }
         }
     }
@@ -195,6 +198,7 @@ public partial class FindJobsView : UserControl
             items.Add(ToItem(job, score));
         }
         ResultsList.ItemsSource = items;
+        _lastItems = items;
 
         if (items.Count == 0)
         {
@@ -239,6 +243,21 @@ public partial class FindJobsView : UserControl
             EvidenceVisibility = string.IsNullOrEmpty(evidence) ? Visibility.Collapsed : Visibility.Visible,
             Url = job.Url
         };
+    }
+
+    private void CmbSort_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_lastItems.Count == 0 || CmbSort?.SelectedItem == null) return;
+
+        var sortIndex = CmbSort.SelectedIndex;
+        var sorted = sortIndex switch
+        {
+            0 => _lastItems.OrderByDescending(i => i.Meta).ToList(),  // Newest first (meta contains date)
+            1 => _lastItems.OrderByDescending(i => i.RiskText).ToList(),  // Ghost score
+            2 => _lastItems.OrderBy(i => i.Company).ToList(),  // Company A-Z
+            _ => _lastItems
+        };
+        ResultsList.ItemsSource = sorted;
     }
 
     private void BtnView_Click(object sender, RoutedEventArgs e)

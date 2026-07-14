@@ -15,10 +15,12 @@ namespace Envoy.Discovery;
 public class JobDiscoveryService
 {
     private const int MaxBoardConcurrency = 4;
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
 
     private readonly IReadOnlyDictionary<JobSource, IAtsBoardSource> _ats;
     private readonly IWebSearchSource _webSearch;
     private readonly ILogger<JobDiscoveryService> _log;
+    private readonly Dictionary<string, (DateTime Expiry, IReadOnlyList<JobPosting> Jobs)> _cache = new();
 
     public JobDiscoveryService(IEnumerable<IAtsBoardSource> sources, IWebSearchSource webSearch, ILogger<JobDiscoveryService> log)
     {
@@ -46,6 +48,14 @@ public class JobDiscoveryService
             await sem.WaitAsync(ct);
             try
             {
+                // Check cache first
+                var cacheKey = $"{b.Ats}:{b.Token}";
+                if (_cache.TryGetValue(cacheKey, out var entry) && entry.Expiry > DateTime.UtcNow)
+                {
+                    lock (all) all.AddRange(entry.Jobs);
+                    return;
+                }
+
                 if (!_ats.TryGetValue(b.Ats, out var source))
                 {
                     lock (errors) errors.Add($"{b.Ats} {b.Token}: no source registered for this ATS");
@@ -53,6 +63,7 @@ public class JobDiscoveryService
                 }
 
                 var jobs = await source.FetchBoardAsync(b.Token, b.CompanyName, ct);
+                _cache[cacheKey] = (DateTime.UtcNow + CacheTtl, jobs);
                 lock (all) all.AddRange(jobs);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
