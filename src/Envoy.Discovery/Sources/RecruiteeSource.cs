@@ -64,4 +64,16 @@ public class RecruiteeSource : IAtsBoardSource
         }
         return jobs;
     }
+
+    public async Task<bool> BoardExistsAsync(string token, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(token) || !ValidSubdomain.IsMatch(token)) return false;
+        try
+        {
+            var url = $"https://{token}.recruitee.com/api/offers/";
+            using var resp = await _http.GetAsync(url, ct);
+            return resp.IsSuccessStatusCode;
+        }
+        catch { return false; }
+    }
 }

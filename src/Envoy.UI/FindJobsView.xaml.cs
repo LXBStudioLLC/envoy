@@ -16,6 +16,7 @@ public partial class FindJobsView : UserControl
     private readonly JobDiscoveryService _discovery;
     private readonly GhostScorer _scorer;
     private readonly EnvoySettings _settings;
+    private List<AtsBoardRef> _boards = new();
 
     public FindJobsView(JobDiscoveryService discovery, GhostScorer scorer, EnvoySettings settings)
     {
@@ -28,13 +29,32 @@ public partial class FindJobsView : UserControl
 
     private void FindJobsView_Loaded(object sender, RoutedEventArgs e)
     {
-        // Don't render the decrypted key on screen. If one is stored, tell the user it
-        // will be reused unless they type a replacement.
         if (!string.IsNullOrEmpty(_settings.BraveSearchApiKeyEncrypted))
         {
             StatusText.Text = "✓ Brave key saved — leave blank to reuse it, or enter a new key to replace.";
             StatusText.Foreground = Gray;
         }
+        LoadBoards();
+    }
+
+    private void LoadBoards()
+    {
+        _boards = _discovery.DefaultBoards.ToList();
+        RefreshBoardList();
+    }
+
+    private void RefreshBoardList()
+    {
+        var items = _boards.Select(b => new BoardListItem
+        {
+            Id = $"{b.Ats}:{b.Token}",
+            Company = b.CompanyName ?? b.Token,
+            Ats = b.Ats.ToString()
+        }).ToList();
+
+        BoardList.ItemsSource = items;
+        BoardCountLabel.Text = $"{_boards.Count} board{(_boards.Count == 1 ? "" : "s")}";
+        NoBoardsLabel.Visibility = _boards.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private DiscoveryQuery BuildQuery() => new()
@@ -50,7 +70,7 @@ public partial class FindJobsView : UserControl
         SetBusy(true, "SCANNING PUBLIC BOARDS...");
         try
         {
-            var result = await _discovery.SearchBoardsAsync(_discovery.DefaultBoards, BuildQuery());
+            var result = await _discovery.SearchBoardsAsync(_boards, BuildQuery());
             await RenderAsync(result);
         }
         catch (Exception ex) { ShowError(ex.Message); }
@@ -61,8 +81,6 @@ public partial class FindJobsView : UserControl
     {
         var typed = TxtBraveKey.Password?.Trim() ?? "";
         if (!string.IsNullOrEmpty(typed)) SaveKeyIfChanged(typed);
-        // Use the typed key if provided, otherwise the stored key — so search works
-        // without re-displaying the key on screen.
         var key = !string.IsNullOrEmpty(typed) ? typed : (_settings.BraveSearchApiKey ?? "");
         SetBusy(true, "SEARCHING THE WEB...");
         try
@@ -72,6 +90,69 @@ public partial class FindJobsView : UserControl
         }
         catch (Exception ex) { ShowError(ex.Message); }
         finally { SetBusy(false); }
+    }
+
+    private async void BtnAddCompany_Click(object sender, RoutedEventArgs e)
+    {
+        var companyName = TxtAddCompany.Text?.Trim() ?? "";
+        if (string.IsNullOrWhiteSpace(companyName))
+        {
+            AddCompanyStatus.Text = "Enter a company name first.";
+            AddCompanyStatus.Foreground = Yellow;
+            return;
+        }
+
+        BtnAddCompany.IsEnabled = false;
+        AddCompanyStatus.Text = $"Probing ATS platforms for \"{companyName}\"...";
+        AddCompanyStatus.Foreground = Cyan;
+
+        try
+        {
+            var board = await _discovery.DiscoverBoardAsync(companyName);
+            if (board != null)
+            {
+                if (_boards.Any(b => b.Ats == board.Ats && b.Token == board.Token))
+                {
+                    AddCompanyStatus.Text = $"{companyName} is already in your board list ({board.Ats}).";
+                    AddCompanyStatus.Foreground = Gray;
+                }
+                else
+                {
+                    _boards.Add(board);
+                    RefreshBoardList();
+                    AddCompanyStatus.Text = $"✓ Found {companyName} on {board.Ats} (token: {board.Token}). Added to your boards.";
+                    AddCompanyStatus.Foreground = Green;
+                    TxtAddCompany.Clear();
+                }
+            }
+            else
+            {
+                AddCompanyStatus.Text = $"✕ No public job board found for \"{companyName}\" on any ATS. Try a different name or check the spelling.";
+                AddCompanyStatus.Foreground = Red;
+            }
+        }
+        catch (Exception ex)
+        {
+            AddCompanyStatus.Text = $"✕ Error: {ex.Message}";
+            AddCompanyStatus.Foreground = Red;
+        }
+        finally
+        {
+            BtnAddCompany.IsEnabled = true;
+        }
+    }
+
+    private void BtnRemoveBoard_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string id)
+        {
+            var parts = id.Split(':', 2);
+            if (parts.Length == 2 && Enum.TryParse<JobSource>(parts[0], out var ats))
+            {
+                _boards.RemoveAll(b => b.Ats == ats && b.Token == parts[1]);
+                RefreshBoardList();
+            }
+        }
     }
 
     private void BtnSaveKey_Click(object sender, RoutedEventArgs e)
@@ -96,14 +177,12 @@ public partial class FindJobsView : UserControl
         }
     }
 
-    // Returns true if the key was persisted or there was nothing to persist; false only
-    // when a genuine change failed to save.
     private bool SaveKeyIfChanged(string key)
     {
         if (string.IsNullOrEmpty(key) || key == _settings.BraveSearchApiKey)
             return true;
         try { _settings.BraveSearchApiKey = key; }
-        catch { return false; } // DPAPI encrypt failure surfaces as a failed save
+        catch { return false; }
         return _settings.Save();
     }
 
@@ -112,8 +191,6 @@ public partial class FindJobsView : UserControl
         var items = new List<DiscoveredJobItem>(result.Jobs.Count);
         foreach (var job in result.Jobs)
         {
-            // Local-only scoring: skips network-bound signals so a 100-row list doesn't
-            // fan out one outbound request per posting.
             var score = await _scorer.ScoreAsync(job, localOnly: true);
             items.Add(ToItem(job, score));
         }
@@ -202,4 +279,11 @@ public class DiscoveredJobItem
     public string Evidence { get; init; } = "";
     public Visibility EvidenceVisibility { get; init; } = Visibility.Collapsed;
     public string Url { get; init; } = "";
+}
+
+public class BoardListItem
+{
+    public string Id { get; init; } = "";
+    public string Company { get; init; } = "";
+    public string Ats { get; init; } = "";
 }

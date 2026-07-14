@@ -25,7 +25,7 @@ public class DiscoveryContainerResolutionTests
         var discovery = provider.GetRequiredService<JobDiscoveryService>();
         Assert.NotNull(discovery);
 
-        var expected = new[] { JobSource.Greenhouse, JobSource.Lever, JobSource.Ashby, JobSource.Workable, JobSource.Recruitee };
+        var expected = new[] { JobSource.Greenhouse, JobSource.Lever, JobSource.Ashby, JobSource.Workable, JobSource.Recruitee, JobSource.SmartRecruiters };
 
         var sources = provider.GetServices<IAtsBoardSource>().ToList();
         Assert.Equal(expected.Length, sources.Count);

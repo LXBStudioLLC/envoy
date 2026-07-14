@@ -53,4 +53,16 @@ public class GreenhouseSource : IAtsBoardSource
         }
         return jobs;
     }
+
+    public async Task<bool> BoardExistsAsync(string token, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(token)) return false;
+        try
+        {
+            var url = $"https://boards-api.greenhouse.io/v1/boards/{Uri.EscapeDataString(token)}/jobs";
+            using var resp = await _http.GetAsync(url, ct);
+            return resp.IsSuccessStatusCode;
+        }
+        catch { return false; }
+    }
 }

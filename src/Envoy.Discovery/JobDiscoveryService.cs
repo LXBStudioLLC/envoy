@@ -127,8 +127,7 @@ public class JobDiscoveryService
 
         if (!string.IsNullOrWhiteSpace(q.Location))
             result = result.Where(j =>
-                j.Location.Contains(q.Location!, StringComparison.OrdinalIgnoreCase) ||
-                j.Location.Contains("remote", StringComparison.OrdinalIgnoreCase));
+                j.Location.Contains(q.Location!, StringComparison.OrdinalIgnoreCase));
 
         if (q.RemoteOnly)
             result = result.Where(j => j.Location.Contains("remote", StringComparison.OrdinalIgnoreCase));
@@ -140,5 +139,45 @@ public class JobDiscoveryService
             .OrderByDescending(j => j.PostedAtUtc ?? DateTime.MinValue)
             .Take(Math.Max(1, q.MaxResults))
             .ToList();
+    }
+
+    /// <summary>
+    /// Probe each registered ATS to find a public board for the given company name/token.
+    /// Tries the slug as-is and with common transformations (lowercase, no spaces).
+    /// Returns the first board that confirms it exists, or null if none found.
+    /// </summary>
+    public async Task<AtsBoardRef?> DiscoverBoardAsync(string companyName, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(companyName)) return null;
+
+        // Generate candidate slugs from the company name
+        var baseName = companyName.Trim();
+        var slug = baseName.ToLowerInvariant().Replace(" ", "").Replace("&", "").Replace("-", "").Replace(".", "");
+        var slugWithDash = baseName.ToLowerInvariant().Replace(" ", "-").Replace("&", "");
+        var slugNoSuffix = slug.Replace("inc", "").Replace("llc", "").Replace("corp", "").TrimEnd('-');
+
+        var candidates = new[] { slug, slugWithDash, slugNoSuffix, baseName.ToLowerInvariant() }
+            .Where(s => !string.IsNullOrWhiteSpace(s) && s.Length >= 2)
+            .Distinct()
+            .ToList();
+
+        foreach (var (ats, source) in _ats)
+        {
+            foreach (var candidate in candidates)
+            {
+                ct.ThrowIfCancellationRequested();
+                if (await source.BoardExistsAsync(candidate, ct))
+                {
+                    return new AtsBoardRef
+                    {
+                        Ats = ats,
+                        Token = candidate,
+                        CompanyName = baseName
+                    };
+                }
+            }
+        }
+
+        return null;
     }
 }

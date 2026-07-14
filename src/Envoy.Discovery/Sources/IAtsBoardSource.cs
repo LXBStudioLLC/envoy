@@ -14,4 +14,11 @@ public interface IAtsBoardSource
 
     /// <summary>Fetch all currently-published postings for one board token.</summary>
     Task<IReadOnlyList<JobPosting>> FetchBoardAsync(string token, string? companyName, CancellationToken ct = default);
+
+    /// <summary>
+    /// Lightly probe whether a board exists for the given token without fetching all
+    /// postings. Returns true if the board is reachable and has at least one posting.
+    /// Used by the auto-discovery feature to check if a company name maps to a board.
+    /// </summary>
+    Task<bool> BoardExistsAsync(string token, CancellationToken ct = default);
 }

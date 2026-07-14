@@ -23,6 +23,9 @@ public class JobDiscoveryServiceTests
         public JobSource Ats { get; }
         public Task<IReadOnlyList<JobPosting>> FetchBoardAsync(string token, string? companyName, CancellationToken ct = default)
             => _throw != null ? throw _throw : Task.FromResult(_jobs);
+
+        public Task<bool> BoardExistsAsync(string token, CancellationToken ct = default)
+            => Task.FromResult(true);
     }
 
     private sealed class FakeWebSearch : IWebSearchSource

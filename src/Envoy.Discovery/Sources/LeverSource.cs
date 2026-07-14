@@ -53,6 +53,18 @@ public class LeverSource : IAtsBoardSource
         return jobs;
     }
 
+    public async Task<bool> BoardExistsAsync(string token, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(token)) return false;
+        try
+        {
+            var url = $"https://api.lever.co/v0/postings/{Uri.EscapeDataString(token)}?mode=json&limit=1";
+            using var resp = await _http.GetAsync(url, ct);
+            return resp.IsSuccessStatusCode;
+        }
+        catch { return false; }
+    }
+
     private static string? LeverSalary(JsonElement j)
     {
         if (!Json.TryObj(j, "salaryRange", out var s)) return null;

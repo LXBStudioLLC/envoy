@@ -17,6 +17,7 @@ public static class ServiceRegistration
         AddAtsSource<AshbySource>(services);
         AddAtsSource<WorkableSource>(services);
         AddAtsSource<RecruiteeSource>(services);
+        AddAtsSource<SmartRecruitersSource>(services);
 
         services.AddHttpClient<IWebSearchSource, BraveSearchSource>(ConfigureClient);
         services.AddSingleton<JobDiscoveryService>();
