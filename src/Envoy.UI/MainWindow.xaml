@@ -31,6 +31,7 @@
                         </TextBlock.Effect>
                     </TextBlock>
                     <TextBlock x:Name="VersionText" Text=" SOVEREIGN JOB AGENT" FontSize="11" Foreground="#8892A4" FontFamily="{StaticResource CyberFontBody}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                    <Button x:Name="BtnUpdate" Content="&#x25B2; UPDATE" Visibility="Collapsed" Click="BtnUpdate_Click" Background="Transparent" Foreground="#00F0FF" BorderThickness="0" FontSize="11" FontFamily="{StaticResource CyberFontBody}" VerticalAlignment="Center" Margin="12,0,0,0" Padding="4,2" Cursor="Hand" AutomationProperties.Name="Update available" ToolTip="A newer version is available. Click to open the release page."/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,4,0">
                     <Button x:Name="BtnAbout" Content="?" Width="36" Height="36" Click="BtnAbout_Click" Background="Transparent" Foreground="#8892A4" BorderThickness="0" FontSize="14" FontFamily="{StaticResource CyberFontBody}" AutomationProperties.Name="About and report a bug" ToolTip="About / Report a bug"/>

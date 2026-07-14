@@ -29,6 +29,8 @@ public static class ServiceRegistration
         services.AddSingleton<IBrowserLauncher, BrowserLauncher>();
 
         services.AddSingleton(EnvoySettings.Load());
+        services.AddSingleton<IUpdateCheckService>(sp =>
+            new UpdateCheckService(new HttpClient(), sp.GetRequiredService<ILogger<UpdateCheckService>>()));
         services.AddSingleton<LLMDetectionService>();
         services.AddSingleton<OllamaService>(sp =>
         {

@@ -2,6 +2,20 @@
 
 All notable changes to Envoy are documented in this file. Format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- In-app update check. Once per launch, Envoy asks the public GitHub releases API whether a newer version exists and, when one does, shows an UPDATE link in the title bar that opens the release page. Nothing is sent beyond the request itself; set `"CheckForUpdates": false` in `settings.json` to turn it off.
+
+## [1.0.3] - 2026-07-14
+
+### Added
+- Find Jobs overhaul: 80+ seed companies across six ATS platforms, a new SmartRecruiters source with pagination, auto-discovery that probes all six platforms when you type a company name, board add/remove in the UI (persisted to `seed-boards.json`), a five-minute response cache, result sorting (newest, ghost score, company), and ATS-aware Brave web search.
+
+### Fixed
+- Location filter no longer floods every search with unrelated remote jobs.
+- Critical audit fixes: the browser bridge awaits its previous receive loop before starting a new one; repositories and the orchestrator now use singleton lifetimes over the context factory; cancel-path cleanup uses `CancellationToken.None` so it still runs; a safe cast keeps a crash from escaping an async void handler; all `Run.Text` bindings are one-way.
+
 ## [1.0.2] - 2026-07-05
 
 ### Fixed
