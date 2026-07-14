@@ -92,6 +92,8 @@ Initial foundation: local-first resume tailoring + human-assisted apply.
 ### Security
 - Cloud LLM API keys encrypted with DPAPI at rest. Plaintext keys from pre-DPAPI builds are automatically migrated on first launch.
 
+[Unreleased]: https://github.com/LXBStudioLLC/envoy/compare/v1.0.3...HEAD
+[1.0.3]: https://github.com/LXBStudioLLC/envoy/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/LXBStudioLLC/envoy/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/LXBStudioLLC/envoy/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/LXBStudioLLC/envoy/releases/tag/v1.0.0
