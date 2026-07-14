@@ -26,6 +26,14 @@ public class EnvoySettings
     /// </summary>
     public bool StealthModeEnabled { get; set; } = false;
     public bool CaptureScreenshots { get; set; } = true;
+
+    /// <summary>
+    /// Once per launch, ask the public GitHub releases API whether a newer version
+    /// exists and show a link in the title bar when one does. Read-only and
+    /// unauthenticated; nothing is sent beyond the request itself. Set to false in
+    /// settings.json to disable the check entirely.
+    /// </summary>
+    public bool CheckForUpdates { get; set; } = true;
     public string TemplatesPath { get; set; } = "";
     public int TypingSpeedVariance { get; set; } = 35;
     public int MousePathSteps { get; set; } = 25;

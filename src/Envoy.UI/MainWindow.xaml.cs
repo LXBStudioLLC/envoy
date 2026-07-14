@@ -1,4 +1,5 @@
-﻿using Envoy.Core.Services;
+﻿using Envoy.Core.Configuration;
+using Envoy.Core.Services;
 using System.Diagnostics;
 using System.Reflection;
 using System.Windows;
@@ -21,12 +22,15 @@ public partial class MainWindow : Window
     private readonly LLMSettingsView _llmSettings;
     private readonly IBrowserLauncher _browserLauncher;
     private readonly HardwareProfiler _hardwareProfiler;
+    private readonly IUpdateCheckService _updateCheck;
+    private readonly EnvoySettings _settings;
+    private string? _updateUrl;
     private DispatcherTimer? _glitchTimer;
     private DispatcherTimer? _statusTimer;
     private readonly TranslateTransform _titleTransform = new(0, 0);
     private Random _rng = new();
 
-    public MainWindow(DashboardView dashboard, FindJobsView find, ApplyView apply, VaultView vault, BrowserSelectionView browser, LLMSettingsView llmSettings, IBrowserLauncher browserLauncher, HardwareProfiler hardwareProfiler)
+    public MainWindow(DashboardView dashboard, FindJobsView find, ApplyView apply, VaultView vault, BrowserSelectionView browser, LLMSettingsView llmSettings, IBrowserLauncher browserLauncher, HardwareProfiler hardwareProfiler, IUpdateCheckService updateCheck, EnvoySettings settings)
     {
         _dashboard = dashboard;
         _find = find;
@@ -36,6 +40,8 @@ public partial class MainWindow : Window
         _llmSettings = llmSettings;
         _browserLauncher = browserLauncher;
         _hardwareProfiler = hardwareProfiler;
+        _updateCheck = updateCheck;
+        _settings = settings;
 
         InitializeComponent();
 
@@ -96,6 +102,42 @@ public partial class MainWindow : Window
         VersionText.Text = $" SOVEREIGN JOB AGENT  v{GetAppVersion()}";
         UpdateHardwareStatus();
         StartStatusPolling();
+        _ = CheckForUpdatesAsync();
+    }
+
+    private async Task CheckForUpdatesAsync()
+    {
+        if (!_settings.CheckForUpdates)
+            return;
+
+        try
+        {
+            var update = await _updateCheck.CheckForUpdateAsync(GetAppVersion());
+            if (update is null)
+                return;
+
+            _updateUrl = update.ReleaseUrl;
+            BtnUpdate.Content = $"▲ UPDATE v{update.LatestVersion}";
+            BtnUpdate.ToolTip = $"Envoy v{update.LatestVersion} is available. Click to open the release page.";
+            BtnUpdate.Visibility = Visibility.Visible;
+        }
+        catch { /* never disturb startup over an update check */ }
+    }
+
+    private void BtnUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        if (_updateUrl is null)
+            return;
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = _updateUrl,
+                UseShellExecute = true
+            });
+        }
+        catch { /* best-effort; the user can open the releases page manually */ }
     }
 
     private static string GetAppVersion()
