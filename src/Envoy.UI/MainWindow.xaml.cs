@@ -14,6 +14,7 @@ namespace Envoy.UI;
 
 public partial class MainWindow : Window
 {
+    private readonly ScoreboardView _scoreboard;
     private readonly DashboardView _dashboard;
     private readonly FindJobsView _find;
     private readonly ApplyView _apply;
@@ -30,8 +31,9 @@ public partial class MainWindow : Window
     private readonly TranslateTransform _titleTransform = new(0, 0);
     private Random _rng = new();
 
-    public MainWindow(DashboardView dashboard, FindJobsView find, ApplyView apply, VaultView vault, BrowserSelectionView browser, LLMSettingsView llmSettings, IBrowserLauncher browserLauncher, HardwareProfiler hardwareProfiler, IUpdateCheckService updateCheck, EnvoySettings settings)
+    public MainWindow(ScoreboardView scoreboard, DashboardView dashboard, FindJobsView find, ApplyView apply, VaultView vault, BrowserSelectionView browser, LLMSettingsView llmSettings, IBrowserLauncher browserLauncher, HardwareProfiler hardwareProfiler, IUpdateCheckService updateCheck, EnvoySettings settings)
     {
+        _scoreboard = scoreboard;
         _dashboard = dashboard;
         _find = find;
         _apply = apply;
@@ -49,8 +51,10 @@ public partial class MainWindow : Window
 
         Closed += MainWindow_Closed;
 
-        NavigateTo(_dashboard);
-        UpdateNavButtons("Dashboard");
+        // The scoreboard is the front door: opening Envoy should feel like
+        // checking the score, not starting a chore.
+        NavigateTo(_scoreboard);
+        UpdateNavButtons("Scoreboard");
 
         StartGlitchEffect();
     }
@@ -279,6 +283,8 @@ public partial class MainWindow : Window
 
     private void UpdateNavButtons(string active)
     {
+        NavScoreboard.Background = active == "Scoreboard" ? NavActiveBg : Transparent;
+        NavScoreboard.Foreground = active == "Scoreboard" ? Cyan : Gray;
         NavDashboard.Background = active == "Dashboard" ? NavActiveBg : Transparent;
         NavDashboard.Foreground = active == "Dashboard" ? Cyan : Gray;
         NavFind.Background = active == "Find" ? NavActiveBg : Transparent;
@@ -291,6 +297,12 @@ public partial class MainWindow : Window
         NavBrowser.Foreground = active == "Browser" ? Cyan : Gray;
         NavLLM.Background = active == "LLM" ? NavActiveBg : Transparent;
         NavLLM.Foreground = active == "LLM" ? Cyan : Gray;
+    }
+
+    private void NavScoreboard_Click(object sender, RoutedEventArgs e)
+    {
+        NavigateTo(_scoreboard);
+        UpdateNavButtons("Scoreboard");
     }
 
     private void NavDashboard_Click(object sender, RoutedEventArgs e)

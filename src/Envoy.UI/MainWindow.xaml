@@ -50,7 +50,8 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Background="#0D1117" Margin="0,0,0,0">
-                    <Button x:Name="NavDashboard" Content="&#x25C8; DASHBOARD" Click="NavDashboard_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,12,8,2" HorizontalContentAlignment="Left"/>
+                    <Button x:Name="NavScoreboard" Content="&#x25C8; SCOREBOARD" Click="NavScoreboard_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,12,8,2" HorizontalContentAlignment="Left"/>
+                    <Button x:Name="NavDashboard" Content="&#x25C8; DASHBOARD" Click="NavDashboard_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,2,8,2" HorizontalContentAlignment="Left"/>
                     <Button x:Name="NavFind" Content="&#x2316; FIND JOBS" Click="NavFind_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,2,8,2" HorizontalContentAlignment="Left"/>
                     <Button x:Name="NavApply" Content="&#x25C8; APPLY" Click="NavApply_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,2,8,2" HorizontalContentAlignment="Left"/>
                     <Button x:Name="NavVault" Content="&#x25C8; VAULT" Click="NavVault_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,2,8,2" HorizontalContentAlignment="Left"/>

@@ -60,6 +60,7 @@ public partial class App
                 services.AddEnvoyDiscovery();
                 services.AddScoped<IResumePdfGenerator, Envoy.Assets.Pdf.ResumePdfGenerator>();
                 services.AddSingleton<MainWindow>();
+                services.AddSingleton<ScoreboardView>();
                 services.AddSingleton<DashboardView>();
                 services.AddSingleton<ApplyView>();
                 services.AddSingleton<FindJobsView>();

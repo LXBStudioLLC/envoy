@@ -67,7 +67,7 @@ src/
     Sources/                     — Greenhouse, Lever, Ashby, Workable, Recruitee, Brave
     JobDiscoveryService.cs       — aggregates public postings, ghost-scores them
     ServiceRegistration.cs       — AddEnvoyDiscovery()
-  Envoy.UI/                  WPF views (incl. Find Jobs + Apply ghost-risk panel), app host
+  Envoy.UI/                  WPF views (Scoreboard start view, Find Jobs + Apply ghost-risk panel), app host
   Envoy.Assets/              PDF generation, fonts
   Envoy.Templates/           JSON templates for supported job boards
 tests/
