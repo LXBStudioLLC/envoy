@@ -49,7 +49,7 @@ public partial class DashboardView : UserControl
         }
         catch (Exception ex)
         {
-            ImportStatus.Text = $"✕ ERROR: {ex.Message}";
+            ImportStatus.Text = $"Error: {ex.Message}";
             ImportStatus.Foreground = Red;
         }
     }
@@ -64,11 +64,11 @@ public partial class DashboardView : UserControl
             var debugReady = await _browserLauncher.IsRunningWithDebuggingAsync(browserType);
             if (debugReady)
             {
-                ChromeStatusLabel.Text = $"◉ {browserName} Ready — Debug bridge active";
+                ChromeStatusLabel.Text = $"{browserName} is ready.";
                 ChromeStatusLabel.Foreground = Green;
                 ChromeDetailLabel.Text = $"{browserName} is running with remote debugging on port 9222.";
                 ChromeDetailLabel.Foreground = Gray;
-                BtnLaunchChrome.Content = $"◈ RE-LAUNCH {browserName.ToUpper()}";
+                BtnLaunchChrome.Content = $"RELAUNCH {browserName.ToUpper()}";
                 return;
             }
 
@@ -77,28 +77,28 @@ public partial class DashboardView : UserControl
             {
                 if (!_browserAutoLaunched)
                 {
-                    ChromeStatusLabel.Text = $"◉ {browserName} detected (no debug bridge)";
+                    ChromeStatusLabel.Text = $"{browserName} is running without the debug bridge.";
                     ChromeStatusLabel.Foreground = Yellow;
-                    ChromeDetailLabel.Text = $"{browserName} is running but without remote debugging. Click below to restart it with the debug bridge.";
+                    ChromeDetailLabel.Text = $"{browserName} is open but Envoy can't reach it. Click below to restart it with the bridge.";
                     ChromeDetailLabel.Foreground = Gray;
-                    BtnLaunchChrome.Content = $"◈ RESTART {browserName.ToUpper()} WITH DEBUG";
+                    BtnLaunchChrome.Content = $"RESTART {browserName.ToUpper()}";
                 }
                 else
                 {
-                    ChromeStatusLabel.Text = $"⚠ {browserName} debug bridge not responding";
+                    ChromeStatusLabel.Text = $"{browserName}: the debug bridge isn't responding.";
                     ChromeStatusLabel.Foreground = Yellow;
-                    ChromeDetailLabel.Text = "The browser was launched but the debug bridge is not responding. Try clicking below.";
+                    ChromeDetailLabel.Text = "The browser launched but isn't answering. Try clicking below.";
                     ChromeDetailLabel.Foreground = Gray;
-                    BtnLaunchChrome.Content = $"◈ RETRY {browserName.ToUpper()} LAUNCH";
+                    BtnLaunchChrome.Content = $"RETRY {browserName.ToUpper()}";
                 }
                 return;
             }
 
             if (!_browserAutoLaunched)
             {
-                ChromeStatusLabel.Text = $"◉ Launching {browserName} with debug bridge...";
+                ChromeStatusLabel.Text = $"Launching {browserName}...";
                 ChromeStatusLabel.Foreground = Cyan;
-                ChromeDetailLabel.Text = $"Envoy launches {browserName} with remote debugging for the apply copilot — it fills forms in your own browser session, and you review before anything is submitted.";
+                ChromeDetailLabel.Text = $"Envoy launches {browserName} with remote debugging for the apply copilot. It fills forms in your own browser, and you review before anything is submitted.";
                 ChromeDetailLabel.Foreground = Gray;
                 BtnLaunchChrome.IsEnabled = false;
 
@@ -107,38 +107,38 @@ public partial class DashboardView : UserControl
 
                 if (launched)
                 {
-                    ChromeStatusLabel.Text = $"◉ {browserName} Ready — Debug bridge active";
+                    ChromeStatusLabel.Text = $"{browserName} is ready.";
                     ChromeStatusLabel.Foreground = Green;
-                    ChromeDetailLabel.Text = $"{browserName} launched successfully. You can now apply to jobs.";
+                    ChromeDetailLabel.Text = $"{browserName} launched. You're set to apply.";
                     ChromeDetailLabel.Foreground = Gray;
-                    BtnLaunchChrome.Content = $"◈ RE-LAUNCH {browserName.ToUpper()}";
+                    BtnLaunchChrome.Content = $"RELAUNCH {browserName.ToUpper()}";
                 }
                 else
                 {
-                    ChromeStatusLabel.Text = $"⚠ Could not start {browserName}";
+                    ChromeStatusLabel.Text = $"Couldn't start {browserName}.";
                     ChromeStatusLabel.Foreground = Yellow;
-                    ChromeDetailLabel.Text = $"Install {browserName} or select a different browser, then click below to retry.";
+                    ChromeDetailLabel.Text = $"Install {browserName} or pick a different browser, then click below to retry.";
                     ChromeDetailLabel.Foreground = Gray;
-                    BtnLaunchChrome.Content = $"◈ LAUNCH {browserName.ToUpper()}";
+                    BtnLaunchChrome.Content = $"LAUNCH {browserName.ToUpper()}";
                 }
 
                 BtnLaunchChrome.IsEnabled = true;
                 return;
             }
 
-            ChromeStatusLabel.Text = $"⚠ {browserName} not detected";
+            ChromeStatusLabel.Text = $"{browserName} isn't running.";
             ChromeStatusLabel.Foreground = Yellow;
-            ChromeDetailLabel.Text = $"Click below to launch {browserName} with the debug bridge.";
+            ChromeDetailLabel.Text = $"Click below to launch {browserName}.";
             ChromeDetailLabel.Foreground = Gray;
-            BtnLaunchChrome.Content = $"◈ LAUNCH {browserName.ToUpper()}";
+            BtnLaunchChrome.Content = $"LAUNCH {browserName.ToUpper()}";
         }
         catch (Exception ex)
         {
-            ChromeStatusLabel.Text = $"✕ Browser error: {ex.Message}";
+            ChromeStatusLabel.Text = $"Browser error: {ex.Message}";
             ChromeStatusLabel.Foreground = Red;
-            ChromeDetailLabel.Text = "Click below to retry launching.";
+            ChromeDetailLabel.Text = "Click below to retry.";
             ChromeDetailLabel.Foreground = Gray;
-            BtnLaunchChrome.Content = "◈ LAUNCH BROWSER";
+            BtnLaunchChrome.Content = "LAUNCH BROWSER";
             BtnLaunchChrome.IsEnabled = true;
         }
     }
@@ -166,14 +166,14 @@ public partial class DashboardView : UserControl
     {
         if (!File.Exists(pdfPath))
         {
-            ImportStatus.Text = $"✕ FILE NOT FOUND: {pdfPath}";
+            ImportStatus.Text = $"File not found: {pdfPath}";
             ImportStatus.Foreground = Red;
             return;
         }
 
         if (!pdfPath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
         {
-            ImportStatus.Text = "✕ ONLY PDF FILES ARE SUPPORTED";
+            ImportStatus.Text = "Only PDF files are supported.";
             ImportStatus.Foreground = Red;
             return;
         }
@@ -183,7 +183,7 @@ public partial class DashboardView : UserControl
             var size = new FileInfo(pdfPath).Length;
             if (size > MaxResumePdfBytes)
             {
-                ImportStatus.Text = $"✕ FILE TOO LARGE ({size / (1024 * 1024)} MB; limit 50 MB)";
+                ImportStatus.Text = $"That file is too large ({size / (1024 * 1024)} MB; the limit is 50 MB).";
                 ImportStatus.Foreground = Red;
                 return;
             }
@@ -194,19 +194,19 @@ public partial class DashboardView : UserControl
         }
 
         BtnImport.IsEnabled = false;
-        ImportStatus.Text = "INITIALIZING PARSE SEQUENCE...";
+        ImportStatus.Text = "Reading your resume...";
         ImportStatus.Foreground = Cyan;
 
         try
         {
             var profile = await _orchestrator.ImportResumeAsync(pdfPath);
             await LoadProfilesAsync();
-            ImportStatus.Text = $"✓ PROFILE IMPORTED: {profile.Name}";
+            ImportStatus.Text = $"Profile imported: {profile.Name}";
             ImportStatus.Foreground = Green;
         }
         catch (Exception ex)
         {
-            ImportStatus.Text = $"✕ ERROR: {ex.Message}";
+            ImportStatus.Text = $"Error: {ex.Message}";
             ImportStatus.Foreground = Red;
         }
         finally
@@ -244,7 +244,7 @@ public partial class DashboardView : UserControl
 
         if (files.Length > 1)
         {
-            ImportStatus.Text = "✕ DROP ONLY ONE PDF AT A TIME";
+            ImportStatus.Text = "Drop one PDF at a time.";
             ImportStatus.Foreground = Red;
             return;
         }
@@ -258,9 +258,9 @@ public partial class DashboardView : UserControl
         var browserType = _browserLauncher.GetSelectedBrowserType() ?? BrowserType.Chrome;
         var browserName = _browserLauncher.GetSelectedBrowser()?.DisplayName ?? GetBrowserDisplayName(browserType);
 
-        ChromeStatusLabel.Text = $"◉ Restarting {browserName} with debug bridge...";
+        ChromeStatusLabel.Text = $"Restarting {browserName}...";
         ChromeStatusLabel.Foreground = Cyan;
-        ChromeDetailLabel.Text = $"Closing existing {browserName} session and restarting with debugging enabled. Your tabs will be restored.";
+        ChromeDetailLabel.Text = $"Closing the current {browserName} session and restarting it with debugging on. Your tabs will come back.";
         ChromeDetailLabel.Foreground = Gray;
 
         try
@@ -268,24 +268,24 @@ public partial class DashboardView : UserControl
             var success = await _browserLauncher.RestartWithDebuggingAsync(browserType);
             if (success)
             {
-                ChromeStatusLabel.Text = $"◉ {browserName} Ready — Debug bridge active";
+                ChromeStatusLabel.Text = $"{browserName} is ready.";
                 ChromeStatusLabel.Foreground = Green;
-                ChromeDetailLabel.Text = $"{browserName} restarted with debugging. You can now apply to jobs.";
+                ChromeDetailLabel.Text = $"{browserName} restarted with debugging. You're set to apply.";
                 ChromeDetailLabel.Foreground = Gray;
-                BtnLaunchChrome.Content = $"◈ RE-LAUNCH {browserName.ToUpper()}";
+                BtnLaunchChrome.Content = $"RELAUNCH {browserName.ToUpper()}";
             }
             else
             {
-                ChromeStatusLabel.Text = "✕ Could not start browser";
+                ChromeStatusLabel.Text = "Couldn't start the browser.";
                 ChromeStatusLabel.Foreground = Red;
-                ChromeDetailLabel.Text = "Select a browser from the list above, or install Chrome/Edge and try again.";
+                ChromeDetailLabel.Text = "Pick a browser on the Browser page, or install Chrome or Edge and try again.";
                 ChromeDetailLabel.Foreground = Yellow;
-                BtnLaunchChrome.Content = "◈ RETRY";
+                BtnLaunchChrome.Content = "RETRY";
             }
         }
         catch (Exception ex)
         {
-            ChromeStatusLabel.Text = $"✕ Error: {ex.Message}";
+            ChromeStatusLabel.Text = $"Error: {ex.Message}";
             ChromeStatusLabel.Foreground = Red;
             ChromeDetailLabel.Text = "Click below to retry.";
             ChromeDetailLabel.Foreground = Gray;
@@ -333,7 +333,7 @@ public partial class DashboardView : UserControl
         }
         catch (Exception ex)
         {
-            ImportStatus.Text = $"✕ DELETE ERROR: {ex.Message}";
+            ImportStatus.Text = $"Couldn't delete: {ex.Message}";
             ImportStatus.Foreground = Red;
         }
     }

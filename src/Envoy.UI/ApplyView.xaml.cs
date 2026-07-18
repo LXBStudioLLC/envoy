@@ -59,14 +59,14 @@ public partial class ApplyView : UserControl
         var jobUrl = TxtJobUrl.Text?.Trim() ?? "";
         if (string.IsNullOrWhiteSpace(jobUrl))
         {
-            StatusText.Text = "⚠ TARGET URL REQUIRED";
+            StatusText.Text = "Paste a job posting link first.";
             StatusText.Foreground = Red;
             return;
         }
 
         if (_profileId == Guid.Empty)
         {
-            StatusText.Text = "⚠ SELECT A PROFILE ON THE DASHBOARD FIRST";
+            StatusText.Text = "Pick a profile on the Dashboard first.";
             StatusText.Foreground = Yellow;
             return;
         }
@@ -74,13 +74,13 @@ public partial class ApplyView : UserControl
         if (!Uri.TryCreate(jobUrl, UriKind.Absolute, out var uri)
             || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
-            StatusText.Text = "⚠ TARGET URL MUST BE A FULL http:// OR https:// LINK";
+            StatusText.Text = "That link doesn't look complete. It needs to start with http:// or https://.";
             StatusText.Foreground = Red;
             return;
         }
 
         BtnInitiate.IsEnabled = false;
-        StatusText.Text = "ANALYZING TARGET AND OPTIMIZING PAYLOAD...";
+        StatusText.Text = "Reading the posting and tailoring your resume...";
         StatusText.Foreground = Cyan;
         ResultPanel.Visibility = Visibility.Collapsed;
 
@@ -94,7 +94,7 @@ public partial class ApplyView : UserControl
         }
         catch (Exception ex)
         {
-            StatusText.Text = $"✕ ERROR: {ex.Message}";
+            StatusText.Text = $"Something went wrong: {ex.Message}";
             StatusText.Foreground = Red;
         }
         finally
@@ -103,7 +103,7 @@ public partial class ApplyView : UserControl
         }
     }
 
-    // Scores the posting in front of the user (full scoring — network signals OK for a
+    // Scores the posting in front of the user (full scoring; network signals OK for a
     // single job) and surfaces the ghost risk band + evidence before they apply.
     private async Task ScoreGhostRiskAsync(string jobUrl)
     {
@@ -120,7 +120,7 @@ public partial class ApplyView : UserControl
             };
 
             var score = await _ghostScorer.ScoreAsync(posting);
-            // Held so the score in front of the user travels with the submit —
+            // Held so the score in front of the user travels with the submit;
             // the log and the ledger record what the decision was made against.
             _ghostScore = score;
 
@@ -134,7 +134,7 @@ public partial class ApplyView : UserControl
             GhostBadge.Background = badge;
             GhostBandText.Text = score.Band == RiskBand.Neutral ? "OK" : $"{label}  ·  {score.RiskScore:0}";
             GhostEvidenceText.Text = score.TopEvidence.Length > 0
-                ? string.Join("\n", score.TopEvidence.Select(ev => "• " + ev))
+                ? string.Join("\n", score.TopEvidence.Select(ev => "- " + ev))
                 : "No ghost-risk signals detected on this posting.";
             GhostRiskPanel.Visibility = Visibility.Visible;
         }
@@ -151,19 +151,21 @@ public partial class ApplyView : UserControl
         ResultPanel.Visibility = Visibility.Visible;
 
         ScoreText.Text = $"{_tailored.MatchScore}%";
-        SafetyText.Text = _tailored.SafetyResult.Passed ? "✓ CLEARED" : "⚠ SAFE MODE REQUIRED";
+        SafetyText.Text = _tailored.SafetyResult.Passed ? "Cleared" : "Needs your review";
         SafetyText.Foreground = _tailored.SafetyResult.Passed ? Green : Red;
 
         ViolationsText.Text = _tailored.SafetyResult.Violations.Any()
-            ? string.Join("\n", _tailored.SafetyResult.Violations.Select(v => $"⚠ {v.Type}: {v.Description}"))
+            ? string.Join("\n", _tailored.SafetyResult.Violations.Select(v => $"- {v.Type}: {v.Description}"))
             : "";
 
         ChangesText.Text = _tailored.ChangesMade.Any()
-            ? "MODIFICATIONS:\n" + string.Join("\n", _tailored.ChangesMade.Select(c => $"  ► {c}"))
+            ? "Changes made:\n" + string.Join("\n", _tailored.ChangesMade.Select(c => $"  - {c}"))
             : "";
 
         BtnExecute.Visibility = Visibility.Visible;
-        StatusText.Text = _tailored.SafetyResult.Passed ? "✓ PAYLOAD OPTIMIZED" : "⚠ SAFETY PROTOCOLS TRIGGERED";
+        StatusText.Text = _tailored.SafetyResult.Passed
+            ? "Resume tailored and ready."
+            : "Tailored, but check the flagged items before you send.";
     }
 
     private async void BtnExecute_Click(object sender, RoutedEventArgs e)
@@ -177,7 +179,7 @@ public partial class ApplyView : UserControl
             var mode = (CmbMode.SelectedItem as ComboBoxItem)?.Content?.ToString() == "Stealth"
                 ? ExecutionMode.Stealth : ExecutionMode.Safe;
 
-            StatusText.Text = "ESTABLISHING CONNECTION...";
+            StatusText.Text = "Connecting to your browser...";
             StatusText.Foreground = Cyan;
 
             var snapshot = _ghostScore == null
@@ -189,14 +191,14 @@ public partial class ApplyView : UserControl
 
             StatusText.Text = log.Status switch
             {
-                ApplicationStatus.Completed => "✓ MISSION ACCOMPLISHED",
-                ApplicationStatus.DeclinedByUser => "⏸ DECLINED — NOTHING WAS SENT",
-                ApplicationStatus.SafeModeStopped => "⏸ SUBMISSION HELD — NOT SUBMITTED",
-                ApplicationStatus.RequiresCaptcha => "🧩 CAPTCHA DETECTED — HUMAN INPUT NEEDED",
-                ApplicationStatus.Failed => $"✕ FAILED: {log.ErrorMessage}",
-                _ => $"STATUS: {log.Status}"
+                ApplicationStatus.Completed => "Application submitted.",
+                ApplicationStatus.DeclinedByUser => "You said no. Nothing was sent.",
+                ApplicationStatus.SafeModeStopped => "Held for your review. Nothing was sent.",
+                ApplicationStatus.RequiresCaptcha => "There's a CAPTCHA. Solve it in the browser, then run this again.",
+                ApplicationStatus.Failed => $"That didn't work: {log.ErrorMessage}",
+                _ => $"Status: {log.Status}"
             };
-            // Declining is a decision, not a failure — don't paint it error-red.
+            // Declining is a decision, not a failure; don't paint it error-red.
             StatusText.Foreground = log.Status switch
             {
                 ApplicationStatus.Completed => Green,
@@ -206,7 +208,7 @@ public partial class ApplyView : UserControl
         }
         catch (Exception ex)
         {
-            StatusText.Text = $"✕ ERROR: {ex.Message}";
+            StatusText.Text = $"Something went wrong: {ex.Message}";
             StatusText.Foreground = Red;
         }
         finally
@@ -217,7 +219,7 @@ public partial class ApplyView : UserControl
     }
 
     // Presents an inline Confirm/Cancel gate and blocks until the user decides.
-    // Returns true only on explicit confirmation — the submit click never fires
+    // Returns true only on explicit confirmation; the submit click never fires
     // otherwise. Marshalled through the Dispatcher so it is safe regardless of
     // which thread the orchestrator resumes the callback on.
     private Task<bool> RequestSubmitConfirmationAsync(string message)
@@ -229,7 +231,7 @@ public partial class ApplyView : UserControl
             ConfirmPanel.Visibility = Visibility.Visible;
             BtnConfirmSubmit.IsEnabled = true;
             BtnCancelSubmit.IsEnabled = true;
-            StatusText.Text = "⏸ AWAITING YOUR CONFIRMATION...";
+            StatusText.Text = "Waiting on you. Confirm or cancel below.";
             StatusText.Foreground = Yellow;
             _confirmTcs = tcs;
         });

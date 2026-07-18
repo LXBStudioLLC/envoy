@@ -180,7 +180,7 @@ public partial class BrowserSelectionView : UserControl
         }
 
         if (!_settings.Save())
-            MessageBox.Show("Could not save the setting — settings.json may be locked. Your change was not stored.",
+            MessageBox.Show("Couldn't save the setting. settings.json may be locked, so the change was not stored.",
                 "Save failed", MessageBoxButton.OK, MessageBoxImage.Warning);
         RefreshStealthStatus();
     }
@@ -205,7 +205,7 @@ public partial class BrowserSelectionView : UserControl
     {
         _settings.CaptureScreenshots = !_settings.CaptureScreenshots;
         if (!_settings.Save())
-            MessageBox.Show("Could not save the setting — settings.json may be locked. Your change was not stored.",
+            MessageBox.Show("Couldn't save the setting. settings.json may be locked, so the change was not stored.",
                 "Save failed", MessageBoxButton.OK, MessageBoxImage.Warning);
         RefreshScreenshotStatus();
     }

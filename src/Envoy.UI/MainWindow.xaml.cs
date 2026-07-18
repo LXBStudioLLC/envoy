@@ -103,7 +103,7 @@ public partial class MainWindow : Window
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        VersionText.Text = $" SOVEREIGN JOB AGENT  v{GetAppVersion()}";
+        VersionText.Text = $" v{GetAppVersion()}";
         UpdateHardwareStatus();
         StartStatusPolling();
         _ = CheckForUpdatesAsync();
@@ -121,7 +121,7 @@ public partial class MainWindow : Window
                 return;
 
             _updateUrl = update.ReleaseUrl;
-            BtnUpdate.Content = $"▲ UPDATE v{update.LatestVersion}";
+            BtnUpdate.Content = $"UPDATE v{update.LatestVersion}";
             BtnUpdate.ToolTip = $"Envoy v{update.LatestVersion} is available. Click to open the release page.";
             BtnUpdate.Visibility = Visibility.Visible;
         }
@@ -160,7 +160,7 @@ public partial class MainWindow : Window
     {
         var choice = MessageBox.Show(
             $"Envoy v{GetAppVersion()}\nLXB Studio LLC\n\n" +
-            "Ghost-job detection + a human-gated apply copilot.\n\n" +
+            "Ghost-job detection and an apply copilot that never sends without you.\n\n" +
             "Found a bug, or a real job flagged as a possible ghost? " +
             "Those reports are especially valuable.\n\n" +
             "Your data and logs stay on this PC in %LOCALAPPDATA%\\Envoy\n\n" +
@@ -189,15 +189,15 @@ public partial class MainWindow : Window
         {
             var hw = _hardwareProfiler.DetectHardware();
 
-            GpuLabel.Text = hw.HasGpu ? $"◉ GPU: {hw.GpuName}" : "◎ GPU: None detected";
+            GpuLabel.Text = hw.HasGpu ? $"GPU: {hw.GpuName}" : "GPU: none detected";
             GpuLabel.Foreground = hw.HasGpu ? Green : Red;
 
-            ModelLabel.Text = $"◈ {hw.RecommendedModel} ({hw.RecommendedQuantization})";
+            ModelLabel.Text = $"Model: {hw.RecommendedModel} ({hw.RecommendedQuantization})";
         }
         catch
         {
-            GpuLabel.Text = "◎ GPU: Detection failed";
-            ModelLabel.Text = "◈ Default: qwen2.5-coder:14b";
+            GpuLabel.Text = "GPU: check failed";
+            ModelLabel.Text = "Model: qwen2.5-coder:14b (default)";
         }
 
         try
@@ -218,17 +218,17 @@ public partial class MainWindow : Window
 
             if (browserReady)
             {
-                ChromeLabel.Text = $"◉ {browserName} Ready";
+                ChromeLabel.Text = $"{browserName} ready";
                 ChromeLabel.Foreground = Green;
             }
             else if (browserProcessRunning)
             {
-                ChromeLabel.Text = $"⚠ {browserName} (no debug)";
+                ChromeLabel.Text = $"{browserName}: debug bridge off";
                 ChromeLabel.Foreground = Yellow;
             }
             else
             {
-                ChromeLabel.Text = "⚠ Browser Offline";
+                ChromeLabel.Text = "Browser offline";
                 ChromeLabel.Foreground = Red;
             }
         }

@@ -5,10 +5,10 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="24">
-            <TextBlock Text="&#x25C8; DATA VAULT" Style="{StaticResource CyberHeading}" Margin="0,0,0,4"/>
-            <TextBlock Text="SECURE PROFILE MANAGEMENT INTERFACE" Style="{StaticResource CyberSubheading}" Margin="0,0,0,20"/>
+            <TextBlock Text="VAULT" Style="{StaticResource CyberHeading}" Margin="0,0,0,4"/>
+            <TextBlock Text="Your profile as Envoy read it. Fix anything that looks off." Style="{StaticResource CyberSubheading}" Margin="0,0,0,20"/>
 
-            <TextBlock x:Name="NoProfileLabel" Text="NO PROFILE SELECTED &#x2014; Choose a profile from the Dashboard" Foreground="#8892A4" FontSize="12" FontFamily="{StaticResource CyberFontBody}"/>
+            <TextBlock x:Name="NoProfileLabel" Text="No profile selected. Pick one on the Dashboard." Foreground="#8892A4" FontSize="12" FontFamily="{StaticResource CyberFontBody}"/>
 
             <StackPanel x:Name="ProfilePanel" Visibility="Collapsed">
                 <Border Background="#111827" CornerRadius="3" BorderBrush="#1A3A4A" BorderThickness="1" Padding="20" Margin="0,0,0,12">
@@ -27,27 +27,27 @@
                         </Grid.RowDefinitions>
 
                         <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,8">
-                            <TextBlock Text="&#x25C8; CODENAME" Style="{StaticResource CyberLabel}" Margin="0,0,0,4"/>
+                            <TextBlock Text="FULL NAME" Style="{StaticResource CyberLabel}" Margin="0,0,0,4"/>
                             <TextBox x:Name="TxtName" Style="{StaticResource CyberTextBox}" AutomationProperties.Name="Full name"/>
                         </StackPanel>
                         <StackPanel Grid.Row="0" Grid.Column="1" Margin="8,0,0,8">
-                            <TextBlock Text="&#x25C8; COMMS (EMAIL)" Style="{StaticResource CyberLabel}" Margin="0,0,0,4"/>
+                            <TextBlock Text="EMAIL" Style="{StaticResource CyberLabel}" Margin="0,0,0,4"/>
                             <TextBox x:Name="TxtEmail" Style="{StaticResource CyberTextBox}" AutomationProperties.Name="Email address"/>
                         </StackPanel>
                         <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,8,8">
-                            <TextBlock Text="&#x25C8; COMMS (VOICE)" Style="{StaticResource CyberLabel}" Margin="0,0,0,4"/>
+                            <TextBlock Text="PHONE" Style="{StaticResource CyberLabel}" Margin="0,0,0,4"/>
                             <TextBox x:Name="TxtPhone" Style="{StaticResource CyberTextBox}" AutomationProperties.Name="Phone number"/>
                         </StackPanel>
                         <StackPanel Grid.Row="1" Grid.Column="1" Margin="8,0,0,8">
-                            <TextBlock Text="&#x25C8; LOCATION" Style="{StaticResource CyberLabel}" Margin="0,0,0,4"/>
+                            <TextBlock Text="LOCATION" Style="{StaticResource CyberLabel}" Margin="0,0,0,4"/>
                             <TextBox x:Name="TxtLocation" Style="{StaticResource CyberTextBox}" AutomationProperties.Name="Location"/>
                         </StackPanel>
                         <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,8,8">
-                            <TextBlock Text="&#x25C8; NETWORK (LINKEDIN)" Style="{StaticResource CyberLabel}" Margin="0,0,0,4"/>
+                            <TextBlock Text="LINKEDIN" Style="{StaticResource CyberLabel}" Margin="0,0,0,4"/>
                             <TextBox x:Name="TxtLinkedIn" Style="{StaticResource CyberTextBox}" AutomationProperties.Name="LinkedIn URL"/>
                         </StackPanel>
                         <StackPanel Grid.Row="2" Grid.Column="1" Margin="8,0,0,8">
-                            <TextBlock Text="&#x25C8; WEB PRESENCE" Style="{StaticResource CyberLabel}" Margin="0,0,0,4"/>
+                            <TextBlock Text="WEBSITE" Style="{StaticResource CyberLabel}" Margin="0,0,0,4"/>
                             <TextBox x:Name="TxtWebsite" Style="{StaticResource CyberTextBox}" AutomationProperties.Name="Personal website URL"/>
                         </StackPanel>
                     </Grid>
@@ -58,23 +58,23 @@
                         <DropShadowEffect Color="#00F0FF" BlurRadius="12" ShadowDepth="0" Opacity="0.15"/>
                     </Border.Effect>
                     <StackPanel>
-                        <TextBlock Text="&#x25C8; MISSION BRIEF (SUMMARY)" Style="{StaticResource CyberLabel}" Margin="0,0,0,4"/>
+                        <TextBlock Text="SUMMARY" Style="{StaticResource CyberLabel}" Margin="0,0,0,4"/>
                         <TextBox x:Name="TxtSummary" Style="{StaticResource CyberTextBox}" TextWrapping="Wrap" AcceptsReturn="True" Height="80" AutomationProperties.Name="Professional summary"/>
 
-                        <TextBlock Text="&#x25C8; CAPABILITIES (COMMA-SEPARATED)" Style="{StaticResource CyberLabel}" Margin="0,12,0,4"/>
+                        <TextBlock Text="SKILLS (COMMA-SEPARATED)" Style="{StaticResource CyberLabel}" Margin="0,12,0,4"/>
                         <TextBox x:Name="TxtSkills" Style="{StaticResource CyberTextBox}" AutomationProperties.Name="Skills, comma-separated"/>
                     </StackPanel>
                 </Border>
 
-                <TextBlock Text="OPERATIONAL HISTORY" Foreground="#00F0FF" FontSize="14" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,8,0,8"/>
+                <TextBlock Text="WORK HISTORY" Foreground="#00F0FF" FontSize="14" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,8,0,8"/>
                 <ItemsControl x:Name="ExperienceList" Margin="0,0,0,12"/>
 
-                <TextBlock Text="SYSTEM ANOMALIES" Foreground="#00F0FF" FontSize="14" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,8,0,8"/>
-                <TextBlock x:Name="AnomaliesText" Text="&#x2713; NO ANOMALIES DETECTED" Foreground="#39FF14" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,12"/>
+                <TextBlock Text="DATA QUALITY" Foreground="#00F0FF" FontSize="14" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,8,0,8"/>
+                <TextBlock x:Name="AnomaliesText" Text="No issues found" Foreground="#39FF14" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,12"/>
 
                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                    <Button Content="&#x25C8; COMMIT CHANGES" Click="BtnSave_Click" Style="{StaticResource CyberButton}" Padding="20,10" Margin="0,0,8,0"/>
-                    <Button Content="&#x25C8; RETURN TO DASHBOARD" Click="BtnBack_Click" Style="{StaticResource CyberButton}" Padding="20,10"/>
+                    <Button Content="SAVE CHANGES" Click="BtnSave_Click" Style="{StaticResource CyberButton}" Padding="20,10" Margin="0,0,8,0"/>
+                    <Button Content="BACK TO DASHBOARD" Click="BtnBack_Click" Style="{StaticResource CyberButton}" Padding="20,10"/>
                 </StackPanel>
                 <TextBlock x:Name="SaveStatus" Text="" FontSize="12" FontFamily="{StaticResource CyberFontBody}" Margin="0,8,0,0"/>
             </StackPanel>

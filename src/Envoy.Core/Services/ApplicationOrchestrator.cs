@@ -200,7 +200,7 @@ public class ApplicationOrchestrator
             if (await _browser.DetectCaptchaAsync(ct))
             {
                 log.Status = ApplicationStatus.RequiresCaptcha;
-                await onConfirmationRequired("CAPTCHA detected. Please solve it manually in the browser window, then click Resume.");
+                await onConfirmationRequired("CAPTCHA detected. Envoy doesn't solve those. Finish it in the browser, then run the application again.");
                 await _logRepo.UpdateAsync(log, ct);
                 return log;
             }

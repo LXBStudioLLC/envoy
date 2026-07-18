@@ -113,7 +113,7 @@ public partial class LLMSettingsView : UserControl
                 Endpoint = s.Endpoint ?? "",
                 IsConnected = s.IsConnected,
                 IsActive = s.ProviderId == (_settings.ActiveLLMProvider ?? "ollama"),
-                StatusText = s.IsConnected ? $"Connected — {(s.Models?.Count ?? 0)} model(s)" : (s.Error ?? "Not running"),
+                StatusText = s.IsConnected ? $"Connected, {(s.Models?.Count ?? 0)} model(s)" : (s.Error ?? "Not running"),
                 ModelCountText = s.IsConnected ? $"{s.Models?.Count ?? 0} model(s) available" : "Not connected",
                 Models = s.Models ?? new List<LLMModelInfo>(),
                 Error = s.Error
@@ -127,7 +127,7 @@ public partial class LLMSettingsView : UserControl
 
             if (connected != null)
             {
-                ConnectionStatusLabel.Text = $"Active: {connected.ProviderName} — {connected.ModelCountText}";
+                ConnectionStatusLabel.Text = $"Active: {connected.ProviderName}, {connected.ModelCountText}";
                 ConnectionStatusLabel.Foreground = Green;
                 ActiveProviderLabel.Text = connected.ProviderName.ToUpper();
 
@@ -251,14 +251,14 @@ public partial class LLMSettingsView : UserControl
             if (available)
             {
                 var models = await provider.ListModelsAsync();
-                ConnectionStatusLabel.Text = $"✓ {provider.DisplayName} connected — {models.Count} model(s) found";
+                ConnectionStatusLabel.Text = $"{provider.DisplayName} connected, {models.Count} model(s) found";
                 ConnectionStatusLabel.Foreground = Green;
 
                 var card = _cards.FirstOrDefault(c => c.ProviderId == providerId);
                 if (card != null)
                 {
                     card.IsConnected = true;
-                    card.StatusText = $"Connected — {models.Count} model(s)";
+                    card.StatusText = $"Connected, {models.Count} model(s)";
                     card.ModelCountText = $"{models.Count} model(s) available";
                     card.Models = models;
                     card.Error = null;
@@ -268,7 +268,7 @@ public partial class LLMSettingsView : UserControl
             }
             else
             {
-                ConnectionStatusLabel.Text = $"✕ {provider.DisplayName} not reachable at {_settings.OllamaEndpoint ?? "default endpoint"}";
+                ConnectionStatusLabel.Text = $"{provider.DisplayName} not reachable at {_settings.OllamaEndpoint ?? "default endpoint"}";
                 ConnectionStatusLabel.Foreground = Red;
             }
         }
@@ -339,7 +339,7 @@ public partial class LLMSettingsView : UserControl
 
             if (!_settings.Save())
             {
-                ConfigSaveStatus.Text = "Could not save — settings.json may be locked. Your changes were NOT stored.";
+                ConfigSaveStatus.Text = "Couldn't save. settings.json may be locked, so your changes were not stored.";
                 ConfigSaveStatus.Foreground = Red;
                 ConfigSaveStatus.Visibility = Visibility.Visible;
                 return;
