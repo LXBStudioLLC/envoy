@@ -5,6 +5,7 @@ All notable changes to Envoy are documented in this file. Format is based on [Ke
 ## [Unreleased]
 
 ### Added
+- Scoreboard foundation. Envoy now keeps a local activity ledger (a `JobEvents` table in `envoy.db`): a submitted application is recorded as Applied, and a cancel at the submit gate as Declined, each carrying the ghost risk score, band, and evidence that was on screen when the user decided. Application logs also store the score and band at submit time. Cancelling at the gate gets its own status (`DeclinedByUser`) instead of being lumped in with the safety-check halt, and the Apply view shows it in yellow, not error red, because walking away from a bad posting is a decision, not a failure. This ledger is the data layer for the upcoming stats view, and it begins the cross-session listing history the repost-frequency signal has been waiting on.
 - In-app update check. Once per launch, Envoy asks the public GitHub releases API whether a newer version exists and, when one does, shows an UPDATE link in the title bar that opens the release page. Nothing is sent beyond the request itself; set `"CheckForUpdates": false` in `settings.json` to turn it off.
 
 ## [1.0.3] - 2026-07-14

@@ -14,6 +14,7 @@ public class ApplicationOrchestrator
     private readonly IProfileRepository _profileRepo;
     private readonly ITailoredProfileRepository _tailoredRepo;
     private readonly IApplicationLogRepository _logRepo;
+    private readonly IJobEventRepository _eventRepo;
     private readonly IBrowserLauncher _browserLauncher;
     private readonly EnvoySettings _settings;
     private readonly ILogger<ApplicationOrchestrator> _log;
@@ -27,6 +28,7 @@ public class ApplicationOrchestrator
         IProfileRepository profileRepo,
         ITailoredProfileRepository tailoredRepo,
         IApplicationLogRepository logRepo,
+        IJobEventRepository eventRepo,
         IBrowserLauncher browserLauncher,
         EnvoySettings settings,
         ILogger<ApplicationOrchestrator> log)
@@ -39,6 +41,7 @@ public class ApplicationOrchestrator
         _profileRepo = profileRepo;
         _tailoredRepo = tailoredRepo;
         _logRepo = logRepo;
+        _eventRepo = eventRepo;
         _browserLauncher = browserLauncher;
         _settings = settings;
         _log = log;
@@ -129,6 +132,7 @@ public class ApplicationOrchestrator
         Guid tailoredProfileId,
         ExecutionMode mode,
         Func<string, Task<bool>> onConfirmationRequired,
+        GhostScoreSnapshot? ghostScore = null,
         CancellationToken ct = default)
     {
         var tailored = await _tailoredRepo.GetByIdAsync(tailoredProfileId, ct)
@@ -141,7 +145,9 @@ public class ApplicationOrchestrator
             JobTitle = tailored.JobTitle,
             Company = tailored.Company,
             Mode = mode,
-            Status = ApplicationStatus.InProgress
+            Status = ApplicationStatus.InProgress,
+            GhostRiskScore = ghostScore?.RiskScore,
+            GhostRiskBand = ghostScore?.Band
         };
 
         await _logRepo.AddAsync(log, ct);
@@ -220,11 +226,13 @@ public class ApplicationOrchestrator
                 await _logRepo.UpdateAsync(log, ct);
 
                 var approved = await onConfirmationRequired(msg);
-                if (approved)
-                {
-                    log.Status = ApplicationStatus.InProgress;
-                    await _logRepo.UpdateAsync(log, ct);
-                }
+                // A "no" at the gate is a deliberate decision by a human who just
+                // read the evidence — record it as its own status, distinct from
+                // the safety-check auto-halt that shares this callback shape.
+                log.Status = approved
+                    ? ApplicationStatus.InProgress
+                    : ApplicationStatus.DeclinedByUser;
+                await _logRepo.UpdateAsync(log, ct);
                 return approved;
             }, ct);
 
@@ -232,7 +240,8 @@ public class ApplicationOrchestrator
             if (_settings.CaptureScreenshots)
                 log.AfterScreenshot = await _browser.CaptureScreenshotAsync(ct);
 
-            if (log.Status != ApplicationStatus.SafeModeStopped)
+            if (log.Status != ApplicationStatus.SafeModeStopped
+                && log.Status != ApplicationStatus.DeclinedByUser)
             {
                 log.Status = ApplicationStatus.Completed;
             }
@@ -249,6 +258,24 @@ public class ApplicationOrchestrator
             await _browser.CloseAsync(CancellationToken.None);
         }
 
+        await RecordLedgerEventAsync(log, ghostScore);
+
         return log;
+    }
+
+    // The scoreboard ledger is bookkeeping — failing to record it must never
+    // change the outcome of a submit flow that already ran.
+    private async Task RecordLedgerEventAsync(ApplicationLog log, GhostScoreSnapshot? ghostScore)
+    {
+        try
+        {
+            var jobEvent = JobEvent.FromApplication(log, ghostScore);
+            if (jobEvent != null)
+                await _eventRepo.AddAsync(jobEvent, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Failed to record scoreboard event for application {LogId}", log.Id);
+        }
     }
 }

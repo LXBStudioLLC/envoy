@@ -20,6 +20,7 @@ public static class ServiceRegistration
         services.AddSingleton<IProfileRepository, ProfileRepository>();
         services.AddSingleton<ITailoredProfileRepository, TailoredProfileRepository>();
         services.AddSingleton<IApplicationLogRepository, ApplicationLogRepository>();
+        services.AddSingleton<IJobEventRepository, JobEventRepository>();
         services.AddSingleton<IOcrService, TesseractOcrService>();
 
         services.AddSingleton<HardwareProfiler>();

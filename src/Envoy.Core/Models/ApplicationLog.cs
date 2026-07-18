@@ -15,8 +15,14 @@ public class ApplicationLog
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
     public DateTime? CompletedAt { get; set; }
     public ExecutionMode Mode { get; set; }
+
+    // Ghost-risk snapshot at the moment of submit; null when the posting was
+    // never scored. Band is text so stored rows survive enum renumbering.
+    public double? GhostRiskScore { get; set; }
+    public string? GhostRiskBand { get; set; }
 }
 
+// Persisted as integers in envoy.db — append new members at the end, never reorder.
 public enum ApplicationStatus
 {
     Pending,
@@ -25,7 +31,10 @@ public enum ApplicationStatus
     Failed,
     RequiresCaptcha,
     Blocked,
-    SafeModeStopped
+    SafeModeStopped,
+
+    /// <summary>The user reviewed the filled application at the submit gate and chose not to send it.</summary>
+    DeclinedByUser
 }
 
 public enum ExecutionMode
