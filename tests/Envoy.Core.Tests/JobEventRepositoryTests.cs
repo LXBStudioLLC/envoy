@@ -43,17 +43,20 @@ public class JobEventRepositoryTests : IDisposable
 
     public void Dispose() => _connection.Dispose();
 
-    private static JobEvent Event(JobEventType type, DateTime occurredAt) => new()
+    private static JobEvent Event(JobEventType type, DateTime occurredAt, string postingKey = "boards.greenhouse.io/acme/jobs/123") => new()
     {
         Type = type,
         OccurredAt = occurredAt,
         JobUrl = "https://boards.greenhouse.io/acme/jobs/123",
         JobTitle = "Engineer",
         Company = "Acme",
-        PostingKey = "boards.greenhouse.io/acme/jobs/123",
+        PostingKey = postingKey,
         RiskBand = "High",
         RiskScore = 80
     };
+
+    private static JobEvent Sighting(string postingKey, DateTime? occurredAt = null) =>
+        Event(JobEventType.Sighted, occurredAt ?? DateTime.UtcNow, postingKey);
 
     [Fact]
     public async Task AddAndGetAll_RoundTrips_NewestFirst()
@@ -83,5 +86,50 @@ public class JobEventRepositoryTests : IDisposable
         Assert.Equal(2, await _repo.CountByTypeAsync(JobEventType.Applied));
         Assert.Equal(1, await _repo.CountByTypeAsync(JobEventType.Declined));
         Assert.Equal(0, await _repo.CountByTypeAsync(JobEventType.Skipped));
+    }
+
+    [Fact]
+    public async Task RecordSightings_InsertsFresh_SkipsSameDayDuplicates()
+    {
+        var first = await _repo.RecordSightingsAsync(new[]
+        {
+            Sighting("key-a"),
+            Sighting("key-b"),
+            Sighting("key-a")   // duplicate inside the same batch
+        });
+        Assert.Equal(2, first);
+
+        var second = await _repo.RecordSightingsAsync(new[]
+        {
+            Sighting("key-a"),  // already sighted today
+            Sighting("key-c")
+        });
+        Assert.Equal(1, second);
+
+        Assert.Equal(3, await _repo.CountByTypeAsync(JobEventType.Sighted));
+    }
+
+    [Fact]
+    public async Task RecordSightings_SamePostingOnALaterDay_RecordsAgain()
+    {
+        await _repo.AddAsync(Sighting("key-a", DateTime.UtcNow.AddDays(-1)));
+
+        var inserted = await _repo.RecordSightingsAsync(new[] { Sighting("key-a") });
+
+        Assert.Equal(1, inserted);
+        Assert.Equal(2, await _repo.CountByTypeAsync(JobEventType.Sighted));
+    }
+
+    [Fact]
+    public async Task RecordSightings_IgnoresNonSightedEvents()
+    {
+        var inserted = await _repo.RecordSightingsAsync(new[]
+        {
+            Event(JobEventType.Skipped, DateTime.UtcNow),
+            Event(JobEventType.Viewed, DateTime.UtcNow)
+        });
+
+        Assert.Equal(0, inserted);
+        Assert.Empty(await _repo.GetAllAsync());
     }
 }

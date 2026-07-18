@@ -144,7 +144,8 @@
                                     <Border Background="{Binding RiskBrush}" CornerRadius="2" Padding="8,3" HorizontalAlignment="Right">
                                         <TextBlock Text="{Binding RiskText}" Foreground="#0A0E17" FontSize="11" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}"/>
                                     </Border>
-                                    <Button Content="&#x25C8; VIEW" Tag="{Binding Url}" Click="BtnView_Click" Style="{StaticResource CyberButton}" Padding="14,5" Margin="0,8,0,0"/>
+                                    <Button Content="&#x25C8; VIEW" Tag="{Binding}" Click="BtnView_Click" Style="{StaticResource CyberButton}" Padding="14,5" Margin="0,8,0,0" AutomationProperties.Name="Open this posting in the browser"/>
+                                    <Button Content="&#x2715; SKIP" Tag="{Binding}" Click="BtnSkip_Click" Style="{StaticResource CyberButton}" Padding="14,5" Margin="0,6,0,0" AutomationProperties.Name="Pass on this posting"/>
                                 </StackPanel>
                             </Grid>
                         </Border>

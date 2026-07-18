@@ -235,6 +235,7 @@ public interface IJobEventRepository
     Task AddAsync(JobEvent jobEvent, CancellationToken ct = default);
     Task<List<JobEvent>> GetAllAsync(CancellationToken ct = default);
     Task<int> CountByTypeAsync(JobEventType type, CancellationToken ct = default);
+    Task<int> RecordSightingsAsync(IReadOnlyList<JobEvent> sightings, CancellationToken ct = default);
 }
 
 public class JobEventRepository : IJobEventRepository
@@ -270,5 +271,35 @@ public class JobEventRepository : IJobEventRepository
         return await db.JobEvents
             .AsNoTracking()
             .CountAsync(e => e.Type == type, ct);
+    }
+
+    // Sightings are deduplicated per posting per UTC day: re-running the same
+    // search minutes later must not inflate the ledger, while a listing seen
+    // again on a later day lands as a new row — that day-by-day trail is the
+    // history the repost-frequency signal wants. Non-Sighted events in the
+    // batch are ignored. Returns the number of rows actually inserted.
+    public async Task<int> RecordSightingsAsync(IReadOnlyList<JobEvent> sightings, CancellationToken ct = default)
+    {
+        if (sightings.Count == 0) return 0;
+
+        using var db = _factory.CreateDbContext();
+        var dayStart = DateTime.UtcNow.Date;
+        var seenToday = (await db.JobEvents
+            .AsNoTracking()
+            .Where(e => e.Type == JobEventType.Sighted && e.OccurredAt >= dayStart)
+            .Select(e => e.PostingKey)
+            .ToListAsync(ct)).ToHashSet();
+
+        var fresh = new List<JobEvent>();
+        foreach (var sighting in sightings)
+        {
+            if (sighting.Type == JobEventType.Sighted && seenToday.Add(sighting.PostingKey))
+                fresh.Add(sighting);
+        }
+
+        if (fresh.Count == 0) return 0;
+        db.JobEvents.AddRange(fresh);
+        await db.SaveChangesAsync(ct);
+        return fresh.Count;
     }
 }
