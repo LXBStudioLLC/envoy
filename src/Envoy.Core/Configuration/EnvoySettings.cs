@@ -35,6 +35,13 @@ public class EnvoySettings
     /// </summary>
     public bool CheckForUpdates { get; set; } = true;
     public string TemplatesPath { get; set; } = "";
+
+    /// <summary>
+    /// The user's own estimate of how long one application takes them by hand,
+    /// in minutes. Multiplied by ghosts dodged for the hours-saved stat; the
+    /// scoreboard shows the formula rather than pretending to measure it.
+    /// </summary>
+    public int MinutesPerApplicationEstimate { get; set; } = 45;
     public int TypingSpeedVariance { get; set; } = 35;
     public int MousePathSteps { get; set; } = 25;
     public double RelocationConfidenceThreshold { get; set; } = 0.75;
