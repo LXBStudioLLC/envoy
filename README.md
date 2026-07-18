@@ -102,6 +102,11 @@ Every dodge is listed with the evidence that was on screen when you passed on it
 
 There is no setup. Run a search in Find Jobs and the board starts counting. All of it lives in a local ledger inside `envoy.db` on your machine, and none of it is uploaded anywhere.
 
+<p align="center">
+  <img src="assets/scoreboard.png" alt="The Envoy Scoreboard showing ghosts dodged, hours saved, day streak, ghosts surfaced, a response tracker, and dodged postings with evidence" width="820">
+</p>
+<p align="center"><em>The Scoreboard: your dodges, your hours back, and what actually came back. Demo data shown; companies and postings are fictional.</em></p>
+
 ---
 
 ## Ghost Detection
