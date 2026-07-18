@@ -20,6 +20,20 @@ public class ApplicationLog
     // never scored. Band is text so stored rows survive enum renumbering.
     public double? GhostRiskScore { get; set; }
     public string? GhostRiskBand { get; set; }
+
+    /// <summary>What came back from the employer, logged by the user. Feeds the response rate.</summary>
+    public ResponseOutcome Outcome { get; set; } = ResponseOutcome.None;
+}
+
+// Persisted as integers in envoy.db. Append new members at the end, never reorder.
+public enum ResponseOutcome
+{
+    /// <summary>Nothing yet. The default, and sadly the most common.</summary>
+    None,
+    Replied,
+    Interview,
+    Offer,
+    Rejected
 }
 
 // Persisted as integers in envoy.db — append new members at the end, never reorder.

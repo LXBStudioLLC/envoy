@@ -12,6 +12,9 @@ public record ScoreboardStats(
     int PostingsScreened,
     int GhostsSurfaced,
     int Applications,
+    int SubmitsCompleted,
+    int Responses,
+    double? ResponseRatePercent,
     int StreakDays,
     IReadOnlyList<DodgeReceipt> RecentDodges);
 

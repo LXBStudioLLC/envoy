@@ -105,5 +105,33 @@ public class JobEventTests
         Assert.Equal(2, (int)JobEventType.Skipped);
         Assert.Equal(3, (int)JobEventType.Declined);
         Assert.Equal(4, (int)JobEventType.Applied);
+        Assert.Equal(5, (int)JobEventType.Outcome);
+    }
+
+    [Fact]
+    public void ResponseOutcome_StoredValues_AreStable()
+    {
+        Assert.Equal(0, (int)ResponseOutcome.None);
+        Assert.Equal(1, (int)ResponseOutcome.Replied);
+        Assert.Equal(2, (int)ResponseOutcome.Interview);
+        Assert.Equal(3, (int)ResponseOutcome.Offer);
+        Assert.Equal(4, (int)ResponseOutcome.Rejected);
+    }
+
+    [Fact]
+    public void ForOutcome_CarriesOutcomeLinkAndRiskSnapshotFromTheLog()
+    {
+        var log = Log(ApplicationStatus.Completed);
+        log.GhostRiskScore = 12;
+        log.GhostRiskBand = "Neutral";
+
+        var jobEvent = JobEvent.ForOutcome(log, ResponseOutcome.Interview);
+
+        Assert.Equal(JobEventType.Outcome, jobEvent.Type);
+        Assert.Equal("Interview", jobEvent.Outcome);
+        Assert.Equal(log.Id, jobEvent.ApplicationLogId);
+        Assert.Equal(12, jobEvent.RiskScore);
+        Assert.Equal("Neutral", jobEvent.RiskBand);
+        Assert.Equal("boards.greenhouse.io/acme/jobs/123", jobEvent.PostingKey);
     }
 }

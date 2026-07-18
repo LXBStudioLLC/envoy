@@ -33,8 +33,11 @@ public class JobEvent
     public string? RiskBand { get; set; }
     public string? Evidence { get; set; }
 
-    /// <summary>Links Applied/Declined events back to their submit log.</summary>
+    /// <summary>Links Applied/Declined/Outcome events back to their submit log.</summary>
     public Guid? ApplicationLogId { get; set; }
+
+    /// <summary>For Outcome events: the ResponseOutcome name that was logged (e.g. "Interview").</summary>
+    public string? Outcome { get; set; }
 
     /// <summary>
     /// Builds a ledger event for a posting the user saw or acted on in a
@@ -83,6 +86,21 @@ public class JobEvent
         jobEvent.ApplicationLogId = log.Id;
         return jobEvent;
     }
+
+    /// <summary>
+    /// Records the user logging what came back for a submitted application,
+    /// carrying the application's ghost-risk snapshot so outcome trends can be
+    /// compared against risk later.
+    /// </summary>
+    public static JobEvent ForOutcome(ApplicationLog log, ResponseOutcome outcome)
+    {
+        var jobEvent = ForPosting(JobEventType.Outcome, log.JobUrl, log.JobTitle, log.Company, source: "", ghostScore: null);
+        jobEvent.Outcome = outcome.ToString();
+        jobEvent.RiskScore = log.GhostRiskScore;
+        jobEvent.RiskBand = log.GhostRiskBand;
+        jobEvent.ApplicationLogId = log.Id;
+        return jobEvent;
+    }
 }
 
 /// <summary>
@@ -104,5 +122,8 @@ public enum JobEventType
     Declined,
 
     /// <summary>Application was submitted.</summary>
-    Applied
+    Applied,
+
+    /// <summary>User logged what came back for a submitted application.</summary>
+    Outcome
 }
