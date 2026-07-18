@@ -1,4 +1,6 @@
 using Envoy.Core.Configuration;
+using Envoy.Core.Models;
+using Envoy.Core.Services;
 using Envoy.Discovery;
 using Envoy.Discovery.Models;
 using Envoy.GhostDetection;
@@ -16,14 +18,16 @@ public partial class FindJobsView : UserControl
     private readonly JobDiscoveryService _discovery;
     private readonly GhostScorer _scorer;
     private readonly EnvoySettings _settings;
+    private readonly IJobEventRepository _jobEvents;
     private List<AtsBoardRef> _boards = new();
     private List<DiscoveredJobItem> _lastItems = new();
 
-    public FindJobsView(JobDiscoveryService discovery, GhostScorer scorer, EnvoySettings settings)
+    public FindJobsView(JobDiscoveryService discovery, GhostScorer scorer, EnvoySettings settings, IJobEventRepository jobEvents)
     {
         _discovery = discovery;
         _scorer = scorer;
         _settings = settings;
+        _jobEvents = jobEvents;
         InitializeComponent();
         Loaded += FindJobsView_Loaded;
     }
@@ -199,6 +203,7 @@ public partial class FindJobsView : UserControl
         }
         ResultsList.ItemsSource = items;
         _lastItems = items;
+        RecordSightings(items);
 
         if (items.Count == 0)
         {
@@ -241,8 +246,44 @@ public partial class FindJobsView : UserControl
             RiskBrush = brush,
             Evidence = evidence,
             EvidenceVisibility = string.IsNullOrEmpty(evidence) ? Visibility.Collapsed : Visibility.Visible,
-            Url = job.Url
+            Url = job.Url,
+            Posting = job,
+            Snapshot = new GhostScoreSnapshot(score.RiskScore, score.Band.ToString(), score.TopEvidence)
         };
+    }
+
+    // Ledger bookkeeping is best-effort and off the UI thread; a bookkeeping
+    // failure must never break the search results on screen.
+    private void RecordSightings(List<DiscoveredJobItem> items)
+    {
+        var sightings = items
+            .Where(i => i.Posting != null)
+            .Select(i => JobEvent.ForPosting(
+                JobEventType.Sighted,
+                i.Posting!.Url, i.Posting.JobTitle, i.Posting.CompanyName,
+                i.Posting.Source.ToString(), i.Snapshot))
+            .ToList();
+        if (sightings.Count == 0) return;
+
+        _ = Task.Run(async () =>
+        {
+            try { await _jobEvents.RecordSightingsAsync(sightings); }
+            catch { /* bookkeeping only */ }
+        });
+    }
+
+    private void RecordItemEvent(DiscoveredJobItem item, JobEventType type)
+    {
+        if (item.Posting == null) return;
+        var jobEvent = JobEvent.ForPosting(
+            type, item.Posting.Url, item.Posting.JobTitle, item.Posting.CompanyName,
+            item.Posting.Source.ToString(), item.Snapshot);
+
+        _ = Task.Run(async () =>
+        {
+            try { await _jobEvents.AddAsync(jobEvent); }
+            catch { /* bookkeeping only */ }
+        });
     }
 
     private void CmbSort_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -262,11 +303,31 @@ public partial class FindJobsView : UserControl
 
     private void BtnView_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button btn && btn.Tag is string url && !string.IsNullOrWhiteSpace(url))
+        if (sender is Button btn && btn.Tag is DiscoveredJobItem item && !string.IsNullOrWhiteSpace(item.Url))
         {
-            try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
+            RecordItemEvent(item, JobEventType.Viewed);
+            try { Process.Start(new ProcessStartInfo(item.Url) { UseShellExecute = true }); }
             catch (Exception ex) { ShowError($"Could not open link: {ex.Message}"); }
         }
+    }
+
+    private void BtnSkip_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not DiscoveredJobItem item) return;
+
+        RecordItemEvent(item, JobEventType.Skipped);
+
+        // Drop the row but keep whatever order is currently on screen.
+        _lastItems.Remove(item);
+        var current = (ResultsList.ItemsSource as IEnumerable<DiscoveredJobItem>)?.Where(i => i != item).ToList()
+            ?? _lastItems.ToList();
+        ResultsList.ItemsSource = current;
+
+        var flagged = item.Snapshot?.Band is "High" or "Elevated";
+        StatusText.Text = flagged
+            ? $"✓ GHOST DODGED  ·  {item.RiskText}  ·  {item.Company}"
+            : $"SKIPPED  ·  {item.Company}";
+        StatusText.Foreground = flagged ? Green : Gray;
     }
 
     private void SetBusy(bool busy, string? message = null)
@@ -298,6 +359,11 @@ public class DiscoveredJobItem
     public string Evidence { get; init; } = "";
     public Visibility EvidenceVisibility { get; init; } = Visibility.Collapsed;
     public string Url { get; init; } = "";
+
+    // Raw posting + score snapshot so user actions on this row can be recorded
+    // in the ledger with the evidence that was on screen.
+    public JobPosting? Posting { get; init; }
+    public GhostScoreSnapshot? Snapshot { get; init; }
 }
 
 public class BoardListItem

@@ -56,6 +56,22 @@ public class JobEventTests
     }
 
     [Fact]
+    public void ForPosting_BuildsIdentityKeySourceAndScoreFields()
+    {
+        var jobEvent = JobEvent.ForPosting(
+            JobEventType.Skipped,
+            "https://boards.greenhouse.io/acme/jobs/123?utm_source=feed",
+            "Engineer", "Acme", "Greenhouse", Snapshot);
+
+        Assert.Equal(JobEventType.Skipped, jobEvent.Type);
+        Assert.Equal("boards.greenhouse.io/acme/jobs/123", jobEvent.PostingKey);
+        Assert.Equal("Greenhouse", jobEvent.Source);
+        Assert.Equal(72.5, jobEvent.RiskScore);
+        Assert.Equal("High", jobEvent.RiskBand);
+        Assert.Null(jobEvent.ApplicationLogId);
+    }
+
+    [Fact]
     public void UnscoredPosting_LeavesRiskFieldsNull()
     {
         var jobEvent = JobEvent.FromApplication(Log(ApplicationStatus.Completed), ghostScore: null);

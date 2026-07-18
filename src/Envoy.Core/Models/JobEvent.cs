@@ -37,6 +37,32 @@ public class JobEvent
     public Guid? ApplicationLogId { get; set; }
 
     /// <summary>
+    /// Builds a ledger event for a posting the user saw or acted on in a
+    /// results list. The score snapshot is whatever was on screen at the time;
+    /// null means the posting was never scored.
+    /// </summary>
+    public static JobEvent ForPosting(
+        JobEventType type,
+        string jobUrl,
+        string jobTitle,
+        string company,
+        string source,
+        GhostScoreSnapshot? ghostScore) => new()
+    {
+        Type = type,
+        JobUrl = jobUrl,
+        JobTitle = jobTitle,
+        Company = company,
+        Source = source,
+        PostingKey = Services.PostingKey.For(jobUrl, company, jobTitle),
+        RiskScore = ghostScore?.RiskScore,
+        RiskBand = ghostScore?.Band,
+        Evidence = ghostScore == null || ghostScore.TopEvidence.Length == 0
+            ? null
+            : string.Join("\n", ghostScore.TopEvidence)
+    };
+
+    /// <summary>
     /// Maps a finished submit-flow log to its ledger event: a completed submit
     /// becomes <see cref="JobEventType.Applied"/>, a user cancel at the gate
     /// becomes <see cref="JobEventType.Declined"/>. Every other terminal status
@@ -53,20 +79,9 @@ public class JobEvent
             default: return null;
         }
 
-        return new JobEvent
-        {
-            Type = type,
-            JobUrl = log.JobUrl,
-            JobTitle = log.JobTitle,
-            Company = log.Company,
-            PostingKey = Services.PostingKey.For(log.JobUrl, log.Company, log.JobTitle),
-            RiskScore = ghostScore?.RiskScore,
-            RiskBand = ghostScore?.Band,
-            Evidence = ghostScore == null || ghostScore.TopEvidence.Length == 0
-                ? null
-                : string.Join("\n", ghostScore.TopEvidence),
-            ApplicationLogId = log.Id
-        };
+        var jobEvent = ForPosting(type, log.JobUrl, log.JobTitle, log.Company, source: "", ghostScore);
+        jobEvent.ApplicationLogId = log.Id;
+        return jobEvent;
     }
 }
 
