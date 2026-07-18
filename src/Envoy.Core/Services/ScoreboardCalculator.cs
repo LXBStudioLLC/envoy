@@ -16,7 +16,14 @@ public static class ScoreboardCalculator
     private const int DefaultMinutesPerApplication = 45;
     private const int MaxReceipts = 10;
 
-    public static ScoreboardStats Compute(IReadOnlyList<JobEvent> events, int minutesPerApplication, DateTime nowLocal)
+    // Below this many completed submits a percentage is noise, not a stat.
+    private const int MinSubmitsForRate = 5;
+
+    public static ScoreboardStats Compute(
+        IReadOnlyList<JobEvent> events,
+        IReadOnlyList<ApplicationLog> submits,
+        int minutesPerApplication,
+        DateTime nowLocal)
     {
         if (minutesPerApplication <= 0)
             minutesPerApplication = DefaultMinutesPerApplication;
@@ -32,6 +39,12 @@ public static class ScoreboardCalculator
                 e.OccurredAt, e.Company, e.JobTitle, e.RiskBand ?? "", e.RiskScore, e.Evidence, e.JobUrl))
             .ToList();
 
+        // A rejection counts as a response: the stat measures whether anyone
+        // answered at all, and a no is still an answer. Silence is the zero.
+        var completed = submits.Count(s => s.Status == ApplicationStatus.Completed);
+        var responses = submits.Count(s => s.Status == ApplicationStatus.Completed
+                                           && s.Outcome != ResponseOutcome.None);
+
         return new ScoreboardStats(
             GhostsDodged: dodges.Count,
             HoursSaved: Math.Round(dodges.Count * minutesPerApplication / 60.0, 1),
@@ -39,6 +52,11 @@ public static class ScoreboardCalculator
             PostingsScreened: events.Count(e => e.Type == JobEventType.Sighted),
             GhostsSurfaced: events.Count(e => e.Type == JobEventType.Sighted && IsFlagged(e)),
             Applications: events.Count(e => e.Type == JobEventType.Applied),
+            SubmitsCompleted: completed,
+            Responses: responses,
+            ResponseRatePercent: completed >= MinSubmitsForRate
+                ? Math.Round(100.0 * responses / completed)
+                : null,
             StreakDays: ComputeStreak(events, nowLocal),
             RecentDodges: receipts);
     }

@@ -173,9 +173,11 @@ public class TailoredProfileRepository : ITailoredProfileRepository
 public interface IApplicationLogRepository
 {
     Task<List<ApplicationLog>> GetAllAsync(CancellationToken ct = default);
+    Task<List<ApplicationLog>> GetAllWithoutScreenshotsAsync(CancellationToken ct = default);
     Task<ApplicationLog?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task AddAsync(ApplicationLog log, CancellationToken ct = default);
     Task UpdateAsync(ApplicationLog log, CancellationToken ct = default);
+    Task SetOutcomeAsync(Guid id, ResponseOutcome outcome, CancellationToken ct = default);
     Task<ApplicationLog?> GetByTailoredProfileIdAsync(Guid tailoredProfileId, CancellationToken ct = default);
 }
 
@@ -197,6 +199,46 @@ public class ApplicationLogRepository : IApplicationLogRepository
             .AsNoTracking()
             .OrderByDescending(l => l.StartedAt)
             .ToListAsync(ct);
+    }
+
+    // The scoreboard reads every log on each visit; screenshots are BLOBs that
+    // can dwarf the rest of the row, so it uses this projection instead. Rows
+    // from here have null screenshots by construction and must never be passed
+    // to UpdateAsync (that would wipe the stored images). Use SetOutcomeAsync.
+    public async Task<List<ApplicationLog>> GetAllWithoutScreenshotsAsync(CancellationToken ct = default)
+    {
+        using var db = _factory.CreateDbContext();
+        return await db.ApplicationLogs
+            .AsNoTracking()
+            .OrderByDescending(l => l.StartedAt)
+            .Select(l => new ApplicationLog
+            {
+                Id = l.Id,
+                TailoredProfileId = l.TailoredProfileId,
+                JobUrl = l.JobUrl,
+                JobTitle = l.JobTitle,
+                Company = l.Company,
+                SiteTemplateId = l.SiteTemplateId,
+                Status = l.Status,
+                ErrorMessage = l.ErrorMessage,
+                StartedAt = l.StartedAt,
+                CompletedAt = l.CompletedAt,
+                Mode = l.Mode,
+                GhostRiskScore = l.GhostRiskScore,
+                GhostRiskBand = l.GhostRiskBand,
+                Outcome = l.Outcome
+            })
+            .ToListAsync(ct);
+    }
+
+    // Targeted column update so logging an outcome can never touch the
+    // screenshot BLOBs or any other field.
+    public async Task SetOutcomeAsync(Guid id, ResponseOutcome outcome, CancellationToken ct = default)
+    {
+        using var db = _factory.CreateDbContext();
+        await db.ApplicationLogs
+            .Where(l => l.Id == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(l => l.Outcome, outcome), ct);
     }
 
     public async Task<ApplicationLog?> GetByIdAsync(Guid id, CancellationToken ct = default)

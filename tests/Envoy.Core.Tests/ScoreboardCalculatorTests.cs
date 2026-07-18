@@ -26,7 +26,16 @@ public class ScoreboardCalculatorTests
     };
 
     private static ScoreboardStats Compute(params JobEvent[] events) =>
-        ScoreboardCalculator.Compute(events, 45, NowLocal);
+        ScoreboardCalculator.Compute(events, Array.Empty<ApplicationLog>(), 45, NowLocal);
+
+    private static ApplicationLog Submit(ApplicationStatus status, ResponseOutcome outcome = ResponseOutcome.None) => new()
+    {
+        Status = status,
+        Outcome = outcome,
+        JobUrl = "https://boards.greenhouse.io/acme/jobs/123",
+        JobTitle = "Engineer",
+        Company = "Acme"
+    };
 
     [Fact]
     public void Dodges_AreExplicitActsOnFlaggedPostingsOnly()
@@ -52,7 +61,7 @@ public class ScoreboardCalculatorTests
             Ev(JobEventType.Declined, "Elevated")
         };
 
-        var stats = ScoreboardCalculator.Compute(events, 40, NowLocal);
+        var stats = ScoreboardCalculator.Compute(events, Array.Empty<ApplicationLog>(), 40, NowLocal);
 
         Assert.Equal(2.0, stats.HoursSaved);
         Assert.Equal(40, stats.MinutesPerApplication);
@@ -62,7 +71,7 @@ public class ScoreboardCalculatorTests
     public void NonPositiveMinutes_FallBackToDefault()
     {
         var stats = ScoreboardCalculator.Compute(
-            new[] { Ev(JobEventType.Skipped, "High") }, 0, NowLocal);
+            new[] { Ev(JobEventType.Skipped, "High") }, Array.Empty<ApplicationLog>(), 0, NowLocal);
 
         Assert.Equal(45, stats.MinutesPerApplication);
         Assert.Equal(0.8, stats.HoursSaved);
@@ -109,6 +118,45 @@ public class ScoreboardCalculatorTests
     }
 
     [Fact]
+    public void ResponseRate_HiddenUntilFiveCompletedSubmits()
+    {
+        var submits = new[]
+        {
+            Submit(ApplicationStatus.Completed, ResponseOutcome.Interview),
+            Submit(ApplicationStatus.Completed),
+            Submit(ApplicationStatus.Completed),
+            Submit(ApplicationStatus.Completed),
+            Submit(ApplicationStatus.Failed, ResponseOutcome.Replied)   // not completed, ignored entirely
+        };
+
+        var stats = ScoreboardCalculator.Compute(Array.Empty<JobEvent>(), submits, 45, NowLocal);
+
+        Assert.Equal(4, stats.SubmitsCompleted);
+        Assert.Equal(1, stats.Responses);
+        Assert.Null(stats.ResponseRatePercent);
+    }
+
+    [Fact]
+    public void ResponseRate_CountsAnyAnswerIncludingRejection()
+    {
+        var submits = new[]
+        {
+            Submit(ApplicationStatus.Completed, ResponseOutcome.Replied),
+            Submit(ApplicationStatus.Completed, ResponseOutcome.Interview),
+            Submit(ApplicationStatus.Completed, ResponseOutcome.Offer),
+            Submit(ApplicationStatus.Completed, ResponseOutcome.Rejected),
+            Submit(ApplicationStatus.Completed),
+            Submit(ApplicationStatus.Completed)
+        };
+
+        var stats = ScoreboardCalculator.Compute(Array.Empty<JobEvent>(), submits, 45, NowLocal);
+
+        Assert.Equal(6, stats.SubmitsCompleted);
+        Assert.Equal(4, stats.Responses);
+        Assert.Equal(67, stats.ResponseRatePercent);
+    }
+
+    [Fact]
     public void Receipts_AreFlaggedDodgesNewestFirst_CappedAtTen()
     {
         var events = new List<JobEvent>();
@@ -116,7 +164,7 @@ public class ScoreboardCalculatorTests
             events.Add(Ev(JobEventType.Skipped, "High", daysAgo: i, score: 80 + i));
         events.Add(Ev(JobEventType.Skipped, "Neutral"));
 
-        var stats = ScoreboardCalculator.Compute(events, 45, NowLocal);
+        var stats = ScoreboardCalculator.Compute(events, Array.Empty<ApplicationLog>(), 45, NowLocal);
 
         Assert.Equal(12, stats.GhostsDodged);
         Assert.Equal(10, stats.RecentDodges.Count);
