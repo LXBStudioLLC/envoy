@@ -70,8 +70,8 @@
                     <DropShadowEffect Color="#00F0FF" BlurRadius="12" ShadowDepth="0" Opacity="0.15"/>
                 </Border.Effect>
                 <StackPanel>
-                    <TextBlock Text="RECEIPTS" Foreground="#00F0FF" FontSize="12" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,2"/>
-                    <TextBlock Text="Every dodge, with the evidence you saw at the time" Foreground="#5A6678" FontSize="10" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,10"/>
+                    <TextBlock Text="DODGED POSTINGS" Foreground="#00F0FF" FontSize="12" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,2"/>
+                    <TextBlock Text="Each one, with the evidence you saw at the time" Foreground="#5A6678" FontSize="10" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,10"/>
                     <ItemsControl x:Name="ReceiptsList">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
