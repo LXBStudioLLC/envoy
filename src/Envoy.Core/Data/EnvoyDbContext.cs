@@ -9,6 +9,7 @@ public class EnvoyDbContext : DbContext
     public DbSet<MasterProfile> MasterProfiles { get; set; } = null!;
     public DbSet<TailoredProfile> TailoredProfiles { get; set; } = null!;
     public DbSet<ApplicationLog> ApplicationLogs { get; set; } = null!;
+    public DbSet<JobEvent> JobEvents { get; set; } = null!;
 
     public string DbPath { get; }
 
@@ -122,6 +123,16 @@ public class EnvoyDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.JobUrl).IsRequired();
+        });
+
+        modelBuilder.Entity<JobEvent>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.PostingKey).IsRequired();
+            // The ledger is read two ways: "this posting's history" (dodge
+            // receipts, repost detection) and "recent activity" (scoreboard).
+            entity.HasIndex(e => e.PostingKey);
+            entity.HasIndex(e => e.OccurredAt);
         });
     }
 

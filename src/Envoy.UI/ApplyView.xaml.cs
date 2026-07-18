@@ -17,6 +17,7 @@ public partial class ApplyView : UserControl
     private Guid _profileId;
     private TailoredProfile? _tailored;
     private string _jobDescription = "";
+    private GhostScore? _ghostScore;
     private TaskCompletionSource<bool>? _confirmTcs;
 
     public ApplyView(ApplicationOrchestrator orchestrator, GhostScorer ghostScorer, EnvoySettings settings)
@@ -43,6 +44,7 @@ public partial class ApplyView : UserControl
         _profileId = profileId;
         _tailored = null;
         _jobDescription = "";
+        _ghostScore = null;
         // Clear inputs left over from the previous profile so two job apps
         // for two different people don't accidentally cross-pollinate.
         TxtJobUrl.Text = "";
@@ -118,6 +120,9 @@ public partial class ApplyView : UserControl
             };
 
             var score = await _ghostScorer.ScoreAsync(posting);
+            // Held so the score in front of the user travels with the submit —
+            // the log and the ledger record what the decision was made against.
+            _ghostScore = score;
 
             var (badge, label) = score.Band switch
             {
@@ -135,6 +140,7 @@ public partial class ApplyView : UserControl
         }
         catch
         {
+            _ghostScore = null;
             GhostRiskPanel.Visibility = Visibility.Collapsed;
         }
     }
@@ -174,18 +180,29 @@ public partial class ApplyView : UserControl
             StatusText.Text = "ESTABLISHING CONNECTION...";
             StatusText.Foreground = Cyan;
 
+            var snapshot = _ghostScore == null
+                ? null
+                : new GhostScoreSnapshot(_ghostScore.RiskScore, _ghostScore.Band.ToString(), _ghostScore.TopEvidence);
+
             var log = await _orchestrator.SubmitApplicationAsync(
-                _tailored.Id, mode, RequestSubmitConfirmationAsync);
+                _tailored.Id, mode, RequestSubmitConfirmationAsync, snapshot);
 
             StatusText.Text = log.Status switch
             {
                 ApplicationStatus.Completed => "✓ MISSION ACCOMPLISHED",
+                ApplicationStatus.DeclinedByUser => "⏸ DECLINED — NOTHING WAS SENT",
                 ApplicationStatus.SafeModeStopped => "⏸ SUBMISSION HELD — NOT SUBMITTED",
                 ApplicationStatus.RequiresCaptcha => "🧩 CAPTCHA DETECTED — HUMAN INPUT NEEDED",
                 ApplicationStatus.Failed => $"✕ FAILED: {log.ErrorMessage}",
                 _ => $"STATUS: {log.Status}"
             };
-            StatusText.Foreground = log.Status == ApplicationStatus.Completed ? Green : Red;
+            // Declining is a decision, not a failure — don't paint it error-red.
+            StatusText.Foreground = log.Status switch
+            {
+                ApplicationStatus.Completed => Green,
+                ApplicationStatus.DeclinedByUser => Yellow,
+                _ => Red
+            };
         }
         catch (Exception ex)
         {

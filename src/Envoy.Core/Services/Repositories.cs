@@ -229,3 +229,46 @@ public class ApplicationLogRepository : IApplicationLogRepository
             .FirstOrDefaultAsync(l => l.TailoredProfileId == tailoredProfileId, ct);
     }
 }
+
+public interface IJobEventRepository
+{
+    Task AddAsync(JobEvent jobEvent, CancellationToken ct = default);
+    Task<List<JobEvent>> GetAllAsync(CancellationToken ct = default);
+    Task<int> CountByTypeAsync(JobEventType type, CancellationToken ct = default);
+}
+
+public class JobEventRepository : IJobEventRepository
+{
+    private readonly IDbContextFactory<EnvoyDbContext> _factory;
+    private readonly ILogger<JobEventRepository> _log;
+
+    public JobEventRepository(IDbContextFactory<EnvoyDbContext> factory, ILogger<JobEventRepository> log)
+    {
+        _factory = factory;
+        _log = log;
+    }
+
+    public async Task AddAsync(JobEvent jobEvent, CancellationToken ct = default)
+    {
+        using var db = _factory.CreateDbContext();
+        db.JobEvents.Add(jobEvent);
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task<List<JobEvent>> GetAllAsync(CancellationToken ct = default)
+    {
+        using var db = _factory.CreateDbContext();
+        return await db.JobEvents
+            .AsNoTracking()
+            .OrderByDescending(e => e.OccurredAt)
+            .ToListAsync(ct);
+    }
+
+    public async Task<int> CountByTypeAsync(JobEventType type, CancellationToken ct = default)
+    {
+        using var db = _factory.CreateDbContext();
+        return await db.JobEvents
+            .AsNoTracking()
+            .CountAsync(e => e.Type == type, ct);
+    }
+}

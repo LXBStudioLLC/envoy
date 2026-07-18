@@ -45,6 +45,7 @@ src/
       OllamaService.cs             — local LLM inference wrapper
     Models/
       ApplicationLog.cs
+      JobEvent.cs                  — append-only activity ledger (scoreboard stats + cross-session listing history)
       MasterProfile.cs
       TailoredProfile.cs
   Envoy.GhostDetection/      NEW — ghost-job detection framework
