@@ -34,7 +34,7 @@ public partial class ScoreboardView : UserControl
         }
         catch (Exception ex)
         {
-            StatusLine.Text = $"✕ Could not read the ledger: {ex.Message}";
+            StatusLine.Text = $"Couldn't load your stats: {ex.Message}";
             StatusLine.Foreground = Red;
         }
     }
@@ -43,11 +43,11 @@ public partial class ScoreboardView : UserControl
     {
         DodgedValue.Text = stats.GhostsDodged.ToString();
         HoursValue.Text = stats.HoursSaved.ToString("0.0");
-        HoursFormula.Text = $"{stats.GhostsDodged} DODGE{(stats.GhostsDodged == 1 ? "" : "S")} × {stats.MinutesPerApplication} MIN";
+        HoursFormula.Text = $"{stats.GhostsDodged} dodge{(stats.GhostsDodged == 1 ? "" : "s")} × {stats.MinutesPerApplication} min";
         StreakValue.Text = stats.StreakDays.ToString();
         SurfacedValue.Text = stats.GhostsSurfaced.ToString();
 
-        ContextLine.Text = $"POSTINGS SCREENED: {stats.PostingsScreened}   ·   APPLICATIONS SENT: {stats.Applications}";
+        ContextLine.Text = $"Screened {stats.PostingsScreened} posting{(stats.PostingsScreened == 1 ? "" : "s")}, sent {stats.Applications} application{(stats.Applications == 1 ? "" : "s")}.";
         ColdStartLabel.Visibility = ledgerEmpty ? Visibility.Visible : Visibility.Collapsed;
 
         var receipts = stats.RecentDodges.Select(ToReceiptItem).ToList();
@@ -66,14 +66,14 @@ public partial class ScoreboardView : UserControl
 
         return new ReceiptItem
         {
-            Company = string.IsNullOrWhiteSpace(receipt.Company) ? "—" : receipt.Company,
-            Title = string.IsNullOrWhiteSpace(receipt.JobTitle) ? "—" : receipt.JobTitle,
-            DateText = $"DODGED {receipt.OccurredAtUtc.ToLocalTime():yyyy-MM-dd HH:mm}",
+            Company = string.IsNullOrWhiteSpace(receipt.Company) ? "Unknown company" : receipt.Company,
+            Title = string.IsNullOrWhiteSpace(receipt.JobTitle) ? "Untitled posting" : receipt.JobTitle,
+            DateText = $"Dodged {receipt.OccurredAtUtc.ToLocalTime():yyyy-MM-dd HH:mm}",
             BadgeText = receipt.RiskScore is { } score ? $"{label} {score:0}" : label,
             BadgeBrush = brush,
             Evidence = string.IsNullOrWhiteSpace(receipt.Evidence)
                 ? ""
-                : string.Join("\n", receipt.Evidence.Split('\n').Select(line => "• " + line)),
+                : string.Join("\n", receipt.Evidence.Split('\n').Select(line => "- " + line)),
             EvidenceVisibility = string.IsNullOrWhiteSpace(receipt.Evidence) ? Visibility.Collapsed : Visibility.Visible,
             Url = receipt.JobUrl
         };
@@ -112,7 +112,7 @@ public partial class ScoreboardView : UserControl
         _settings.MinutesPerApplicationEstimate = minutes;
         if (!_settings.Save())
         {
-            StatusLine.Text = "✕ Could not save settings — settings.json may be locked. The estimate applies for this session only.";
+            StatusLine.Text = "Couldn't save settings. settings.json may be locked, so this estimate lasts until you close Envoy.";
             StatusLine.Foreground = Yellow;
         }
         else
@@ -129,7 +129,7 @@ public partial class ScoreboardView : UserControl
             try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
             catch (Exception ex)
             {
-                StatusLine.Text = $"✕ Could not open link: {ex.Message}";
+                StatusLine.Text = $"Couldn't open the link: {ex.Message}";
                 StatusLine.Foreground = Red;
             }
         }

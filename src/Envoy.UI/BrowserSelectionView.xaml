@@ -5,27 +5,27 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="24">
-            <TextBlock Text="&#x25C8; BROWSER NEXUS" Style="{StaticResource CyberHeading}" Margin="0,0,0,4"/>
-            <TextBlock Text="SELECT YOUR STEALTH VECTOR &#x2014; REAL BROWSER, ZERO FINGERPRINT" Style="{StaticResource CyberSubheading}" Margin="0,0,0,20"/>
+            <TextBlock Text="BROWSER" Style="{StaticResource CyberHeading}" Margin="0,0,0,4"/>
+            <TextBlock Text="Pick the browser Envoy uses to fill applications." Style="{StaticResource CyberSubheading}" Margin="0,0,0,20"/>
 
             <Border Background="#111827" CornerRadius="3" BorderBrush="#1A3A4A" BorderThickness="1" Padding="16" Margin="0,0,0,16">
                 <Border.Effect>
                     <DropShadowEffect Color="#00F0FF" BlurRadius="12" ShadowDepth="0" Opacity="0.15"/>
                 </Border.Effect>
                 <StackPanel>
-                    <TextBlock Text="&#x26A0; INTELLIGENCE BRIEF" Foreground="#00F0FF" FontSize="13" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,8"/>
+                    <TextBlock Text="HOW IT WORKS" Foreground="#00F0FF" FontSize="13" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,8"/>
                     <TextBlock TextWrapping="Wrap" Foreground="#8892A4" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,4">
-                        Envoy connects to real browsers via Chrome DevTools Protocol. No WebDriver. No Puppeteer. No detectable automation flags.
+                        Envoy drives your real browser through the Chrome DevTools Protocol, the same interface the browser's own developer tools use.
                     </TextBlock>
                     <TextBlock TextWrapping="Wrap" Foreground="#39FF14" FontSize="11" FontFamily="{StaticResource CyberFontBody}">
-                        Your real browser profile (cookies, history, extensions) is used &#x2014; making you indistinguishable from a normal user.
+                        Your own profile is used, so your logins, cookies, and extensions work like normal. And you confirm every submission yourself.
                     </TextBlock>
                 </StackPanel>
             </Border>
 
             <Border Background="#1A1230" CornerRadius="3" BorderBrush="#FFE600" BorderThickness="1" Padding="16" Margin="0,0,0,16">
                 <StackPanel>
-                    <TextBlock Text="&#x26A0; STEALTH INPUT EMULATION" Foreground="#FFE600" FontSize="13" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,8"/>
+                    <TextBlock Text="STEALTH INPUT" Foreground="#FFE600" FontSize="13" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,8"/>
                     <TextBlock TextWrapping="Wrap" Foreground="#8892A4" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,10">
                         Adds human-cadence typing and mouse movement to the form-fill in the human-gated apply flow. OFF by default. It never solves CAPTCHAs and is never used for scraping or job discovery. You are responsible for complying with the terms of use of any site you apply to.
                     </TextBlock>
@@ -40,7 +40,7 @@
 
             <Border Background="#0D1117" CornerRadius="3" BorderBrush="#1A3A4A" BorderThickness="1" Padding="16" Margin="0,0,0,16">
                 <StackPanel>
-                    <TextBlock Text="&#x25C9; APPLICATION SCREENSHOTS" Foreground="#00F0FF" FontSize="13" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,8"/>
+                    <TextBlock Text="APPLICATION SCREENSHOTS" Foreground="#00F0FF" FontSize="13" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,8"/>
                     <TextBlock TextWrapping="Wrap" Foreground="#8892A4" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,10">
                         When you submit an application, Envoy captures a before/after screenshot of the page for your records. These are stored locally in envoy.db (%LOCALAPPDATA%\Envoy) and never leave your machine. Turn this off if you'd rather not store page images.
                     </TextBlock>
@@ -137,7 +137,7 @@
                                                     <Setter Property="Text" Value="SELECT"/>
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                            <Setter Property="Text" Value="&#x2713; ACTIVE"/>
+                                                            <Setter Property="Text" Value="ACTIVE"/>
                                                             <Setter Property="Foreground" Value="#39FF14"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
@@ -152,10 +152,10 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <TextBlock x:Name="NoBrowsersLabel" Text="NO COMPATIBLE BROWSERS DETECTED &#x2014; Install Chrome, Edge, Brave, Opera, or Vivaldi" Foreground="#FF073A" FontSize="12" FontFamily="{StaticResource CyberFontBody}" Visibility="Collapsed" Margin="0,8"/>
+            <TextBlock x:Name="NoBrowsersLabel" Text="No compatible browsers found. Install Chrome, Edge, Brave, Opera, or Vivaldi." Foreground="#FF073A" FontSize="12" FontFamily="{StaticResource CyberFontBody}" Visibility="Collapsed" Margin="0,8"/>
 
             <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
-                <Button x:Name="BtnScan" Content="&#x25C8; SCAN AGAIN" Click="BtnScan_Click" Style="{StaticResource CyberButton}" Padding="16,8" Margin="0,0,8,0"/>
+                <Button x:Name="BtnScan" Content="SCAN AGAIN" Click="BtnScan_Click" Style="{StaticResource CyberButton}" Padding="16,8" Margin="0,0,8,0"/>
             </StackPanel>
         </StackPanel>
     </ScrollViewer>

@@ -4,6 +4,9 @@ All notable changes to Envoy are documented in this file. Format is based on [Ke
 
 ## [Unreleased]
 
+### Changed
+- The whole app now talks like a person. Every emoji and dingbat is gone from buttons and status messages, along with the em dashes and the mission-briefing jargon. Mission Briefing is now just Apply, the Data Vault is the Vault, Browser Nexus is Browser, LLM Nexus is AI Models, and Codename is Full Name. Status lines read like plain English ("Application submitted." instead of "MISSION ACCOMPLISHED"). The Browser page also drops the fingerprint-evasion sales pitch and now just explains how the DevTools connection works, which matches what the app actually does and has always done.
+
 ### Added
 - The Scoreboard. A new view, and the first thing you see when Envoy opens: ghosts dodged, hours saved, day streak, and ghosts surfaced, with a receipts list showing every dodge alongside the evidence that was on screen when you passed. Hours saved shows its math (dodges times your own time-per-application estimate, adjustable right on the board) instead of pretending to measure something it can't. Screened and sent counts appear only as context; the board scores the system, it does not grade you.
 - Find Jobs feeds the ledger. Every scored result is recorded as a sighting (one per posting per day, so re-running a search inflates nothing), opening a posting records a view, and a new SKIP button on each result records the pass and clears the row. Skipping a flagged posting answers with GHOST DODGED in the status line. Day-by-day sightings are also the listing history the repost-frequency signal needs for its stronger path.

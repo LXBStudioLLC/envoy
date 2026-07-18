@@ -98,7 +98,7 @@ public partial class App
                 $"{head}\n\n{context}: {ex.Message}\n\n" +
                 $"Details were saved to:\n{CrashLogPath}\n\n" +
                 "Open the logs folder now?",
-                fatal ? "Envoy — fatal error" : "Envoy — error",
+                fatal ? "Envoy: fatal error" : "Envoy: error",
                 MessageBoxButton.YesNo,
                 fatal ? MessageBoxImage.Error : MessageBoxImage.Warning);
 

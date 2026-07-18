@@ -5,24 +5,24 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="24">
-            <TextBlock Text="&#x25C8; MISSION BRIEFING" Style="{StaticResource CyberHeading}" Margin="0,0,0,4"/>
-            <TextBlock Text="TARGET ACQUISITION AND PAYLOAD DELIVERY" Style="{StaticResource CyberSubheading}" Margin="0,0,0,20"/>
+            <TextBlock Text="APPLY" Style="{StaticResource CyberHeading}" Margin="0,0,0,4"/>
+            <TextBlock Text="Paste a job link. Envoy tailors your resume and fills the form. Nothing sends without you." Style="{StaticResource CyberSubheading}" Margin="0,0,0,20"/>
 
             <Border Background="#111827" CornerRadius="3" BorderBrush="#1A3A4A" BorderThickness="1" Padding="20" Margin="0,0,0,16">
                 <Border.Effect>
                     <DropShadowEffect Color="#00F0FF" BlurRadius="12" ShadowDepth="0" Opacity="0.15"/>
                 </Border.Effect>
                 <StackPanel>
-                    <TextBlock Text="&#x25C8; TARGET URL" Foreground="#00F0FF" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,6"/>
+                    <TextBlock Text="JOB URL" Foreground="#00F0FF" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,6"/>
                     <TextBox x:Name="TxtJobUrl" Style="{StaticResource CyberTextBox}" Margin="0,0,0,12" AutomationProperties.Name="Job posting URL"/>
 
-                    <TextBlock Text="&#x25C8; OPERATION MODE" Foreground="#00F0FF" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,6"/>
+                    <TextBlock Text="INPUT MODE" Foreground="#00F0FF" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,6"/>
                     <ComboBox x:Name="CmbMode" Style="{StaticResource CyberComboBox}" Margin="0,0,0,12" AutomationProperties.Name="Execution mode">
                         <ComboBoxItem Content="Safe" IsSelected="True"/>
                         <ComboBoxItem Content="Stealth"/>
                     </ComboBox>
 
-                    <Button x:Name="BtnInitiate" Content="&#x25C8; INITIATE SEQUENCE" Click="BtnInitiate_Click" Style="{StaticResource CyberButton}" HorizontalAlignment="Left" Padding="24,10"/>
+                    <Button x:Name="BtnInitiate" Content="TAILOR RESUME" Click="BtnInitiate_Click" Style="{StaticResource CyberButton}" HorizontalAlignment="Left" Padding="24,10"/>
                 </StackPanel>
             </Border>
 
@@ -31,7 +31,7 @@
             <Border x:Name="GhostRiskPanel" Background="#111827" CornerRadius="3" BorderBrush="#1A3A4A" BorderThickness="1" Padding="16" Visibility="Collapsed" Margin="0,0,0,16">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                        <TextBlock Text="&#x25C8; GHOST RISK  " Foreground="#8892A4" FontSize="12" FontFamily="{StaticResource CyberFontBody}" VerticalAlignment="Center"/>
+                        <TextBlock Text="GHOST RISK  " Foreground="#8892A4" FontSize="12" FontFamily="{StaticResource CyberFontBody}" VerticalAlignment="Center"/>
                         <Border x:Name="GhostBadge" CornerRadius="2" Padding="8,3" Background="#39FF14">
                             <TextBlock x:Name="GhostBandText" Text="OK" Foreground="#0A0E17" FontSize="12" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}"/>
                         </Border>
@@ -45,19 +45,19 @@
                     <DropShadowEffect Color="#00F0FF" BlurRadius="12" ShadowDepth="0" Opacity="0.15"/>
                 </Border.Effect>
                 <StackPanel>
-                    <TextBlock Text="&#x25C8; TACTICAL ANALYSIS" Foreground="#00F0FF" FontSize="14" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,8"/>
+                    <TextBlock Text="TAILORING RESULTS" Foreground="#00F0FF" FontSize="14" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,8"/>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                         <TextBlock Text="MATCH SCORE: " Foreground="#8892A4" FontSize="12" FontFamily="{StaticResource CyberFontBody}"/>
-                        <TextBlock x:Name="ScoreText" Text="&#x2014;" Foreground="#00F0FF" FontSize="18" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}"/>
+                        <TextBlock x:Name="ScoreText" Text="-" Foreground="#00F0FF" FontSize="18" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                         <TextBlock Text="STATUS: " Foreground="#8892A4" FontSize="12" FontFamily="{StaticResource CyberFontBody}"/>
-                        <TextBlock x:Name="SafetyText" Text="&#x2014;" FontSize="12" FontFamily="{StaticResource CyberFontBody}"/>
+                        <TextBlock x:Name="SafetyText" Text="-" FontSize="12" FontFamily="{StaticResource CyberFontBody}"/>
                     </StackPanel>
                     <TextBlock x:Name="ViolationsText" Text="" Foreground="#FFE600" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="0,4,0,8" TextWrapping="Wrap"/>
                     <TextBlock x:Name="ChangesText" Text="" Foreground="#39FF14" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,8" TextWrapping="Wrap"/>
 
-                    <Button x:Name="BtnExecute" Content="&#x25C8; EXECUTE DROP" Click="BtnExecute_Click" Style="{StaticResource CyberButton}" HorizontalAlignment="Left" Padding="20,10" Visibility="Collapsed"/>
+                    <Button x:Name="BtnExecute" Content="FILL OUT APPLICATION" Click="BtnExecute_Click" Style="{StaticResource CyberButton}" HorizontalAlignment="Left" Padding="20,10" Visibility="Collapsed"/>
                 </StackPanel>
             </Border>
 
@@ -66,12 +66,12 @@
                     <DropShadowEffect Color="#FFE600" BlurRadius="12" ShadowDepth="0" Opacity="0.2"/>
                 </Border.Effect>
                 <StackPanel>
-                    <TextBlock Text="&#x26A0; HUMAN CONFIRMATION REQUIRED" Foreground="#FFE600" FontSize="14" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,8"/>
+                    <TextBlock Text="READY TO SEND?" Foreground="#FFE600" FontSize="14" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,8"/>
                     <TextBlock x:Name="ConfirmPrompt" Text="" Foreground="#E0E6F0" FontSize="12" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,4" TextWrapping="Wrap"/>
                     <TextBlock Text="The form is filled and ready. Nothing is submitted until you confirm." Foreground="#8892A4" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,12" TextWrapping="Wrap"/>
                     <StackPanel Orientation="Horizontal">
-                        <Button x:Name="BtnConfirmSubmit" Content="&#x25C8; CONFIRM SUBMIT" Click="BtnConfirmSubmit_Click" Style="{StaticResource CyberButton}" Padding="20,10" Margin="0,0,12,0" AutomationProperties.Name="Confirm and submit application"/>
-                        <Button x:Name="BtnCancelSubmit" Content="&#x2715; CANCEL" Click="BtnCancelSubmit_Click" Style="{StaticResource CyberButtonDanger}" Padding="20,10" AutomationProperties.Name="Cancel submission"/>
+                        <Button x:Name="BtnConfirmSubmit" Content="CONFIRM AND SEND" Click="BtnConfirmSubmit_Click" Style="{StaticResource CyberButton}" Padding="20,10" Margin="0,0,12,0" AutomationProperties.Name="Confirm and submit application"/>
+                        <Button x:Name="BtnCancelSubmit" Content="CANCEL" Click="BtnCancelSubmit_Click" Style="{StaticResource CyberButtonDanger}" Padding="20,10" AutomationProperties.Name="Cancel submission"/>
                     </StackPanel>
                 </StackPanel>
             </Border>

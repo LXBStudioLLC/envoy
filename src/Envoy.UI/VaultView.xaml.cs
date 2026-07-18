@@ -67,10 +67,10 @@ public partial class VaultView : UserControl
                     Effect = new DropShadowEffect { Color = Color.FromRgb(0x00, 0xF0, 0xFF), BlurRadius = 6, ShadowDepth = 0, Opacity = 0.08 }
                 };
                 var sp = new StackPanel();
-                sp.Children.Add(new TextBlock { Text = $"{exp.JobTitle} — {exp.Company}", Foreground = TextFg, FontWeight = FontWeights.Bold, FontSize = 13, FontFamily = BodyFont });
-                sp.Children.Add(new TextBlock { Text = $"{exp.StartDate} → {exp.EndDate ?? "Present"}", Foreground = Muted, FontSize = 11, FontFamily = BodyFont });
+                sp.Children.Add(new TextBlock { Text = $"{exp.JobTitle} at {exp.Company}", Foreground = TextFg, FontWeight = FontWeights.Bold, FontSize = 13, FontFamily = BodyFont });
+                sp.Children.Add(new TextBlock { Text = $"{exp.StartDate} to {exp.EndDate ?? "present"}", Foreground = Muted, FontSize = 11, FontFamily = BodyFont });
                 foreach (var bullet in exp.Bullets)
-                    sp.Children.Add(new TextBlock { Text = $"  • {bullet}", Foreground = Muted, FontSize = 11, FontFamily = BodyFont, TextWrapping = TextWrapping.Wrap });
+                    sp.Children.Add(new TextBlock { Text = $"  - {bullet}", Foreground = Muted, FontSize = 11, FontFamily = BodyFont, TextWrapping = TextWrapping.Wrap });
                 border.Child = sp;
                 expPanel.Children.Add(border);
             }
@@ -80,8 +80,8 @@ public partial class VaultView : UserControl
                 ExperienceList.Items.Add(child);
 
             AnomaliesText.Text = _profile.Anomalies.Any()
-                ? string.Join("\n", _profile.Anomalies.Select(a => $"⚠ {a.Field}: {a.Message} [{a.Severity}]"))
-                : "✓ NO ANOMALIES DETECTED";
+                ? string.Join("\n", _profile.Anomalies.Select(a => $"- {a.Field}: {a.Message} ({a.Severity})"))
+                : "No issues found";
             AnomaliesText.Foreground = _profile.Anomalies.Any()
                 ? Yellow
                 : Green;
@@ -112,12 +112,12 @@ public partial class VaultView : UserControl
             _profile.UpdatedAt = DateTime.UtcNow;
 
             await _profileRepo.UpdateAsync(_profile);
-            SaveStatus.Text = "✓ CHANGES COMMITTED SUCCESSFULLY";
+            SaveStatus.Text = "Saved.";
             SaveStatus.Foreground = Green;
         }
         catch (Exception ex)
         {
-            SaveStatus.Text = $"✕ ERROR: {ex.Message}";
+            SaveStatus.Text = $"Couldn't save: {ex.Message}";
             SaveStatus.Foreground = Red;
         }
     }

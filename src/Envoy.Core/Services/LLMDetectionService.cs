@@ -126,8 +126,8 @@ public class LLMDetectionService
         {
             var sizeGB = bestLocal.SizeBytes.HasValue ? bestLocal.SizeBytes.Value / 1_073_741_824.0 : 0;
             return sizeGB >= 7
-                ? $"Recommended: {bestLocal.DisplayName} — large enough for quality resume tailoring"
-                : $"Available: {bestLocal.DisplayName} — works but larger models produce better results";
+                ? $"Recommended: {bestLocal.DisplayName}, large enough for quality resume tailoring"
+                : $"Available: {bestLocal.DisplayName}. It works, but larger models produce better results";
         }
 
         return "No local models loaded. Pull a model in Ollama (e.g., `ollama pull qwen2.5-coder:14b`)";
@@ -184,6 +184,6 @@ public class LLMDetectionService
         if (sizeGB >= 3)
             return "Adequate but may produce lower quality results";
 
-        return "Small model — consider upgrading for better results";
+        return "Small model. Consider a larger one for better results";
     }
 }

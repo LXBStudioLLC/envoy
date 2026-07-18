@@ -5,8 +5,8 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="24">
-            <TextBlock Text="&#x25C8; DASHBOARD" Style="{StaticResource CyberHeading}" Margin="0,0,0,4"/>
-            <TextBlock Text="SOVEREIGN JOB AGENT &#x2014; MISSION CONTROL" Style="{StaticResource CyberSubheading}" Margin="0,0,0,20"/>
+            <TextBlock Text="DASHBOARD" Style="{StaticResource CyberHeading}" Margin="0,0,0,4"/>
+            <TextBlock Text="Import a resume, pick a profile, and go." Style="{StaticResource CyberSubheading}" Margin="0,0,0,20"/>
 
             <Border x:Name="ImportDropZone" Background="#111827" CornerRadius="3" BorderBrush="#1A3A4A" BorderThickness="1" Padding="20" Margin="0,0,0,16"
                     AllowDrop="True" DragEnter="ImportDropZone_DragEnter" DragLeave="ImportDropZone_DragLeave" DragOver="ImportDropZone_DragOver" Drop="ImportDropZone_Drop"
@@ -17,7 +17,7 @@
                 <StackPanel>
                     <TextBlock Text="IMPORT RESUME" Foreground="#00F0FF" FontSize="14" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,8"/>
                     <TextBlock Text="Drop a PDF here or click to browse" Foreground="#8892A4" FontSize="12" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,12"/>
-                    <Button x:Name="BtnImport" Content="&#x25C8; SELECT PDF FILE" Click="BtnImport_Click" Style="{StaticResource CyberButton}" HorizontalAlignment="Left" Padding="20,10"/>
+                    <Button x:Name="BtnImport" Content="SELECT PDF FILE" Click="BtnImport_Click" Style="{StaticResource CyberButton}" HorizontalAlignment="Left" Padding="20,10"/>
                     <TextBlock x:Name="ImportStatus" Text="" Foreground="#39FF14" FontSize="12" FontFamily="{StaticResource CyberFontBody}" Margin="0,8,0,0"/>
                 </StackPanel>
             </Border>
@@ -27,15 +27,15 @@
                     <DropShadowEffect Color="#00F0FF" BlurRadius="12" ShadowDepth="0" Opacity="0.15"/>
                 </Border.Effect>
                 <StackPanel>
-                    <TextBlock Text="CHROME BRIDGE" Foreground="#00F0FF" FontSize="14" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,8"/>
-                    <TextBlock x:Name="ChromeStatusLabel" Text="&#x26A0; Checking Chrome..." Foreground="#8892A4" FontSize="12" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,4"/>
-                    <TextBlock x:Name="ChromeDetailLabel" Text="Envoy automates Chrome via remote debugging. This requires Chrome or Edge." Foreground="#8892A4" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,12" TextWrapping="Wrap"/>
-                    <Button x:Name="BtnLaunchChrome" Content="&#x25C8; LAUNCH CHROME" Click="BtnLaunchChrome_Click" Style="{StaticResource CyberButton}" HorizontalAlignment="Left" Padding="20,10"/>
+                    <TextBlock Text="BROWSER" Foreground="#00F0FF" FontSize="14" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,8"/>
+                    <TextBlock x:Name="ChromeStatusLabel" Text="Checking your browser..." Foreground="#8892A4" FontSize="12" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,4"/>
+                    <TextBlock x:Name="ChromeDetailLabel" Text="Envoy fills applications in a real browser. Chrome or Edge works." Foreground="#8892A4" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,12" TextWrapping="Wrap"/>
+                    <Button x:Name="BtnLaunchChrome" Content="LAUNCH BROWSER" Click="BtnLaunchChrome_Click" Style="{StaticResource CyberButton}" HorizontalAlignment="Left" Padding="20,10"/>
                 </StackPanel>
             </Border>
 
-            <TextBlock Text="ACTIVE PROFILES" Foreground="#00F0FF" FontSize="14" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,8,0,8"/>
-            <TextBlock x:Name="EmptyProfilesLabel" Text="NO PROFILES DETECTED &#x2014; Import a resume to initialize the system" Foreground="#8892A4" FontSize="12" FontFamily="{StaticResource CyberFontBody}" Visibility="Visible"/>
+            <TextBlock Text="YOUR PROFILES" Foreground="#00F0FF" FontSize="14" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,8,0,8"/>
+            <TextBlock x:Name="EmptyProfilesLabel" Text="No profiles yet. Import a resume to get started." Foreground="#8892A4" FontSize="12" FontFamily="{StaticResource CyberFontBody}" Visibility="Visible"/>
 
             <ItemsControl x:Name="ProfilesList" Margin="0,4">
                 <ItemsControl.ItemTemplate>
@@ -56,16 +56,16 @@
                                     </TextBlock>
                                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                                         <TextBlock Foreground="#00F0FF" FontSize="11" FontFamily="{StaticResource CyberFontBody}">
-                                            <Run Text="&#x1F4BC; "/><Run Text="{Binding Experience.Count, Mode=OneWay}"/><Run Text=" positions"/>
+                                            <Run Text="{Binding Experience.Count, Mode=OneWay}"/><Run Text=" positions"/>
                                         </TextBlock>
                                         <TextBlock Foreground="#39FF14" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="12,0,0,0">
-                                            <Run Text="&#x1F3AF; "/><Run Text="{Binding Skills.Count, Mode=OneWay}"/><Run Text=" skills"/>
+                                            <Run Text="{Binding Skills.Count, Mode=OneWay}"/><Run Text=" skills"/>
                                         </TextBlock>
                                     </StackPanel>
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Button Content="&#x25C8; APPLY" Tag="{Binding Id}" Click="BtnApply_Click" Style="{StaticResource CyberButton}" Padding="12,6" Margin="4,0"/>
-                                    <Button Content="&#x2699; EDIT" Tag="{Binding Id}" Click="BtnEdit_Click" Style="{StaticResource CyberButton}" Padding="12,6" Margin="4,0"/>
+                                    <Button Content="APPLY" Tag="{Binding Id}" Click="BtnApply_Click" Style="{StaticResource CyberButton}" Padding="12,6" Margin="4,0"/>
+                                    <Button Content="EDIT" Tag="{Binding Id}" Click="BtnEdit_Click" Style="{StaticResource CyberButton}" Padding="12,6" Margin="4,0"/>
                                     <Button Content="X" Tag="{Binding Id}" Click="BtnDelete_Click" Style="{StaticResource CyberButtonDanger}" Padding="12,6" Margin="4,0"/>
                                 </StackPanel>
                             </Grid>

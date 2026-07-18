@@ -25,13 +25,13 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
-                    <TextBlock x:Name="TitleText" Text="&#x25C8; ENVOY" FontSize="16" FontWeight="Bold" Foreground="#00F0FF" FontFamily="{StaticResource CyberFontHeading}" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                    <TextBlock x:Name="TitleText" Text="ENVOY" FontSize="16" FontWeight="Bold" Foreground="#00F0FF" FontFamily="{StaticResource CyberFontHeading}" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
                         <TextBlock.Effect>
                             <DropShadowEffect Color="#00F0FF" BlurRadius="10" ShadowDepth="0" Opacity="0.5"/>
                         </TextBlock.Effect>
                     </TextBlock>
-                    <TextBlock x:Name="VersionText" Text=" SOVEREIGN JOB AGENT" FontSize="11" Foreground="#8892A4" FontFamily="{StaticResource CyberFontBody}" VerticalAlignment="Center" Margin="8,0,0,0"/>
-                    <Button x:Name="BtnUpdate" Content="&#x25B2; UPDATE" Visibility="Collapsed" Click="BtnUpdate_Click" Background="Transparent" Foreground="#00F0FF" BorderThickness="0" FontSize="11" FontFamily="{StaticResource CyberFontBody}" VerticalAlignment="Center" Margin="12,0,0,0" Padding="4,2" Cursor="Hand" AutomationProperties.Name="Update available" ToolTip="A newer version is available. Click to open the release page."/>
+                    <TextBlock x:Name="VersionText" Text="" FontSize="11" Foreground="#8892A4" FontFamily="{StaticResource CyberFontBody}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                    <Button x:Name="BtnUpdate" Content="UPDATE" Visibility="Collapsed" Click="BtnUpdate_Click" Background="Transparent" Foreground="#00F0FF" BorderThickness="0" FontSize="11" FontFamily="{StaticResource CyberFontBody}" VerticalAlignment="Center" Margin="12,0,0,0" Padding="4,2" Cursor="Hand" AutomationProperties.Name="Update available" ToolTip="A newer version is available. Click to open the release page."/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,4,0">
                     <Button x:Name="BtnAbout" Content="?" Width="36" Height="36" Click="BtnAbout_Click" Background="Transparent" Foreground="#8892A4" BorderThickness="0" FontSize="14" FontFamily="{StaticResource CyberFontBody}" AutomationProperties.Name="About and report a bug" ToolTip="About / Report a bug"/>
@@ -50,18 +50,18 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Background="#0D1117" Margin="0,0,0,0">
-                    <Button x:Name="NavScoreboard" Content="&#x25C8; SCOREBOARD" Click="NavScoreboard_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,12,8,2" HorizontalContentAlignment="Left"/>
-                    <Button x:Name="NavDashboard" Content="&#x25C8; DASHBOARD" Click="NavDashboard_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,2,8,2" HorizontalContentAlignment="Left"/>
-                    <Button x:Name="NavFind" Content="&#x2316; FIND JOBS" Click="NavFind_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,2,8,2" HorizontalContentAlignment="Left"/>
-                    <Button x:Name="NavApply" Content="&#x25C8; APPLY" Click="NavApply_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,2,8,2" HorizontalContentAlignment="Left"/>
-                    <Button x:Name="NavVault" Content="&#x25C8; VAULT" Click="NavVault_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,2,8,2" HorizontalContentAlignment="Left"/>
-                    <Button x:Name="NavBrowser" Content="&#x2699; BROWSER" Click="NavBrowser_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,2,8,2" HorizontalContentAlignment="Left"/>
-                    <Button x:Name="NavLLM" Content="&#x2699; LLM NEXUS" Click="NavLLM_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,2,8,2" HorizontalContentAlignment="Left"/>
+                    <Button x:Name="NavScoreboard" Content="SCOREBOARD" Click="NavScoreboard_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,12,8,2" HorizontalContentAlignment="Left"/>
+                    <Button x:Name="NavDashboard" Content="DASHBOARD" Click="NavDashboard_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,2,8,2" HorizontalContentAlignment="Left"/>
+                    <Button x:Name="NavFind" Content="FIND JOBS" Click="NavFind_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,2,8,2" HorizontalContentAlignment="Left"/>
+                    <Button x:Name="NavApply" Content="APPLY" Click="NavApply_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,2,8,2" HorizontalContentAlignment="Left"/>
+                    <Button x:Name="NavVault" Content="VAULT" Click="NavVault_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,2,8,2" HorizontalContentAlignment="Left"/>
+                    <Button x:Name="NavBrowser" Content="BROWSER" Click="NavBrowser_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,2,8,2" HorizontalContentAlignment="Left"/>
+                    <Button x:Name="NavLLM" Content="AI MODELS" Click="NavLLM_Click" Style="{StaticResource CyberNavButton}" Height="44" Margin="8,2,8,2" HorizontalContentAlignment="Left"/>
                     <Rectangle Fill="#1A3A4A" Height="1" Margin="16,8"/>
                     <StackPanel x:Name="HardwarePanel" Margin="16,8">
-                        <TextBlock x:Name="GpuLabel" Text="&#x25C9; GPU: Detecting..." Style="{StaticResource CyberLabel}" Margin="0,4"/>
-                        <TextBlock x:Name="ModelLabel" Text="&#x25C8; Model: ..." Foreground="#8892A4" FontSize="10" FontFamily="{StaticResource CyberFontBody}" Margin="0,2"/>
-                        <TextBlock x:Name="ChromeLabel" Text="&#x26A0; Chrome Offline" Foreground="#FF073A" FontSize="10" FontFamily="{StaticResource CyberFontBody}" Margin="0,2"/>
+                        <TextBlock x:Name="GpuLabel" Text="GPU: detecting..." Style="{StaticResource CyberLabel}" Margin="0,4"/>
+                        <TextBlock x:Name="ModelLabel" Text="Model: ..." Foreground="#8892A4" FontSize="10" FontFamily="{StaticResource CyberFontBody}" Margin="0,2"/>
+                        <TextBlock x:Name="ChromeLabel" Text="Browser offline" Foreground="#FF073A" FontSize="10" FontFamily="{StaticResource CyberFontBody}" Margin="0,2"/>
                     </StackPanel>
                 </StackPanel>
 

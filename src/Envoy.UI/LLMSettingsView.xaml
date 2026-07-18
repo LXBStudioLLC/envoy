@@ -5,15 +5,15 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="24">
-            <TextBlock Text="&#x25C8; LLM NEXUS" Style="{StaticResource CyberHeading}" Margin="0,0,0,4"/>
-            <TextBlock Text="CONFIGURE YOUR AI CO-PROCESSOR &#x2014; LOCAL OR CLOUD" Style="{StaticResource CyberSubheading}" Margin="0,0,0,20"/>
+            <TextBlock Text="AI MODELS" Style="{StaticResource CyberHeading}" Margin="0,0,0,4"/>
+            <TextBlock Text="Local by default. Cloud only if you add a key." Style="{StaticResource CyberSubheading}" Margin="0,0,0,20"/>
 
             <Border Background="#111827" CornerRadius="3" BorderBrush="#1A3A4A" BorderThickness="1" Padding="16" Margin="0,0,0,16">
                 <Border.Effect>
                     <DropShadowEffect Color="#00F0FF" BlurRadius="12" ShadowDepth="0" Opacity="0.15"/>
                 </Border.Effect>
                 <StackPanel>
-                    <TextBlock Text="&#x26A0; ALL PROCESSING IS LOCAL BY DEFAULT" Foreground="#39FF14" FontSize="12" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,8"/>
+                    <TextBlock Text="EVERYTHING RUNS ON YOUR PC BY DEFAULT" Foreground="#39FF14" FontSize="12" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,8"/>
                     <TextBlock TextWrapping="Wrap" Foreground="#8892A4" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,4">
                         Envoy uses local LLMs for resume tailoring. Your data never leaves your machine unless you configure a cloud provider. Ollama and LM Studio are both auto-detected.
                     </TextBlock>
@@ -74,9 +74,9 @@
                                         </TextBlock>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <Button Content="&#x25C8; ACTIVATE" Click="ActivateProvider_Click" Style="{StaticResource CyberButton}" Padding="12,6" FontSize="11" Margin="0,0,0,4" Tag="{Binding ProviderId}"/>
-                                        <Button Content="&#x25B6; TEST" Click="TestProvider_Click" Style="{StaticResource CyberButton}" Padding="12,6" FontSize="11" Margin="0,0,0,4" Tag="{Binding ProviderId}"/>
-                                        <Button Content="&#x21BB; SCAN" Click="ScanProvider_Click" Style="{StaticResource CyberButton}" Padding="12,6" FontSize="11" Tag="{Binding ProviderId}"/>
+                                        <Button Content="USE THIS" Click="ActivateProvider_Click" Style="{StaticResource CyberButton}" Padding="12,6" FontSize="11" Margin="0,0,0,4" Tag="{Binding ProviderId}"/>
+                                        <Button Content="TEST" Click="TestProvider_Click" Style="{StaticResource CyberButton}" Padding="12,6" FontSize="11" Margin="0,0,0,4" Tag="{Binding ProviderId}"/>
+                                        <Button Content="SCAN" Click="ScanProvider_Click" Style="{StaticResource CyberButton}" Padding="12,6" FontSize="11" Tag="{Binding ProviderId}"/>
                                     </StackPanel>
                                 </Grid>
 
@@ -107,11 +107,11 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <TextBlock x:Name="NoProviderLabel" Text="NO LLM PROVIDERS DETECTED &#x2014; Install Ollama or LM Studio, or configure a cloud API key below" Foreground="#FF073A" FontSize="12" FontFamily="{StaticResource CyberFontBody}" Visibility="Collapsed" Margin="0,8"/>
+            <TextBlock x:Name="NoProviderLabel" Text="No local AI found. Install Ollama or LM Studio, or add a cloud key below." Foreground="#FF073A" FontSize="12" FontFamily="{StaticResource CyberFontBody}" Visibility="Collapsed" Margin="0,8"/>
             <TextBlock x:Name="ProviderNoteLabel" Text="" Foreground="#8892A4" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Visibility="Collapsed" Margin="0,4,0,0"/>
 
-            <TextBlock Text="CLOUD API CONFIGURATION" Foreground="#00F0FF" FontSize="14" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,24,0,8"/>
-            <TextBlock Text="Optional. Your data will be sent to the cloud provider if configured." Foreground="#8892A4" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,12"/>
+            <TextBlock Text="CLOUD KEYS (OPTIONAL)" Foreground="#00F0FF" FontSize="14" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,24,0,8"/>
+            <TextBlock Text="If you add a key and pick that provider, tailoring requests go to it. Keys are stored encrypted on this PC." Foreground="#8892A4" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,12"/>
 
             <Border Background="#111827" CornerRadius="3" BorderBrush="#1A3A4A" BorderThickness="1" Padding="16" Margin="0,0,0,16">
                 <StackPanel>
@@ -163,8 +163,8 @@
                     </Grid>
 
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                        <Button x:Name="BtnSaveConfig" Content="&#x25C8; SAVE CONFIGURATION" Click="BtnSaveConfig_Click" Style="{StaticResource CyberButton}" Padding="16,8" Margin="0,0,8,0"/>
-                        <Button x:Name="BtnRescan" Content="&#x25B6; RESCAN ALL" Click="BtnRescan_Click" Style="{StaticResource CyberButton}" Padding="16,8"/>
+                        <Button x:Name="BtnSaveConfig" Content="SAVE" Click="BtnSaveConfig_Click" Style="{StaticResource CyberButton}" Padding="16,8" Margin="0,0,8,0"/>
+                        <Button x:Name="BtnRescan" Content="RESCAN ALL" Click="BtnRescan_Click" Style="{StaticResource CyberButton}" Padding="16,8"/>
                     </StackPanel>
 
                     <TextBlock x:Name="ConfigSaveStatus" Text="" Foreground="#39FF14" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="0,8,0,0" Visibility="Collapsed"/>

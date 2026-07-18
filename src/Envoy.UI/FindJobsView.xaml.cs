@@ -36,7 +36,7 @@ public partial class FindJobsView : UserControl
     {
         if (!string.IsNullOrEmpty(_settings.BraveSearchApiKeyEncrypted))
         {
-            StatusText.Text = "✓ Brave key saved — leave blank to reuse it, or enter a new key to replace.";
+            StatusText.Text = "Brave key saved. Leave the box blank to keep using it, or type a new one to replace it.";
             StatusText.Foreground = Gray;
         }
         LoadBoards();
@@ -108,7 +108,7 @@ public partial class FindJobsView : UserControl
         }
 
         BtnAddCompany.IsEnabled = false;
-        AddCompanyStatus.Text = $"Probing ATS platforms for \"{companyName}\"...";
+        AddCompanyStatus.Text = $"Checking the six ATS platforms for \"{companyName}\"...";
         AddCompanyStatus.Foreground = Cyan;
 
         try
@@ -126,20 +126,20 @@ public partial class FindJobsView : UserControl
                     _boards.Add(board);
                     RefreshBoardList();
                     SeedBoards.Save(_boards);
-                    AddCompanyStatus.Text = $"✓ Found {companyName} on {board.Ats} (token: {board.Token}). Added to your boards.";
+                    AddCompanyStatus.Text = $"Found {companyName} on {board.Ats} (token: {board.Token}). Added to your boards.";
                     AddCompanyStatus.Foreground = Green;
                     TxtAddCompany.Clear();
                 }
             }
             else
             {
-                AddCompanyStatus.Text = $"✕ No public job board found for \"{companyName}\" on any ATS. Try a different name or check the spelling.";
+                AddCompanyStatus.Text = $"No public job board found for \"{companyName}\". Try a different name or check the spelling.";
                 AddCompanyStatus.Foreground = Red;
             }
         }
         catch (Exception ex)
         {
-            AddCompanyStatus.Text = $"✕ Error: {ex.Message}";
+            AddCompanyStatus.Text = $"Error: {ex.Message}";
             AddCompanyStatus.Foreground = Red;
         }
         finally
@@ -174,12 +174,12 @@ public partial class FindJobsView : UserControl
         if (SaveKeyIfChanged(key))
         {
             TxtBraveKey.Clear();
-            StatusText.Text = "✓ BRAVE KEY SAVED";
+            StatusText.Text = "Brave key saved.";
             StatusText.Foreground = Green;
         }
         else
         {
-            StatusText.Text = "✕ Could not save — settings.json may be locked; key NOT stored.";
+            StatusText.Text = "Couldn't save. settings.json may be locked, so the key was not stored.";
             StatusText.Foreground = Red;
         }
     }
@@ -207,14 +207,13 @@ public partial class FindJobsView : UserControl
 
         if (items.Count == 0)
         {
-            var msg = result.Errors.Count > 0 ? string.Join("  |  ", result.Errors) : "No matching jobs found.";
-            StatusText.Text = $"⚠ {msg}";
+            StatusText.Text = result.Errors.Count > 0 ? string.Join("  |  ", result.Errors) : "No matching jobs found.";
             StatusText.Foreground = result.Errors.Count > 0 ? Yellow : Gray;
         }
         else
         {
-            var suffix = result.Errors.Count > 0 ? $"  ·  {result.Errors.Count} source(s) unavailable" : "";
-            StatusText.Text = $"✓ {items.Count} JOB(S) FOUND{suffix}";
+            var suffix = result.Errors.Count > 0 ? $" ({result.Errors.Count} source{(result.Errors.Count == 1 ? "" : "s")} unavailable)" : "";
+            StatusText.Text = $"{items.Count} job{(items.Count == 1 ? "" : "s")} found{suffix}";
             StatusText.Foreground = Green;
         }
     }
@@ -229,7 +228,7 @@ public partial class FindJobsView : UserControl
         };
 
         var evidence = score.TopEvidence.Length > 0
-            ? string.Join("\n", score.TopEvidence.Select(ev => "• " + ev))
+            ? string.Join("\n", score.TopEvidence.Select(ev => "- " + ev))
             : "";
 
         var meta = $"{job.Source} · {(job.PostedAtUtc?.ToString("yyyy-MM-dd") ?? "date n/a")}";
@@ -238,9 +237,9 @@ public partial class FindJobsView : UserControl
 
         return new DiscoveredJobItem
         {
-            Title = string.IsNullOrWhiteSpace(job.JobTitle) ? "—" : job.JobTitle,
-            Company = string.IsNullOrWhiteSpace(job.CompanyName) ? "—" : job.CompanyName,
-            Location = string.IsNullOrWhiteSpace(job.Location) ? "—" : job.Location,
+            Title = string.IsNullOrWhiteSpace(job.JobTitle) ? "Untitled posting" : job.JobTitle,
+            Company = string.IsNullOrWhiteSpace(job.CompanyName) ? "Unknown company" : job.CompanyName,
+            Location = string.IsNullOrWhiteSpace(job.Location) ? "Location not listed" : job.Location,
             Meta = meta,
             RiskText = score.Band == RiskBand.Neutral ? "OK" : $"{label} {score.RiskScore:0}",
             RiskBrush = brush,
@@ -325,8 +324,8 @@ public partial class FindJobsView : UserControl
 
         var flagged = item.Snapshot?.Band is "High" or "Elevated";
         StatusText.Text = flagged
-            ? $"✓ GHOST DODGED  ·  {item.RiskText}  ·  {item.Company}"
-            : $"SKIPPED  ·  {item.Company}";
+            ? $"Ghost dodged: {item.Company} ({item.RiskText}). It's on your scoreboard."
+            : $"Skipped {item.Company}.";
         StatusText.Foreground = flagged ? Green : Gray;
     }
 
@@ -343,7 +342,7 @@ public partial class FindJobsView : UserControl
 
     private void ShowError(string message)
     {
-        StatusText.Text = $"✕ {message}";
+        StatusText.Text = message;
         StatusText.Foreground = Red;
     }
 }
