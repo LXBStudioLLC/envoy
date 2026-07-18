@@ -4,6 +4,8 @@ All notable changes to Envoy are documented in this file. Format is based on [Ke
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-18
+
 ### Changed
 - The whole app now talks like a person. Every emoji and dingbat is gone from buttons and status messages, along with the em dashes and the mission-briefing jargon. Mission Briefing is now just Apply, the Data Vault is the Vault, Browser Nexus is Browser, LLM Nexus is AI Models, and Codename is Full Name. Status lines read like plain English ("Application submitted." instead of "MISSION ACCOMPLISHED"). The Browser page also drops the fingerprint-evasion sales pitch and now just explains how the DevTools connection works, which matches what the app actually does and has always done.
 
@@ -99,7 +101,8 @@ Initial foundation: local-first resume tailoring + human-assisted apply.
 ### Security
 - Cloud LLM API keys encrypted with DPAPI at rest. Plaintext keys from pre-DPAPI builds are automatically migrated on first launch.
 
-[Unreleased]: https://github.com/LXBStudioLLC/envoy/compare/v1.0.3...HEAD
+[Unreleased]: https://github.com/LXBStudioLLC/envoy/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/LXBStudioLLC/envoy/compare/v1.0.3...v1.1.0
 [1.0.3]: https://github.com/LXBStudioLLC/envoy/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/LXBStudioLLC/envoy/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/LXBStudioLLC/envoy/compare/v1.0.0...v1.0.1
