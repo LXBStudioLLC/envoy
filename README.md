@@ -5,7 +5,7 @@
 <h1 align="center">Envoy</h1>
 
 <p align="center">
-  <strong>Envoy scores how likely a job posting is a waste of your time, and shows you why.</strong><br>
+  <strong>Envoy is the scoreboard for your fight against a rigged job market. It spots ghost jobs before you waste time on them, then counts every one you dodge.</strong><br>
   It runs on your own Windows PC. Your resume and data never leave it.
 </p>
 
@@ -25,6 +25,7 @@
 <p align="center">
   <a href="#download">Download</a> ·
   <a href="#early-beta-testers-and-contributors-wanted">Help wanted</a> ·
+  <a href="#the-scoreboard">The Scoreboard</a> ·
   <a href="#ghost-detection">How it works</a> ·
   <a href="#find-jobs">Find Jobs</a> ·
   <a href="#apply-copilot">Apply Copilot</a> ·
@@ -34,11 +35,12 @@
 
 ---
 
-You tailor the resume, fill out the same fields again, hit submit, and never hear back. Some of those postings were never real openings. Envoy helps you spot them before you waste the afternoon.
+You tailor the resume, fill out the same fields again, hit submit, and never hear back. Some of those postings were never real openings. Envoy helps you spot them before you waste the afternoon. And because dodging a fake posting is a win nobody else counts, Envoy counts it.
 
 ## What it does
 
 - Scores how likely a posting is a ghost job and lists the actual reasons behind the score. It won't call a company a fraud. When the evidence is thin, it stays neutral.
+- Keeps a scoreboard of your hunt: ghosts dodged, hours saved, your day streak, and your application-to-response rate. It's the first thing you see when the app opens.
 - Ghost detection and job search work the second you open it. No account, no API key, no cloud. Your resume stays on your machine.
 - It can also tailor your resume and fill out an application for you, but you read it over and click submit yourself. Always.
 - Windows 10/11. Signed installer or a portable zip. Nothing else to install.
@@ -87,6 +89,21 @@ The installer is signed, but since the app is new, Windows SmartScreen may warn 
 
 ---
 
+## The Scoreboard
+
+The first thing Envoy shows you is not a form. It is the score.
+
+- **Ghosts dodged.** Flagged postings you passed on. Only an explicit act counts, a skip in Find Jobs or a cancel at the submit gate, so the number stays honest. A flagged posting merely showing up in your results never counts as a dodge.
+- **Hours saved.** Dodges times your own time-per-application estimate. The math is printed on the board and the estimate is adjustable right there. Envoy doesn't pretend to measure what it can't.
+- **Day streak.** Consecutive days you worked the hunt.
+- **Ghosts surfaced.** How much noise the engine flagged in your results. The other side gets counted too.
+
+Every dodge is listed with the evidence that was on screen when you passed on it, so you can always check the board's work. Your submitted applications sit below with a dropdown to log what came back, and once five are out, Envoy shows your application-to-response rate. Rejections count as responses, because the stat measures whether anyone answered at all.
+
+There is no setup. Run a search in Find Jobs and the board starts counting. All of it lives in a local ledger inside `envoy.db` on your machine, and none of it is uploaded anywhere.
+
+---
+
 ## Ghost Detection
 
 Envoy checks each posting with a handful of independent signals. Every signal returns a number, a confidence level, and a plain-English reason, and the app rolls those up into one risk band. There's no bare "fake" stamp on anyone.
@@ -131,7 +148,9 @@ Envoy has a built-in job search (`Envoy.Discovery`) in the Find Jobs view. It on
 - Public ATS APIs from Greenhouse, Lever, Ashby, Workable, and Recruitee.
 - An optional web search through the official Brave Search API. You bring your own key, stored encrypted; without one, search just uses the ATS feeds.
 
-Every posting is scored before it hits your list, so the risk band and the reasons show up right in the results. No scraping behind a login, no bot-evasion, no CAPTCHA solving. Search stays on public endpoints.
+Every posting is scored before it hits your list, so the risk band and the reasons show up right in the results. Each result has a SKIP button; skipping a flagged posting records the dodge, with its evidence, on your scoreboard. Results are also remembered locally day by day, which is the listing history the repost-frequency signal needs for its stronger detection path.
+
+No scraping behind a login, no bot-evasion, no CAPTCHA solving. Search stays on public endpoints.
 
 <p align="center">
   <img src="assets/find-jobs.png" alt="Find Jobs results list with a risk band on each posting" width="820">
@@ -151,7 +170,9 @@ Once you find a posting worth your time, Envoy can help you apply:
 - An adaptive parser uses structural fingerprints to keep working when a page's layout shifts.
 - The Apply view shows the posting's risk band and reasons before you spend time tailoring anything.
 
-You always press submit. Envoy fills the form and then stops and waits for you to click Confirm or Cancel. That gate holds in every mode, and the default mode is Safe. (Stealth mode only changes how the text is typed. It never skips the confirmation.)
+You always press submit. Envoy fills the form and then stops and waits for you to confirm or cancel. That gate holds in every mode, and the default mode is Safe. (Stealth mode only changes how the text is typed. It never skips the confirmation.)
+
+Saying no at the gate counts too. If you read the ghost evidence and walk away, that's recorded as a dodge on your scoreboard, and the app treats it as a decision rather than a failure.
 
 Fuller automation is on the roadmap, and by design it only runs on employer-owned and ATS career sites. Aggregators like LinkedIn and Indeed stay copilot-only. Envoy doesn't solve CAPTCHAs; if a site puts one up, it hands control back to you.
 
@@ -254,8 +275,10 @@ Hit a bug or a bad flag? [Open an issue](https://github.com/LXBStudioLLC/envoy/i
 
 - [x] Ghost-detection signal framework, wired into the app
 - [x] Four active signals: ATS cross-check, posting age, duplicate JD, scam pattern
-- [ ] Repost frequency signal, full history-backed detection (the timestamp fallback ships today; the stronger path needs listing history across sessions)
+- [x] The Scoreboard: ghosts dodged, hours saved, day streak, and response tracking, as the app's start view
+- [ ] Repost frequency signal, full history-backed detection (the timestamp fallback ships today; the cross-session listing history it needs started accruing in 1.1.0)
 - [x] Job search over public ATS feeds plus optional Brave Search, every posting scored
+- [x] In-app update check with a title-bar link when a new version is out
 - [ ] More signals: hiring freeze ([#5](https://github.com/LXBStudioLLC/envoy/issues/5)), PERM filings ([#1](https://github.com/LXBStudioLLC/envoy/issues/1))
 - [x] Windows zip and signed installer
 - [x] Vault view for profile history and corrections
