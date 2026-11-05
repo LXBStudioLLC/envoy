@@ -28,25 +28,25 @@ public class GhostScorer
 
     public async Task<GhostScore> ScoreAsync(JobPosting posting, CancellationToken ct = default, bool localOnly = false)
     {
-        var results = new List<SignalResult>();
+        // APP-08: signals run concurrently. Scoring happens once per posting
+        // (twice through the discovery→apply round trip today), and the
+        // network signals dominate wall time; a sequential foreach turned
+        // nine independent checks into their SUM. Failures stay per-signal:
+        // a throwing signal is skipped with a warning, exactly as before.
+        var signals = localOnly
+            ? _signals.Where(s => !s.RequiresNetwork).ToArray()
+            : _signals.ToArray();
 
-        // localOnly skips network-bound signals (e.g. ATS cross-check) so callers scoring
-        // many postings at once — like the discovery list — stay fast and don't fan out
-        // one request per posting.
-        var signals = localOnly ? _signals.Where(s => !s.RequiresNetwork) : _signals;
-
-        foreach (var signal in signals)
+        List<SignalResult> results;
+        if (signals.Length <= 1)
         {
-            try
-            {
-                var result = await signal.EvaluateAsync(posting, ct);
-                if (result != null)
-                    results.Add(result);
-            }
-            catch (Exception ex)
-            {
-                _log.LogWarning(ex, "Signal {Signal} threw during evaluation; skipping.", signal.Name);
-            }
+            results = await RunSignalsSequentialWait(signals, posting, ct);
+        }
+        else
+        {
+            var evaluations = signals.Select(s => EvaluateSafeAsync(s, posting, ct)).ToArray();
+            var settled = await Task.WhenAll(evaluations);
+            results = settled.Where(r => r != null).Cast<SignalResult>().ToList();
         }
 
         var deterministic = results.Where(r => r.Tier == SignalTier.Deterministic).ToList();
@@ -94,5 +94,33 @@ public class GhostScorer
             Signals = results.ToArray(),
             TopEvidence = topEvidence
         };
+    }
+
+    private async Task<List<SignalResult>> RunSignalsSequentialWait(IEnumerable<IGhostSignal> signals, JobPosting posting, CancellationToken ct)
+    {
+        var results = new List<SignalResult>();
+        foreach (var signal in signals)
+        {
+            var result = await EvaluateSafeAsync(signal, posting, ct);
+            if (result != null)
+                results.Add(result);
+        }
+        return results;
+    }
+
+    private async Task<SignalResult?> EvaluateSafeAsync(IGhostSignal signal, JobPosting posting, CancellationToken ct)
+    {
+        // Per-signal capture so one throwing signal can never starve the
+        // batch: a bare Task.WhenAll would aggregate the first exception and
+        // make the scorer drop every healthy result with it.
+        try
+        {
+            return await signal.EvaluateAsync(posting, ct);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Signal {Signal} threw during evaluation; skipping.", signal.Name);
+            return null;
+        }
     }
 }
