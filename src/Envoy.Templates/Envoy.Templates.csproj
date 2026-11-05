@@ -10,4 +10,19 @@
     <ProjectReference Include="..\Envoy.Core\Envoy.Core.csproj" />
   </ItemGroup>
 
+  <!--
+    The JSON templates ARE the product data here. Without these items only
+    publish.ps1 shipped them and a plain `dotnet run` against Envoy.UI left
+    TemplateEngine with an empty directory ("No template found for this job
+    board" on every application). Content items flow transitively to
+    consumers (Envoy.UI and any test project referencing this one), mirroring
+    the bundled-seed pattern in Envoy.GhostDetection.
+  -->
+  <ItemGroup>
+    <!-- default None globbing already includes these; Update adds copy metadata.
+         Link lands them in the Templates\ subfolder at the consumer's output,
+         which is where TemplateEngine looks. -->
+    <None Update="*.json" CopyToOutputDirectory="PreserveNewest" Link="Templates\%(Filename)%(Extension)" />
+  </ItemGroup>
+
 </Project>
