@@ -112,16 +112,33 @@ public class ApplicationOrchestrator
         }
 
         // Step 2: Tailor resume
+        // APP-15 resume/retry policy: if a TailoredProfile already exists for
+        // the same master profile + URL (e.g. after a captcha hand-off or a
+        // failed fill), REUSE it — no LLM spin-up, no new DB row.
         TailoredProfile tailored;
-        try
+        var existingForUrl = (await _tailoredRepo.GetByMasterProfileIdAsync(masterProfileId, ct))
+            .Where(t => t.JobUrl == jobUrl)
+            .OrderByDescending(t => t.CreatedAt)
+            .FirstOrDefault();
+
+        var reused = existingForUrl is not null;
+        if (!reused)
         {
-            tailored = await _tailoring.TailorAsync(masterProfileId, jobUrl, jobDescription, ct);
+            try
+            {
+                tailored = await _tailoring.TailorAsync(masterProfileId, jobUrl, jobDescription, ct);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                // User cancel mid-tailoring: clean up the held page and surface.
+                await DisposePreparedPageAsync();
+                throw;
+            }
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        else
         {
-            // User cancel mid-tailoring: clean up the held page and surface.
-            await DisposePreparedPageAsync();
-            throw;
+            tailored = existingForUrl!;
+            _log.LogInformation("Reusing existing tailored profile {Id} for {JobUrl} (no LLM run)", tailored.Id, jobUrl);
         }
 
         // APP-02: discovery already knows the company/title; the heuristic

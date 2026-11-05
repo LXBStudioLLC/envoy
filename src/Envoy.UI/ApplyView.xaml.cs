@@ -439,7 +439,7 @@ public partial class ApplyView : UserControl
                 ApplicationStatus.DuplicateSkipped => log.ErrorMessage ?? "Already applied — nothing was sent.",
                 ApplicationStatus.DeclinedByUser => "You said no. Nothing was sent.",
                 ApplicationStatus.SafeModeStopped => "Held for your review. Nothing was sent.",
-                ApplicationStatus.RequiresCaptcha => "There's a CAPTCHA. Solve it in the browser, then run this again.",
+                ApplicationStatus.RequiresCaptcha => "There's a CAPTCHA. Solve it in the browser, then run this again — your tailored resume is reused (no new LLM run).",
                 ApplicationStatus.Failed => $"That didn't work: {log.ErrorMessage}",
                 _ => $"Status: {log.Status}"
             };
