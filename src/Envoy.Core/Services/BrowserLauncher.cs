@@ -292,6 +292,11 @@ public class BrowserLauncher : IBrowserLauncher
 
     private void KillBrowserProcesses(BrowserType type)
     {
+        // System.Management (WMI) is Windows-only; this is a Windows app
+        // (WPF host), but Envoy.Core also builds on plain net8.0 for tests.
+        if (!OperatingSystem.IsWindows())
+            return;
+
         // APP-14 audit fix: kill ONLY browser processes running the Envoy
         // profile (their command line carries --user-data-dir=…Envoy\BrowserProfile).
         // A name-based kill of "chrome.exe" would murder the user's personal
