@@ -92,6 +92,8 @@ public partial class ApplyView : UserControl
         CmbMode.Items.Add(new ComboBoxItem { Content = "Safe", IsSelected = true });
         if (_settings.StealthModeEnabled)
             CmbMode.Items.Add(new ComboBoxItem { Content = "Stealth" });
+        if (_settings.FullAutoEnabled)
+            CmbMode.Items.Add(new ComboBoxItem { Content = "Full-Auto" });
     }
 
     public void SetProfileId(Guid profileId)
@@ -407,10 +409,16 @@ public partial class ApplyView : UserControl
         BtnExecute.IsEnabled = false;
         var token = BeginFlow();
 
+        var modeLabel = (CmbMode.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Safe";
+        var mode = modeLabel switch
+        {
+            "Stealth" => ExecutionMode.Stealth,
+            "Full-Auto" => ExecutionMode.FullAuto,
+            _ => ExecutionMode.Safe
+        };
+
         try
         {
-            var mode = (CmbMode.SelectedItem as ComboBoxItem)?.Content?.ToString() == "Stealth"
-                ? ExecutionMode.Stealth : ExecutionMode.Safe;
 
             StatusText.Text = "Connecting to your browser...";
             StatusText.Foreground = Cyan;

@@ -322,4 +322,58 @@ public sealed class ApplicationQueueServiceTests : IDisposable
         uncapped.Dispose();
         Assert.Equal(4, enqueuedCount);
     }
+
+    // ── APP-12: Full-Auto drain ──────────────────────────────────────────
+
+    [Fact]
+    public async Task FullAutoGateAdmits_SubmitterRuns_RowSubmitted()
+    {
+        var submitCalls = 0;
+        var submitter = new StubSubmitter(_ => { Interlocked.Increment(ref submitCalls); return (true, null, false); });
+        var gate = new StubGate(true);
+        var tailored = Guid.NewGuid();
+        _preparer.Handler = _ => Task.FromResult(tailored);
+        var auto = new ApplicationQueueService(_repo, _preparer, Mock.Of<ILogger<ApplicationQueueService>>(),
+            () => new EnvoySettings { FullAutoEnabled = true }, submitter, gate);
+
+        await auto.EnqueueAsync(Item("k-fa", "https://boards.greenhouse.io/acme/jobs/9"));
+
+        // the worker prepares (sets the tailored id) then auto-submits
+        await WaitUntilAsync(
+            async () => (await _repo.GetAllAsync()).Any(r => r.Status == QueueItemStatus.Submitted),
+            TimeSpan.FromSeconds(8));
+        Assert.Equal(1, Interlocked.CompareExchange(ref submitCalls, 0, 0));
+    }
+
+    [Fact]
+    public async Task FullAutoGateDenies_RowStaysAppReady()
+    {
+        var submitter = new StubSubmitter(_ => (true, null, false));
+        var gate = new StubGate(false);
+        var tailored = Guid.NewGuid();
+        _preparer.Handler = _ => Task.FromResult(tailored);
+        var auto = new ApplicationQueueService(_repo, _preparer, Mock.Of<ILogger<ApplicationQueueService>>(),
+            () => new EnvoySettings { FullAutoEnabled = true }, submitter, gate);
+
+        await auto.EnqueueAsync(Item("k-sa", "https://boards.greenhouse.io/acme/jobs/21"));
+
+        await WaitUntilAsync(
+            async () => (await _repo.GetAllAsync()).Single().Status == QueueItemStatus.AppReady,
+            TimeSpan.FromSeconds(8));
+
+        // no submit notification fired
+        Assert.DoesNotContain(await _repo.GetAllAsync(), r => r.Status == QueueItemStatus.Submitted);
+    }
+
+    private sealed class StubSubmitter(Func<QueuedApplication, (bool, string?, bool)> handler) : IApplicationSubmitter
+    {
+        public Task<(bool, string?, bool)> SubmitAsync(QueuedApplication item, CancellationToken ct) => Task.FromResult(handler(item));
+    }
+
+    private sealed class StubGate : IFullAutoGate
+    {
+        private readonly bool _admits;
+        public StubGate(bool admits) => _admits = admits;
+        public bool ShouldAutoSubmitNow(QueuedApplication item, DateTime nowUtc) => _admits;
+    }
 }

@@ -31,6 +31,8 @@ public sealed class ApplicationQueueService : IDisposable
 {
     private readonly IApplicationQueueRepository _queue;
     private readonly IApplicationPreparer _preparer;
+    private readonly IApplicationSubmitter? _submitter;
+    private readonly IFullAutoGate? _gate;
     private readonly Func<EnvoySettings>? _settings;
     private readonly ILogger<ApplicationQueueService> _log;
 
@@ -45,12 +47,15 @@ public sealed class ApplicationQueueService : IDisposable
     public bool IsRunning => _running;
 
     public ApplicationQueueService(IApplicationQueueRepository queue, IApplicationPreparer preparer,
-        ILogger<ApplicationQueueService> log, Func<EnvoySettings>? settings = null)
+        ILogger<ApplicationQueueService> log, Func<EnvoySettings>? settings = null,
+        IApplicationSubmitter? submitter = null, IFullAutoGate? gate = null)
     {
         _queue = queue;
         _preparer = preparer;
         _log = log;
         _settings = settings;
+        _submitter = submitter;
+        _gate = gate;
     }
 
     /// <summary>
@@ -203,6 +208,11 @@ public sealed class ApplicationQueueService : IDisposable
 
                     await _queue.UpdateAsync(item, ct);
                     Notify();
+
+                    if (item.Status == QueueItemStatus.AppReady && _submitter is not null && _settings is not null)
+                    {
+                        await TryFullAutoSubmitAsync(item, ct);
+                    }
                 }
                 finally
                 {
@@ -243,6 +253,48 @@ public sealed class ApplicationQueueService : IDisposable
             await Task.Delay(delay, ct);
         }
         catch (OperationCanceledException) { }
+    }
+
+    /// <summary>
+    /// APP-12: when the Full-Auto gate admits the item, the worker submits it
+    /// right after prepare — no human gate — and records the outcome on the
+    /// queue row (Submitted / Failed / NeedsCaptcha). Captcha hand-offs park
+    /// the row for the user; everything else is an honest status.
+    /// </summary>
+    private async Task TryFullAutoSubmitAsync(QueuedApplication item, CancellationToken ct)
+    {
+        if (_gate is null && _submitter is null) return;
+        if (_gate is not null && !_gate.ShouldAutoSubmitNow(item, DateTime.UtcNow)) return;
+
+        try
+        {
+            var (submitted, error, captcha) = await _submitter!.SubmitAsync(item, ct);
+            if (submitted)
+            {
+                item.Status = QueueItemStatus.Submitted;
+                item.Note = null;
+            }
+            else if (captcha)
+            {
+                item.Status = QueueItemStatus.NeedsCaptcha;
+                item.Note = "captcha during Full-Auto submit — finish in the browser, then requeue";
+            }
+            else
+            {
+                item.Status = QueueItemStatus.Failed;
+                item.Note = error;
+            }
+            await _queue.UpdateAsync(item, ct);
+            Notify();
+        }
+        catch (Exception ex)
+        {
+            item.Status = QueueItemStatus.Failed;
+            item.Note = ex.Message;
+            await _queue.UpdateAsync(item, ct);
+            Notify();
+            _log.LogWarning(ex, "Full-Auto submit failed for {Url}", item.JobUrl);
+        }
     }
 
     private void Notify() => QueueChanged?.Invoke();
