@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Envoy.Core\Envoy.Core.csproj" />
+    <ProjectReference Include="..\..\src\Envoy.Templates\Envoy.Templates.csproj" />
   </ItemGroup>
 
 </Project>
