@@ -109,9 +109,15 @@ public partial class MainWindow : Window
         {
             foreach (var row in rows)
             {
-                var previous = _lastQueueStatus.TryGetValue(row.Id, out var prev)
-                    ? prev
-                    : QueueItemStatus.Queued;
+                if (!_lastQueueStatus.TryGetValue(row.Id, out var previous))
+                {
+                    // First sighting this session (app opened while a queue was
+                    // already draining): adopt the row as-is — no spurious
+                    // transition toasts for state that isn't new.
+                    _lastQueueStatus[row.Id] = row.Status;
+                    continue;
+                }
+
                 if (row.Status != previous)
                 {
                     switch (row.Status)

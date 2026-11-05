@@ -168,10 +168,15 @@ public sealed class ApplicationQueueService : IDisposable
                 // prepare keeps the shared browser safe despite that.
                 var item = await _queue.GetNextQueuedAnyProfileAsync(ct);
                 if (item is null)
-                    item = await DrainDueAsync(DateTime.UtcNow, ct); // Night Owl: parked rows drain when the window opens
-
-                if (item is null)
                 {
+                    // Night Owl (#92): rows prepared outside the window drain the
+                    // moment the gate admits. DrainDueAsync submits AND finishes
+                    // the row in this pass — a successful drain must never fall
+                    // through to the prepare stage (the row is already terminal;
+                    // re-processing would mislabel a real send as a duplicate).
+                    if (await DrainDueAsync(DateTime.UtcNow, ct) is not null)
+                        continue;
+
                     await WaitAsync(TimeSpan.FromSeconds(5), ct);
                     continue;
                 }
@@ -188,14 +193,6 @@ public sealed class ApplicationQueueService : IDisposable
                         continue;
                     }
                     item.MasterProfileId = fallback.Value;
-                }
-
-                if (item.Status == QueueItemStatus.AppReady)
-                {
-                    // Night Owl row surfaced by the drain consult: already
-                    // prepared and already gate-admitted — submit, never re-prepare.
-                    await TryFullAutoSubmitAsync(item, DateTime.UtcNow, ct);
-                    continue;
                 }
 
                 await ProcessItemAsync(item, DateTime.UtcNow, ct);
@@ -291,12 +288,22 @@ public sealed class ApplicationQueueService : IDisposable
     }
 
     /// <summary>
+    /// Set by the Apply view while a human fill/tailor is using the shared
+    /// browser (BeginFlow → EndFlow). The Full-Auto drain never races a manual
+    /// flow: the human goes first, the queue stands down and waits for the next
+    /// loop pass. (The row stays parked; the gate re-consults it later.)
+    /// </summary>
+    public bool ManualBrowserFlowActive { get; set; }
+
+    /// <summary>
     /// Night-Owl drain (#92): the next parked AppReady row (oldest first) when
     /// the Full-Auto policy gate admits content at <paramref name="nowUtc"/>;
     /// the row is submitted and returned, so the caller can see what moved.
     /// Rows prepared outside the window (or before Full-Auto was enabled) drain
     /// the moment the gate says yes — no manual nudge, and never a re-prepare.
     /// Public + injectable "now" so the window contract is testable offline.
+    /// Returns null when nothing moved (nothing parked, gate denies, or a
+    /// manual flow holds the browser).
     /// </summary>
     public async Task<QueuedApplication?> DrainDueAsync(DateTime nowUtc, CancellationToken ct)
     {
@@ -315,6 +322,11 @@ public sealed class ApplicationQueueService : IDisposable
             return null;
 
         await TryFullAutoSubmitAsync(parked, nowUtc, ct);
+
+        // Stood down (a manual flow holds the browser): nothing moved.
+        if (parked.Status == QueueItemStatus.AppReady)
+            return null;
+
         return parked;
     }
 
@@ -325,6 +337,17 @@ public sealed class ApplicationQueueService : IDisposable
     /// own Submit on this path); captcha → parked; everything else → Failed.</summary>
     private async Task TryFullAutoSubmitAsync(QueuedApplication item, DateTime nowUtc, CancellationToken ct)
     {
+        // A human is actively driving the shared browser (manual fill on the
+        // Apply view). The queue never hijacks a session the user is in — the
+        // row stays parked and the next loop pass re-consults the gate.
+        if (ManualBrowserFlowActive)
+        {
+            await _queue.UpdateAsync(item, ct);
+            Notify();
+            _log.LogInformation("Full-Auto submit stood down for {Url} — a manual flow holds the browser", item.JobUrl);
+            return;
+        }
+
         try
         {
             var (resultLog, error, captcha) = await _submitter!.SubmitAsync(item, ct);

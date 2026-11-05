@@ -17,6 +17,7 @@ public partial class ApplyView : UserControl
     private readonly IProfileRepository _profiles;
     private readonly ITailoredProfileRepository _tailoredRepo;
     private readonly IJobEventRepository _jobEvents;
+    private readonly ApplicationQueueService _queue;
     private Guid _profileId;
     private TailoredProfile? _tailored;
     private string _jobDescription = "";
@@ -31,7 +32,8 @@ public partial class ApplyView : UserControl
     private KnownPosting? _discoveryPosting;
 
     public ApplyView(ApplicationOrchestrator orchestrator, GhostScorer ghostScorer, EnvoySettings settings,
-        IProfileRepository profiles, ITailoredProfileRepository tailoredRepo, IJobEventRepository jobEvents)
+        IProfileRepository profiles, ITailoredProfileRepository tailoredRepo, IJobEventRepository jobEvents,
+        ApplicationQueueService queue)
     {
         _orchestrator = orchestrator;
         _ghostScorer = ghostScorer;
@@ -39,6 +41,7 @@ public partial class ApplyView : UserControl
         _profiles = profiles;
         _tailoredRepo = tailoredRepo;
         _jobEvents = jobEvents;
+        _queue = queue;
         InitializeComponent();
         Loaded += (_, _) => RefreshModeOptions();
     }
@@ -91,6 +94,11 @@ public partial class ApplyView : UserControl
             }
 
             ShowResult();
+
+            // #92: the accepted open of a prepared application is a journey tap,
+            // recorded with the tailored profile's own posting identity (and the
+            // re-armed carried score when present).
+            RecordTapEvent(JobEventType.TapOpened);
         }
         catch (Exception ex)
         {
@@ -167,16 +175,35 @@ public partial class ApplyView : UserControl
 
         if (_profileId != Guid.Empty)
         {
+            RecordPropagationTap(posting, snapshot); // accepted route → a journey tap, only now
             StartDiscoveryApply(known, snapshot);
             return;
         }
 
         // No profile selected yet: pick the only one automatically, or tell the
-        // user exactly what to do (no silent no-op).
-        _ = AutoSelectProfileAndTailorAsync(known, snapshot);
+        // user exactly what to do (no silent no-op). The tap records only when
+        // the flow actually starts (AutoSelectProfileAndTailorAsync).
+        _ = AutoSelectProfileAndTailorAsync(known, snapshot, posting);
     }
 
-    private async Task AutoSelectProfileAndTailorAsync(KnownPosting posting, GhostScoreSnapshot? snapshot)
+    /// <summary>#92 tap telemetry: an accepted carry-into-the-Apply-view is one
+    /// journey tap, recorded with the carried evidence. Refused routes record
+    /// nothing — the taps-per-application stat counts journeys, not clicks.</summary>
+    private void RecordPropagationTap(Envoy.GhostDetection.Models.JobPosting posting, GhostScoreSnapshot? snapshot)
+    {
+        var jobEvent = JobEvent.ForPosting(
+            JobEventType.TapOpened, posting.Url, posting.JobTitle, posting.CompanyName,
+            posting.Source.ToString(), snapshot);
+
+        _ = Task.Run(async () =>
+        {
+            try { await _jobEvents.AddAsync(jobEvent); }
+            catch { /* bookkeeping only */ }
+        });
+    }
+
+    private async Task AutoSelectProfileAndTailorAsync(KnownPosting posting, GhostScoreSnapshot? snapshot,
+        Envoy.GhostDetection.Models.JobPosting? sourcePosting = null)
     {
         try
         {
@@ -193,6 +220,10 @@ public partial class ApplyView : UserControl
                 StatusText.Foreground = Yellow;
                 return;
             }
+
+            // Accepted route (the flow genuinely starts): now the tap counts.
+            if (sourcePosting is not null)
+                RecordPropagationTap(sourcePosting, snapshot);
 
             StartDiscoveryApply(posting, snapshot, profiles[0].Id);
         }
@@ -301,6 +332,9 @@ public partial class ApplyView : UserControl
     // silently disposing the first flow's cancellation source.
     private CancellationToken BeginFlow()
     {
+        // The Full-Auto drain stands down while a human fill/tailor drives the
+        // shared browser — the manual flow goes first, always (queue-side latch).
+        _queue.ManualBrowserFlowActive = true;
         _flowRunning = true;
         _flowCts?.Dispose();
         _flowCts = new CancellationTokenSource();
@@ -311,6 +345,7 @@ public partial class ApplyView : UserControl
 
     private void EndFlow()
     {
+        _queue.ManualBrowserFlowActive = false;
         BtnCancelFlow.IsEnabled = false;
         BtnCancelFlow.Visibility = Visibility.Collapsed;
         _flowRunning = false;

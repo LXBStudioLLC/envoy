@@ -361,6 +361,11 @@ public class ApplicationQueueRepository : IApplicationQueueRepository
 
     public async Task UpdateAsync(QueuedApplication item, CancellationToken ct = default)
     {
+        // Every persisted queue change is a real transition; stamp it so the
+        // day-scoped accounting (tray "sent today", daily cap on submits) is
+        // truthful even for rows queued the day before.
+        item.UpdatedAt = DateTime.UtcNow;
+
         using var db = _factory.CreateDbContext();
         var tracked = await db.QueuedApplications.FirstOrDefaultAsync(q => q.Id == item.Id, ct);
         if (tracked == null) return;
