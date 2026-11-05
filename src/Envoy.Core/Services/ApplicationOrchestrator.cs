@@ -133,10 +133,50 @@ public class ApplicationOrchestrator
         ExecutionMode mode,
         Func<string, Task<bool>> onConfirmationRequired,
         GhostScoreSnapshot? ghostScore = null,
+        Func<string, Task<bool>>? onDuplicateDetected = null,
         CancellationToken ct = default)
     {
         var tailored = await _tailoredRepo.GetByIdAsync(tailoredProfileId, ct)
             ?? throw new InvalidOperationException($"Tailored profile {tailoredProfileId} not found.");
+
+        // ── APP-04 duplicate guard ──────────────────────────────────────
+        // Consult the ledger BEFORE any browser work: a completed submission
+        // to the same posting is a blocked re-submit unless the user,
+        // explicitly prompted, says otherwise. Nothing here touches the
+        // browser, so a duplicate never even launches.
+        var priorLogs = await _logRepo.GetAllWithoutScreenshotsAsync(ct);
+        var (blocked, duplicateMessage) = DuplicateApplyCheck.Evaluate(
+            priorLogs, tailored.JobUrl, tailored.Company, tailored.JobTitle,
+            _settings.DuplicateApplyWindowDays, DateTime.UtcNow);
+
+        if (blocked)
+        {
+            var overrideConfirmed = onDuplicateDetected is not null
+                && await onDuplicateDetected(duplicateMessage);
+
+            if (!overrideConfirmed)
+            {
+                var skipLog = new ApplicationLog
+                {
+                    TailoredProfileId = tailoredProfileId,
+                    JobUrl = tailored.JobUrl,
+                    JobTitle = tailored.JobTitle,
+                    Company = tailored.Company,
+                    Mode = mode,
+                    Status = ApplicationStatus.DuplicateSkipped,
+                    ErrorMessage = duplicateMessage,
+                    GhostRiskScore = ghostScore?.RiskScore,
+                    GhostRiskBand = ghostScore?.Band,
+                    StartedAt = DateTime.UtcNow,
+                    CompletedAt = DateTime.UtcNow
+                };
+                await _logRepo.AddAsync(skipLog, ct);
+                _log.LogInformation("Duplicate submission to {Url} blocked ({Message})", tailored.JobUrl, duplicateMessage);
+                return skipLog;
+            }
+
+            _log.LogInformation("Duplicate detected for {Url} but the user chose to apply anyway", tailored.JobUrl);
+        }
 
         var log = new ApplicationLog
         {

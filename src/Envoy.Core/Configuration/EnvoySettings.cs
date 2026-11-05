@@ -42,6 +42,15 @@ public class EnvoySettings
     /// scoreboard shows the formula rather than pretending to measure it.
     /// </summary>
     public int MinutesPerApplicationEstimate { get; set; } = 45;
+
+    /// <summary>
+    /// How many days back a completed application to the same posting blocks a
+    /// re-submit (APP-04 duplicate guard). 0 (default) means a prior completed
+    /// application blocks forever; a positive window lets re-applying after X
+    /// days through the same guard. An explicit user override is still asked
+    /// at submit time in either case.
+    /// </summary>
+    public int DuplicateApplyWindowDays { get; set; } = 0;
     public int TypingSpeedVariance { get; set; } = 35;
     public int MousePathSteps { get; set; } = 25;
     public double RelocationConfidenceThreshold { get; set; } = 0.75;

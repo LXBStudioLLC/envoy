@@ -48,7 +48,11 @@ public enum ApplicationStatus
     SafeModeStopped,
 
     /// <summary>The user reviewed the filled application at the submit gate and chose not to send it.</summary>
-    DeclinedByUser
+    DeclinedByUser,
+
+    /// <summary>The duplicate guard (APP-04) stopped the submit because this posting was already applied to.
+    /// An explicit user override can still proceed; the row records the blocking decision either way.</summary>
+    DuplicateSkipped
 }
 
 public enum ExecutionMode
