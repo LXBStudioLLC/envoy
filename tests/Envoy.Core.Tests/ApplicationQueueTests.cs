@@ -334,7 +334,12 @@ public sealed class ApplicationQueueServiceTests : IDisposable
     public async Task OutsideWindow_RowStaysAppReady_PolicyGateDeniesAtNoon()
     {
         var submitCalls = 0;
-        var submitter = new StubSubmitter(_ => { Interlocked.Increment(ref submitCalls); return (true, null, false); });
+        var submitter = new StubSubmitter((_, log) =>
+        {
+            Interlocked.Increment(ref submitCalls);
+            log.VerifiedSubmission = true;
+            return (log, null, false);
+        });
 
         // The REAL policy gate: FullAutoEnabled + company-ATS + trusted host —
         // with a night window 22→06 UTC, drained at noon UTC: the window denies.
@@ -391,7 +396,12 @@ public sealed class ApplicationQueueServiceTests : IDisposable
     public async Task FullAutoGateAdmits_SubmitterRuns_RowSubmitted()
     {
         var submitCalls = 0;
-        var submitter = new StubSubmitter(_ => { Interlocked.Increment(ref submitCalls); return (true, null, false); });
+        var submitter = new StubSubmitter((_, log) =>
+        {
+            Interlocked.Increment(ref submitCalls);
+            log.VerifiedSubmission = true;
+            return (log, null, false);
+        });
         var gate = new StubGate(true);
         var tailored = Guid.NewGuid();
         _preparer.Handler = _ => Task.FromResult(tailored);
@@ -410,7 +420,11 @@ public sealed class ApplicationQueueServiceTests : IDisposable
     [Fact]
     public async Task FullAutoGateDenies_RowStaysAppReady()
     {
-        var submitter = new StubSubmitter(_ => (true, null, false));
+        var submitter = new StubSubmitter((_, log) =>
+        {
+            log.VerifiedSubmission = true;
+            return (log, null, false);
+        });
         var gate = new StubGate(false);
         var tailored = Guid.NewGuid();
         _preparer.Handler = _ => Task.FromResult(tailored);
@@ -427,9 +441,74 @@ public sealed class ApplicationQueueServiceTests : IDisposable
         Assert.DoesNotContain(await _repo.GetAllAsync(), r => r.Status == QueueItemStatus.Submitted);
     }
 
-    private sealed class StubSubmitter(Func<QueuedApplication, (bool, string?, bool)> handler) : IApplicationSubmitter
+    [Fact]
+    public async Task FullAuto_GenericFill_ParksAsNeedsUserSend_NotSubmitted()
     {
-        public Task<(bool, string?, bool)> SubmitAsync(QueuedApplication item, CancellationToken ct) => Task.FromResult(handler(item));
+        // The generic fill path completes with NeedsUserSubmit: the queue row
+        // must park for the user's hand — never inflate the submitted count.
+        var submitter = new StubSubmitter((_, log) =>
+        {
+            log.Status = ApplicationStatus.NeedsUserSubmit;
+            log.VerificationNote = "generic fill complete";
+            return (log, null, false);
+        });
+        var gate = new StubGate(true);
+        var tailored = Guid.NewGuid();
+        _preparer.Handler = _ => Task.FromResult(tailored);
+        var auto = new ApplicationQueueService(_repo, _preparer, Mock.Of<ILogger<ApplicationQueueService>>(),
+            () => new EnvoySettings { FullAutoEnabled = true }, submitter, gate);
+
+        await auto.EnqueueAsync(Item("k-gen", "https://boards.greenhouse.io/acme/jobs/42"));
+
+        await WaitUntilAsync(
+            async () => (await _repo.GetAllAsync()).Single().Status == QueueItemStatus.NeedsUserSend,
+            TimeSpan.FromSeconds(8));
+
+        var row = (await _repo.GetAllAsync()).Single();
+        Assert.Contains("press the site's Submit", row.Note);
+        Assert.DoesNotContain(await _repo.GetAllAsync(), r => r.Status == QueueItemStatus.Submitted);
+    }
+
+    [Fact]
+    public async Task FullAuto_CaptchaAtSubmit_ParksAsNeedsCaptcha()
+    {
+        var submitter = new StubSubmitter((_, log) =>
+        {
+            log.Status = ApplicationStatus.RequiresCaptcha;
+            return (log, "captcha hand-off", true);
+        });
+        var gate = new StubGate(true);
+        var tailored = Guid.NewGuid();
+        _preparer.Handler = _ => Task.FromResult(tailored);
+        var auto = new ApplicationQueueService(_repo, _preparer, Mock.Of<ILogger<ApplicationQueueService>>(),
+            () => new EnvoySettings { FullAutoEnabled = true }, submitter, gate);
+
+        await auto.EnqueueAsync(Item("k-cap", "https://boards.greenhouse.io/acme/jobs/77"));
+
+        await WaitUntilAsync(
+            async () => (await _repo.GetAllAsync()).Single().Status == QueueItemStatus.NeedsCaptcha,
+            TimeSpan.FromSeconds(8));
+
+        var row = (await _repo.GetAllAsync()).Single();
+        Assert.Contains("captcha", row.Note, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(await _repo.GetAllAsync(), r => r.Status == QueueItemStatus.Submitted);
+    }
+
+    private sealed class StubSubmitter(Func<QueuedApplication, ApplicationLog, (ApplicationLog?, string?, bool)> handler) : IApplicationSubmitter
+    {
+        public Task<(ApplicationLog? Log, string? Error, bool Captcha)> SubmitAsync(QueuedApplication item, CancellationToken ct)
+        {
+            var log = new ApplicationLog
+            {
+                Id = Guid.NewGuid(),
+                JobUrl = item.JobUrl,
+                Company = item.Company,
+                JobTitle = item.JobTitle,
+                Status = ApplicationStatus.Completed
+            };
+            var result = handler(item, log);
+            return Task.FromResult(((ApplicationLog?)result.Item1, result.Item2, result.Item3));
+        }
     }
 
     private sealed class StubGate : IFullAutoGate

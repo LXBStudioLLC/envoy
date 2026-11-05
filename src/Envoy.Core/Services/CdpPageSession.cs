@@ -188,17 +188,23 @@ public sealed class CdpPageSession : IAsyncDisposable
             using var doc = JsonDocument.Parse(message);
             var node = doc.RootElement;
             var id = node.TryGetProperty("id", out var idProp) ? idProp.GetInt32() : default(int?);
-            if (id is not null && _pending.Remove(id.Value, out var cmdTcs))
+            if (id is not null)
             {
-                cmdTcs.TrySetResult(node.Clone());
+                TaskCompletionSource<JsonElement>? cmdTcs;
+                lock (_pending)
+                {
+                    _pending.Remove(id.Value, out cmdTcs);
+                }
+                cmdTcs?.TrySetResult(node.Clone());
                 return;
             }
             if (node.TryGetProperty("method", out var method))
             {
+                var frame = node.Clone();
                 lock (_eventWaiters)
                 {
                     foreach (var w in _eventWaiters.Where(w => w.EventName == method.GetString()).ToList())
-                        w.Tcs.TrySetResult(node.Clone());
+                        w.Tcs.TrySetResult(frame);
                 }
             }
         }

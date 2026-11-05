@@ -12,7 +12,9 @@ namespace Envoy.Core.Services;
 /// </summary>
 public interface IApplicationSubmitter
 {
-    Task<(bool Submitted, string? Error, bool Captcha)> SubmitAsync(QueuedApplication item, CancellationToken ct);
+    /// <summary>Runs the pre-tailored submit; returns the resulting ApplicationLog
+    /// (with terminal status) plus flags for captcha hand-offs from the worker.</summary>
+    Task<(ApplicationLog? Log, string? Error, bool Captcha)> SubmitAsync(QueuedApplication item, CancellationToken ct);
 }
 
 /// <summary>The full-auto decision + execution adapter used by the queue worker.</summary>
@@ -30,10 +32,10 @@ public sealed class OrchestratorApplicationSubmitter : IApplicationSubmitter
         _orchestrator = orchestrator;
     }
 
-    public async Task<(bool Submitted, string? Error, bool Captcha)> SubmitAsync(QueuedApplication item, CancellationToken ct)
+    public async Task<(ApplicationLog? Log, string? Error, bool Captcha)> SubmitAsync(QueuedApplication item, CancellationToken ct)
     {
         if (item.TailoredProfileId is null)
-            return (false, "the item has no tailored profile; re-queue the posting", false);
+            return (null, "the item has no tailored profile; re-queue the posting", false);
 
         var log = await _orchestrator.SubmitApplicationAsync(
             item.TailoredProfileId.Value,
@@ -45,13 +47,19 @@ public sealed class OrchestratorApplicationSubmitter : IApplicationSubmitter
             onDuplicateDetected: _ => Task.FromResult(false),
             ct: ct);
 
-        return log.Status switch
+        // NeedsUserSubmit (generic fill, no auto click) is NOT a submission:
+        // it parks the row for the user's hand without dishonoring the
+        // submitted total. Submitted + captcha handled below.
+        if (log.Status == ApplicationStatus.NeedsUserSubmit)
         {
-            ApplicationStatus.Completed or ApplicationStatus.NeedsUserSubmit => (true, null, false),
-            ApplicationStatus.RequiresCaptcha => (false, "captcha hand-off", true),
-            ApplicationStatus.DuplicateSkipped => (false, log.ErrorMessage, false),
-            _ => (false, log.ErrorMessage ?? log.Status.ToString(), false)
-        };
+            item.Note = null; // caller marks the queue row; keep call-sites uniform
+        }
+
+        // NeedsUserSubmit (generic fill, no auto click) is NOT a submission:
+        // the queue marks the row for the user's hand instead of inflating
+        // the submitted count. Captcha handoffs surface distinctly.
+        return (log, log.ErrorMessage ?? log.Status.ToString(),
+            log.Status == ApplicationStatus.RequiresCaptcha);
     }
 }
 

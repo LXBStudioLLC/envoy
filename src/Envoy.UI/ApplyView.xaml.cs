@@ -332,6 +332,8 @@ public partial class ApplyView : UserControl
 
         var scraping = _discoveryPosting is null;
         BtnInitiate.IsEnabled = false;
+        BtnExecute.IsEnabled = false; // APP-14 audit: no second flow may start mid-prepare
+
         var token = BeginFlow();
         StatusText.Text = scraping
             ? "Reading the posting and tailoring your resume..."
@@ -360,6 +362,8 @@ public partial class ApplyView : UserControl
         finally
         {
             BtnInitiate.IsEnabled = true;
+            if (_tailored is not null)
+                BtnExecute.IsEnabled = true;
             EndFlow();
         }
     }
@@ -450,6 +454,7 @@ public partial class ApplyView : UserControl
                 ApplicationStatus.Completed => log.VerifiedSubmission == false
                     ? "Application submitted (delivery could not be verified — check the browser)."
                     : "Application submitted.",
+                ApplicationStatus.NeedsUserSubmit => "Auto-fill done. Review the form in the browser, fill the leftover fields, and press the site's Submit button — nothing is sent by Envoy here.",
                 ApplicationStatus.DuplicateSkipped => log.ErrorMessage ?? "Already applied — nothing was sent.",
                 ApplicationStatus.DeclinedByUser => "You said no. Nothing was sent.",
                 ApplicationStatus.SafeModeStopped => "Held for your review. Nothing was sent.",
@@ -463,6 +468,7 @@ public partial class ApplyView : UserControl
                 ApplicationStatus.Completed => Green,
                 ApplicationStatus.DuplicateSkipped => Yellow,
                 ApplicationStatus.DeclinedByUser => Yellow,
+                ApplicationStatus.NeedsUserSubmit => Green,
                 _ => Red
             };
         }
