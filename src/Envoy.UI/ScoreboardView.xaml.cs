@@ -1,6 +1,7 @@
 using Envoy.Core.Configuration;
 using Envoy.Core.Models;
 using Envoy.Core.Services;
+using Envoy.GhostDetection.Services;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
@@ -14,13 +15,16 @@ public partial class ScoreboardView : UserControl
     private readonly IJobEventRepository _jobEvents;
     private readonly IApplicationLogRepository _appLogs;
     private readonly EnvoySettings _settings;
+    private readonly WarnRefresher _warnRefresher;
     private bool _suppressMinutesChanged;
 
-    public ScoreboardView(IJobEventRepository jobEvents, IApplicationLogRepository appLogs, EnvoySettings settings)
+    public ScoreboardView(IJobEventRepository jobEvents, IApplicationLogRepository appLogs,
+        EnvoySettings settings, WarnRefresher warnRefresher)
     {
         _jobEvents = jobEvents;
         _appLogs = appLogs;
         _settings = settings;
+        _warnRefresher = warnRefresher;
         InitializeComponent();
         SelectMinutesItem(_settings.MinutesPerApplicationEstimate);
         Loaded += async (_, _) => await RefreshAsync();
@@ -145,6 +149,33 @@ public partial class ScoreboardView : UserControl
             EvidenceVisibility = string.IsNullOrWhiteSpace(receipt.Evidence) ? Visibility.Collapsed : Visibility.Visible,
             Url = receipt.JobUrl
         };
+    }
+
+    /// <summary>
+    /// Refresh the public WARN dataset behind the Hiring Freeze signal.
+    /// Deliberately off the UI thread and best-effort: a network failure or a
+    /// bot-checked site is reported in the status line, never a crash.
+    /// </summary>
+    private async void BtnRefreshWarn_Click(object sender, RoutedEventArgs e)
+    {
+        BtnRefreshWarn.IsEnabled = false;
+        WarnRefreshStatus.Text = "Refreshing WARN notices from public agency pages…";
+        try
+        {
+            var result = await _warnRefresher.RefreshAsync();
+            var banner = result.Success ? result.Summary : $"Refresh failed: {result.Error}";
+            if (result.Notes.Count > 0)
+                banner += " (" + string.Join("; ", result.Notes) + ")";
+            WarnRefreshStatus.Text = banner;
+        }
+        catch (Exception ex)
+        {
+            WarnRefreshStatus.Text = $"Refresh failed: {ex.Message}";
+        }
+        finally
+        {
+            BtnRefreshWarn.IsEnabled = true;
+        }
     }
 
     private void SelectMinutesItem(int minutes)
