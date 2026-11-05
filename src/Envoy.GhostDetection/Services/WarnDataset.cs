@@ -27,8 +27,8 @@ public sealed record WarnNotice
 /// Local WARN Act notice dataset used by <c>HiringFreezeSignal</c>.
 ///
 /// <para>Load order:
-/// 1. the user-refreshed cache at <c>%LOCALAPPDATA%\Envoy\warn-notices.json</c> (a
-///    future refresher writes there),
+/// 1. the user-refreshed cache at <c>%LOCALAPPDATA%\Envoy\warn-notices.json</c>
+///    (written by <see cref="WarnRefresher"/>),
 /// 2. the bundled seed <c>warn-notices.json</c> next to the app,
 /// 3. an empty list (the signal then simply never fires — graceful, never throws).</para>
 ///
@@ -84,6 +84,25 @@ public static class WarnDataset
             var result = (IReadOnlyList<WarnNotice>)(notices ?? new List<WarnNotice>());
             _cached = result;
             return result;
+        }
+        finally
+        {
+            Gate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Replaces the in-memory dataset after a <see cref="WarnRefresher"/> run
+    /// (the refresher itself writes the cache file; this keeps the live
+    /// process in step so the very next posting scores with fresh data).
+    /// Passing <c>null</c> resets to an empty dataset.
+    /// </summary>
+    public static void Replace(IReadOnlyList<WarnNotice>? notices)
+    {
+        Gate.Wait();
+        try
+        {
+            _cached = (IReadOnlyList<WarnNotice>)(notices ?? new List<WarnNotice>());
         }
         finally
         {

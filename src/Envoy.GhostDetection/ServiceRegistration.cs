@@ -1,4 +1,5 @@
 using Envoy.GhostDetection;
+using Envoy.GhostDetection.Services;
 using Envoy.GhostDetection.Signals;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
@@ -18,6 +19,14 @@ public static class ServiceRegistration
     public static IServiceCollection AddEnvoyGhostDetection(this IServiceCollection services)
     {
         services.AddSingleton<GhostScorer>();
+
+        // Dataset maintenance: the WARN refresher (bg maintenance, not a signal).
+        // Longer timeout than signals: it pages through an entire WebForms grid.
+        services.AddHttpClient<WarnRefresher>(c =>
+        {
+            c.Timeout = TimeSpan.FromSeconds(60);
+            c.DefaultRequestHeaders.UserAgent.ParseAdd("Envoy/1.0 (+https://github.com/LXBStudioLLC/envoy)");
+        });
 
         var assembly = Assembly.GetExecutingAssembly();
         var signalTypes = assembly.GetTypes()

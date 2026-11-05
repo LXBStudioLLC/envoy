@@ -246,8 +246,19 @@ public class HiringFreezeSignalTests
     {
         // The bundled seed ships next to the app (transitively copied into the
         // test output too). Guard against a broken or empty seed slipping in.
-        var notices = WarnDataset.Load();
-        Assert.True(notices.Count >= 100, $"Expected the real bundled seed, got {notices.Count} notices");
+        // Read the file directly rather than going through the shared
+        // in-memory cache: parallel suites legitimately reset or replace the
+        // cached dataset (the refresher suite does both), and this check is
+        // about the seed file on disk, not the runtime cache.
+        var seedPath = WarnDataset.BundledPath;
+        Assert.True(File.Exists(seedPath), $"bundled seed missing at {seedPath}");
+
+        var json = File.ReadAllText(seedPath);
+        var stripped = string.Join('\n', json.Split('\n').Where(l => !l.TrimStart().StartsWith("//")));
+        var notices = JsonSerializer.Deserialize<List<WarnNotice>>(stripped);
+
+        Assert.NotNull(notices);
+        Assert.True(notices!.Count >= 100, $"Expected the real bundled seed, got {notices.Count} notices");
         Assert.All(notices, n =>
         {
             Assert.False(string.IsNullOrWhiteSpace(n.Employer));
