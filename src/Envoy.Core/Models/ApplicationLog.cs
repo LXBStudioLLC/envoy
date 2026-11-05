@@ -65,7 +65,11 @@ public enum ApplicationStatus
 
     /// <summary>The duplicate guard (APP-04) stopped the submit because this posting was already applied to.
     /// An explicit user override can still proceed; the row records the blocking decision either way.</summary>
-    DuplicateSkipped
+    DuplicateSkipped,
+
+    /// <summary>Generic fill (APP-09) prepared the form; the human completes leftover fields and
+    /// clicks the site's own Submit button. Envoy never presses that button in this mode.</summary>
+    NeedsUserSubmit
 }
 
 public enum ExecutionMode
