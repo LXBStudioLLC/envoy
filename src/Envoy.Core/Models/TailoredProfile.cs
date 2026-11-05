@@ -14,6 +14,9 @@ public class TailoredProfile
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public SafetyResult SafetyResult { get; set; } = new();
+
+    /// <summary>LLM-written cover letter (facts from the resume only; APP-10), or null when generation failed/was skipped.</summary>
+    public string? CoverLetterText { get; set; }
 }
 
 public class SafetyResult

@@ -141,16 +141,39 @@ public sealed class VaultEntryEditor : Window
         var dialog = new VaultEntryEditor(
             "Edit project entry",
             ("NAME", entry.Name, false, true),
+            
             ("TECHNOLOGIES (comma-separated)", string.Join(", ", entry.Technologies), false, true),
             ("DESCRIPTION", entry.Description, true, true));
 
         if (dialog.ShowDialog() != true)
             return null;
 
-        entry.Name = dialog.Text("NAME");
+        entry.Name = dialog.TextOrProvided("NAME");
         entry.Technologies = dialog.Text("TECHNOLOGIES (comma-separated)")
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
         entry.Description = dialog.Text("DESCRIPTION");
         return entry;
+    }
+
+    /// <summary>Adds/edits a stored answer (APP-10); question null → cancelled.</summary>
+    public static (string? Question, string? Answer) ShowAnswer(string? initialQuestion, string? initialAnswer)
+    {
+        var dialog = new VaultEntryEditor(
+            "Stored answer",
+            ("QUESTION", initialQuestion ?? "", false, true),
+            ("ANSWER", initialAnswer ?? "", true, true));
+
+        if (dialog.ShowDialog() != true)
+            return (null, null);
+
+        var q = dialog.TextOrProvided("QUESTION");
+        var a = dialog.TextOrProvided("ANSWER");
+        if (q.Length < 3 || a.Length < 1)
+        {
+            MessageBox.Show("Both a question and an answer are required.", "Envoy", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return (null, null);
+        }
+
+        return (q, a);
     }
 }

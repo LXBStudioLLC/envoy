@@ -143,7 +143,33 @@
             </ItemsControl>
             <Button Content="+ ADD PROJECT" Click="BtnAddProject_Click" Style="{StaticResource CyberButton}" Padding="12,6" HorizontalAlignment="Left" Margin="0,0,0,16" AutomationProperties.Name="Add project entry"/>
 
-                <TextBlock Text="DATA QUALITY" Foreground="#00F0FF" FontSize="14" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,8,0,8"/>
+                <TextBlock Text="STORED ANSWERS (Q&amp;A BANK)" Foreground="#00F0FF" FontSize="14" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,8,0,2"/>
+            <TextBlock Text="Reusable answers to knockout questions. The auto-fill offers them matched by question text; you always see what gets written before submit." Foreground="#5A6678" FontSize="10" FontFamily="{StaticResource CyberFontBody}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+            <ItemsControl x:Name="AnswerList" Margin="0,0,0,12">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="#1A2235" CornerRadius="3" BorderBrush="#1A3A4A" BorderThickness="1" Padding="12" Margin="0,0,0,6">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="{Binding Heading}" Foreground="#E0E6F0" FontWeight="Bold" FontSize="11" FontFamily="{StaticResource CyberFontBody}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding Meta}" Foreground="#5A6678" FontSize="10" FontFamily="{StaticResource CyberFontBody}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Margin="8,0,0,0">
+                                    <Button Content="EDIT" Tag="{Binding}" Click="VaultItem_EditDelete_Click" Style="{StaticResource CyberButton}" Padding="10,4" AutomationProperties.Name="Edit this stored answer"/>
+                                    <Button Content="DELETE" Tag="{Binding}" Click="VaultItem_EditDelete_Click" Style="{StaticResource CyberButton}" Padding="10,4" Margin="6,0,0,0" AutomationProperties.Name="Delete this stored answer"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <Button x:Name="BtnAddAnswer" Content="+ ADD STORED ANSWER" Click="BtnAddAnswer_Click" Style="{StaticResource CyberButton}" Padding="12,6" HorizontalAlignment="Left" Margin="0,0,0,16" AutomationProperties.Name="Add stored answer"/>
+
+            <TextBlock Text="DATA QUALITY" Foreground="#00F0FF" FontSize="14" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,8,0,8"/>
                 <TextBlock x:Name="AnomaliesText" Text="No issues found" Foreground="#39FF14" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Margin="0,0,0,12"/>
 
                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">

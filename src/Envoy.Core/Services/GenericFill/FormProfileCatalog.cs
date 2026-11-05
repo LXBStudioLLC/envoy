@@ -102,6 +102,38 @@ public static class FormFieldPrompts
 
         return (prompt, system);
     }
+
+    /// <summary>Cover-letter prompt: role, the JD's asks, the resume facts, and the tailored bullets (APP-10).</summary>
+    public static string BuildCoverLetterPrompt(string? jobTitle, string? company, string jobDescription, MasterProfile master, MasterProfile tailored)
+    {
+        var facts = new System.Text.StringBuilder();
+        facts.AppendLine($"Name: {master.Name}");
+        var latest = tailored.Experience.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.Company));
+        facts.AppendLine($"Most recent role: {latest?.JobTitle ?? "n/a"} at {latest?.Company ?? "n/a"}");
+        facts.AppendLine($"Skills: {string.Join(", ", master.Skills)}");
+        foreach (var exp in tailored.Experience.Where(e => !string.IsNullOrWhiteSpace(e.Company)).Take(3))
+        {
+            facts.AppendLine($"At {exp.Company} ({exp.StartDate}–{exp.EndDate ?? "present"}):");
+            foreach (var bullet in exp.Bullets.Take(4))
+                facts.AppendLine($"  - {bullet}");
+        }
+
+        var trimmedJd = jobDescription?.Trim() ?? string.Empty;
+        if (trimmedJd.Length > 2500)
+            trimmedJd = trimmedJd.Substring(0, 2500);
+
+        return $"""
+            Write a cover letter for the {jobTitle ?? "this"} role at {company ?? "this company"}.
+
+            Job description (trimmed):
+            {trimmedJd}
+
+            Only these facts may appear:
+            {facts}
+
+            Structure: short opening tying the role to the experience; one paragraph with the strongest matching work; short close. Plain text.
+            """;
+    }
 }
 
 /// <summary>

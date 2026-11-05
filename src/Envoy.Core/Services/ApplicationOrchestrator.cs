@@ -144,6 +144,14 @@ public class ApplicationOrchestrator
             var pdfPath = ResumeFilePath.For(tailored.TailoredData.Name, tailored.Company, tailored.JobTitle);
             Directory.CreateDirectory(Path.GetDirectoryName(pdfPath)!);
             await File.WriteAllBytesAsync(pdfPath, pdfBytes, ct);
+
+            // APP-10: a cover letter beside the resume when one was generated
+            // (the user reads it there if the site's upload accepts two files).
+            if (!string.IsNullOrWhiteSpace(tailored.CoverLetterText))
+            {
+                var letterPath = Path.ChangeExtension(pdfPath, ".cover-letter.txt");
+                await File.WriteAllTextAsync(letterPath, tailored.CoverLetterText, ct);
+            }
         }
 
         return new PreparedApplication(tailored, jobDescription);
