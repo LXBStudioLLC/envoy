@@ -404,9 +404,20 @@ public partial class FindJobsView : UserControl
         var sortIndex = CmbSort.SelectedIndex;
         var sorted = sortIndex switch
         {
-            0 => _lastItems.OrderByDescending(i => i.Meta).ToList(),  // Newest first (meta contains date)
-            1 => _lastItems.OrderByDescending(i => i.RiskText).ToList(),  // Ghost score
-            2 => _lastItems.OrderBy(i => i.Company).ToList(),  // Company A-Z
+            // Carried data, not display strings: "Newest" sorts on the real
+            // posting date (Meta begins with the board name, so a string sort
+            // ordered by source, not recency) and "Ghost score" orders on the
+            // numeric risk score (the label's band text sorted "OK" above
+            // every risk). Unrated/no-date rows fall to the bottom.
+            0 => _lastItems
+                .OrderByDescending(i => i.Posting?.PostedAtUtc ?? DateTime.MinValue)
+                .ToList(),  // Newest first
+            1 => _lastItems
+                .OrderByDescending(i => i.Snapshot?.RiskScore ?? -1)
+                .ToList(),  // Ghost score
+            2 => _lastItems
+                .OrderBy(i => i.Company, StringComparer.OrdinalIgnoreCase)
+                .ToList(),  // Company A-Z
             _ => _lastItems
         };
         ResultsList.ItemsSource = sorted;

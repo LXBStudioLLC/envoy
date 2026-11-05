@@ -33,11 +33,6 @@ public class HumanizationService
         return 5 + Random.Shared.Next(0, 15);
     }
 
-    public int GetScrollDelay()
-    {
-        return 200 + Random.Shared.Next(0, 800);
-    }
-
     public (double X, double Y) GetClickTarget(double elementX, double elementY, double width, double height)
     {
         var marginX = width * 0.2;
