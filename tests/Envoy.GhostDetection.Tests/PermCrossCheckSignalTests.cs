@@ -27,7 +27,7 @@ public class PermCrossCheckSignalTests
         {
             CompanyName = company ?? string.Empty,
             JobTitle = title,
-            Location = location,
+            Location = location ?? string.Empty,
             DescriptionText = "Design and ship features with a small team."
         };
         posting.Extra["perm.dataset"] = JsonSerializer.Serialize(TestFilings);
