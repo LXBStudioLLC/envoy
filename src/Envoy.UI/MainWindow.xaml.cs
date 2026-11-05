@@ -45,6 +45,10 @@ public partial class MainWindow : Window
         _updateCheck = updateCheck;
         _settings = settings;
 
+        // APP-02: route the Find Jobs APPLY action straight into the Apply
+        // view, carrying the posting + ghost snapshot so nothing re-scrapes.
+        find.ApplyRequested += item => NavigateToApplyFromDiscovery(item);
+
         InitializeComponent();
 
         TitleText.RenderTransform = _titleTransform;
@@ -355,6 +359,16 @@ public partial class MainWindow : Window
         _apply.SetProfileId(profileId);
         NavigateTo(_apply);
         UpdateNavButtons("Apply");
+    }
+
+    /// <summary>APP-02: one click from a Find Jobs result to a prepared
+    /// application. The carried posting + ghost snapshot travel intact; the
+    /// Apply view handles profile selection (auto-select for single profiles).</summary>
+    public void NavigateToApplyFromDiscovery(DiscoveredJobItem item)
+    {
+        NavigateTo(_apply);
+        UpdateNavButtons("Apply");
+        _apply.LoadFromDiscovery(item.Posting!, item.Snapshot);
     }
 
     public async Task NavigateToVault(Guid profileId)
