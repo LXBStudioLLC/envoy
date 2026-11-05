@@ -1,0 +1,17 @@
+// Pay-transparency omission scenario: a posting in California (a covered
+// jurisdiction) that states no salary in SalaryText or in the description.
+// Expected: SalaryAbsenceSignal fires Weak with a low score.
+{
+  "Id": "00000000-0000-0000-0000-000000000301",
+  "Source": 0,
+  "CompanyName": "Acme Corp",
+  "JobTitle": "Support Engineer",
+  "Location": "Oakland, CA",
+  "DescriptionText": "We are hiring a Support Engineer to troubleshoot customer issues, coordinate with engineering, and keep response times low. Familiarity with ticketing systems and SQL is a plus. We offer growth and mentorship in a collaborative team.",
+  "Url": "https://boards.greenhouse.io/acme/jobs/1001",
+  "PostedAtUtc": "2026-10-20T00:00:00Z",
+  "LastUpdatedUtc": "2026-10-20T00:00:00Z",
+  "SalaryText": null,
+  "RawSourceId": "1001",
+  "Extra": {}
+}

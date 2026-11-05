@@ -1,0 +1,17 @@
+// Pay-transparency compliant scenario: a posting in a covered jurisdiction that
+// does state a range in its description.
+// Expected: SalaryAbsenceSignal returns null (pay is present).
+{
+  "Id": "00000000-0000-0000-0000-000000000302",
+  "Source": 0,
+  "CompanyName": "Acme Corp",
+  "JobTitle": "Support Engineer",
+  "Location": "Oakland, CA",
+  "DescriptionText": "We are hiring a Support Engineer to troubleshoot customer issues, coordinate with engineering, and keep response times low. Familiarity with ticketing systems and SQL is a plus. The salary range for this role is $80,000 - $110,000 per year, depending on experience.",
+  "Url": "https://boards.greenhouse.io/acme/jobs/1002",
+  "PostedAtUtc": "2026-10-20T00:00:00Z",
+  "LastUpdatedUtc": "2026-10-20T00:00:00Z",
+  "SalaryText": null,
+  "RawSourceId": "1002",
+  "Extra": {}
+}
