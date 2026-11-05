@@ -4,6 +4,8 @@ All notable changes to Envoy are documented in this file. Format is based on [Ke
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-05
+
 ### Added — #92 remainder shipped: the shell of the product
 
 - **Dashboard first-run checklist, fully wired.** The readiness strip now ends where the product starts: profile → LLM configured → browser bridge → templates present → debug port → **first application** (finished attempts in the ledger count; parked captcha rows don't). Every incomplete row carries one action — IMPORT PDF / SET UP AI / LAUNCH BROWSER / SHOW FOLDER / SHOW SETTINGS / FIND JOBS — and the strip auto-hides the moment everything is green.
@@ -18,8 +20,6 @@ All notable changes to Envoy are documented in this file. Format is based on [Ke
 - **Queue rows carry their resume.** Every queued posting is stamped with the profile it was queued for; the background worker tailors for whichever row is oldest regardless of which resume it belongs to — a second profile's rows no longer starve behind the first profile's batch. Legacy rows persisted before stamping keep the old single-profile binding, so upgrades stay smooth.
 - **Find Jobs `APPLY WITH` selector.** With several resumes saved, QUEUE / QUEUE SELECTED and per-row APPLY use the picked profile instead of demanding a Dashboard detour; the choice rides along into the Apply view. Saved rows re-check their profile on every visit (a deleted profile falls back to the first).
 - Sort options in Find Jobs now order on carried data — the real posting date and the numeric risk score — instead of display strings that sorted by board name and put unscored "OK" on top of every risk.
-
-## [1.2.0] - 2026-11-05
 
 ### Fixed — the deep audit (three batches, #97 / #98 / #99)
 
