@@ -12,7 +12,7 @@ The framework finds every `IGhostSignal` at runtime, so there's no wiring and no
 
 ### Step by step
 
-1. Pick an open [`signal:` issue](https://github.com/LXBStudioLLC/envoy/issues?q=is%3Aissue+label%3Asignal), or propose a new one.
+1. Pick an open [`signal:` issue](https://github.com/LXBStudioLLC/envoy/issues?q=is%3Aissue+label%3Asignal), or propose a new one. Non-signal starter work (dataset refreshers, docs, templates) is on the tracker too — the same branch-and-PR flow applies.
 2. Open [SIGNAL_AUTHORING.md](SIGNAL_AUTHORING.md) and copy the agent prompt as-is.
 3. Paste the prompt into your coding agent (Claude Code, Kimi, Copilot, and so on).
 4. Paste the Spec block from the issue into the prompt.
