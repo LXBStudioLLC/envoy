@@ -359,7 +359,7 @@ public class ApplicationOrchestrator
 
             if (!reusePage)
             {
-                if (!await _browser.ConnectAsync(ct: ct))
+                if (!await _browser.ConnectAsync(DebugPortOrDefault(), ct))
                 {
                     log.Status = ApplicationStatus.Failed;
                     log.ErrorMessage = "Could not connect to Chrome.";

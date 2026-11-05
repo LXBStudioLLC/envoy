@@ -22,6 +22,7 @@ public partial class FindJobsView : UserControl
     private readonly IApplicationLogRepository _appLogs;
     private readonly ApplicationQueueService _queue;
     private readonly IApplicationQueueRepository _queueRepo;
+    private readonly IProfileRepository _profileRepo;
     private List<AtsBoardRef> _boards = new();
     private List<DiscoveredJobItem> _lastItems = new();
 
@@ -38,6 +39,14 @@ public partial class FindJobsView : UserControl
     private void BtnSelectAll_Click(object sender, RoutedEventArgs e) => SetBatchSelection(true);
 
     private void BtnClearSelection_Click(object sender, RoutedEventArgs e) => SetBatchSelection(false);
+
+    // Checkbox handler: the batch toggle routes through the row's item
+    // (a simple handler keeps DiscoveredJobItem plain — no INPC needed).
+    private void BatchCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (sender is CheckBox check && check.Tag is DiscoveredJobItem item)
+            item.Selected = check.IsChecked == true;
+    }
 
     private void SetBatchSelection(bool value)
     {
@@ -67,11 +76,30 @@ public partial class FindJobsView : UserControl
         var enqueued = 0;
         var skipped = new List<string>();
 
+        // APP-11 audit fix: the queue worker needs a profile — resolve here
+        // (auto-select single profile; block 0/2+ honestly).
+        var profiles = await _profileRepo.GetAllAsync();
+        Guid masterProfileId;
+        if (profiles.Count == 0)
+        {
+            StatusText.Text = "No profile yet. Import a resume on the Dashboard, then batch QUEUE works in one click.";
+            StatusText.Foreground = Yellow;
+            return;
+        }
+        if (profiles.Count > 1)
+        {
+            StatusText.Text = $"You have {profiles.Count} profiles — pick one on the Dashboard first, then batch QUEUE.";
+            StatusText.Foreground = Yellow;
+            return;
+        }
+        masterProfileId = profiles[0].Id;
+
         foreach (var item in targets)
         {
             var (ok, reason) = await _queue.EnqueueAsync(
                 new QueuedApplication
                 {
+                    MasterProfileId = masterProfileId,
                     PostingKey = PostingKey.For(item.Posting!.Url, item.Posting.CompanyName, item.Posting.JobTitle),
                     JobUrl = item.Posting.Url ?? string.Empty,
                     JobTitle = item.Posting.JobTitle ?? string.Empty,
@@ -96,12 +124,11 @@ public partial class FindJobsView : UserControl
             : "Nothing queued. " + string.Join("; ", skipped);
 
         StatusText.Foreground = enqueued > 0 ? Cyan : Yellow;
-        ResultsList.ItemsSource = targets.Cast<DiscoveredJobItem>().ToList();
     }
 
     public FindJobsView(JobDiscoveryService discovery, GhostScorer scorer, EnvoySettings settings,
         IJobEventRepository jobEvents, IApplicationLogRepository appLogs, ApplicationQueueService queue,
-        IApplicationQueueRepository queueRepo)
+        IApplicationQueueRepository queueRepo, IProfileRepository profileRepo)
     {
         _discovery = discovery;
         _scorer = scorer;
@@ -110,14 +137,15 @@ public partial class FindJobsView : UserControl
         _appLogs = appLogs;
         _queue = queue;
         _queueRepo = queueRepo;
+        _profileRepo = profileRepo;
+        _queue.QueueChanged += QueueChanged; // subscribe once (ctor), never re-subscribed on re-Loaded
         InitializeComponent();
         Loaded += FindJobsView_Loaded;
     }
 
     private void FindJobsView_Loaded(object sender, RoutedEventArgs e)
     {
-        _queue.QueueChanged += QueueChanged;
-        _ = RenderQueuePanelAsync();
+        _ = RenderQueuePanelAsync(); // subscription lives in the ctor (once per lifetime)
         if (!string.IsNullOrEmpty(_settings.BraveSearchApiKeyEncrypted))
         {
             StatusText.Text = "Brave key saved. Leave the box blank to keep using it, or type a new one to replace it.";
@@ -423,9 +451,28 @@ public partial class FindJobsView : UserControl
             return;
         }
 
+        // APP-11 audit fix: the queue worker needs a profile to tailor for —
+        // resolve one here (auto-select single profile; block 0/2+ honestly).
+        var profileCount = await _profileRepo.GetAllAsync();
+        Guid masterProfileId;
+        if (profileCount.Count == 0)
+        {
+            StatusText.Text = "No profile yet. Import a resume on the Dashboard, then QUEUE works in one click.";
+            StatusText.Foreground = Yellow;
+            return;
+        }
+        if (profileCount.Count > 1)
+        {
+            StatusText.Text = $"You have {profileCount.Count} profiles — pick one on the Dashboard first, then QUEUE.";
+            StatusText.Foreground = Yellow;
+            return;
+        }
+        masterProfileId = profileCount[0].Id;
+
         var (enqueued, reason) = await _queue.EnqueueAsync(
             new QueuedApplication
             {
+                MasterProfileId = masterProfileId,
                 PostingKey = PostingKey.For(item.Posting.Url, item.Posting.CompanyName, item.Posting.JobTitle),
                 JobUrl = item.Posting.Url ?? string.Empty,
                 JobTitle = item.Posting.JobTitle ?? string.Empty,

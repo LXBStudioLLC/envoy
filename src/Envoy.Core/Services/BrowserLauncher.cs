@@ -292,6 +292,10 @@ public class BrowserLauncher : IBrowserLauncher
 
     private void KillBrowserProcesses(BrowserType type)
     {
+        // APP-14 audit fix: kill ONLY browser processes running the Envoy
+        // profile (their command line carries --user-data-dir=…Envoy\BrowserProfile).
+        // A name-based kill of "chrome.exe" would murder the user's personal
+        // browser windows — the process belongs to the machine, not to Envoy.
         var processNames = type switch
         {
             BrowserType.Chrome => new[] { "chrome" },
@@ -304,18 +308,32 @@ public class BrowserLauncher : IBrowserLauncher
 
         try
         {
-            foreach (var name in processNames)
+            var marker = EnvoyProfileDir.TrimEnd('\\');
+            var query = $"SELECT ProcessId FROM Win32_Process WHERE CommandLine LIKE '%{marker.Replace("\\", "\\\\")}%'";
+            using var searcher = new System.Management.ManagementObjectSearcher("root\\cimv2", query);
+            var envoyProcIds = new HashSet<int>();
+            foreach (var o in searcher.Get())
             {
-                foreach (var proc in Process.GetProcessesByName(name))
-                {
-                    try { proc.Kill(); }
-                    catch (Exception ex) { _log?.LogDebug(ex, "Could not kill {Process} (pid {Pid})", name, proc.Id); }
-                }
+                var pid = Convert.ToInt32(o["ProcessId"]);
+                var name = (o["Name"] as string)?.ToLowerInvariant().Replace(".exe", "") ?? "";
+                var cmdLine = o["CommandLine"] as string ?? "";
+
+                if (!processNames.Contains(name))
+                    continue; // other Envoy-spawned processes (crash handlers) skip
+
+                // Only processes USING the Envoy profile qualify.
+                if (!cmdLine.Contains("--user-data-dir", StringComparison.OrdinalIgnoreCase)
+                    && !cmdLine.Contains("Envoy\\BrowserProfile", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                envoyProcIds.Add(pid);
+                try { Process.GetProcessById(pid).Kill(); }
+                catch (Exception ex) { _log?.LogDebug(ex, "Could not kill envoy browser process {Pid}", pid); }
             }
         }
         catch (Exception ex)
         {
-            _log?.LogWarning(ex, "KillBrowserProcesses({Type}) failed", type);
+            _log?.LogWarning(ex, "KillBrowserProcesses({Type}) failed (only Envoy-profile processes are targeted)", type);
         }
     }
 

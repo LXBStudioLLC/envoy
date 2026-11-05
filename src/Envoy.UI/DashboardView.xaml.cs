@@ -46,7 +46,7 @@ public partial class DashboardView : UserControl
             catch { }
 
             var browserType = _browserLauncher.GetSelectedBrowserType() ?? BrowserType.Chrome;
-            var browserDebug = await _browserLauncher.IsRunningWithDebuggingAsync(browserType);
+            var browserDebug = await _browserLauncher.IsRunningWithDebuggingAsync(browserType, DebugPortOrDefault());
 
             var report = EnvoyReadiness.Compute(profileCount, llmConnected, browserDebug, _settings);
 
@@ -70,6 +70,15 @@ public partial class DashboardView : UserControl
         public string Marker { get; set; } = "";
         public System.Windows.Media.Brush MarkerBrush { get; set; } = System.Windows.Media.Brushes.Gray;
         public string Step { get; set; } = "";
+    }
+
+    /// <summary>APP-16: honored here as well as in Core (UI probes + auto-launch).</summary>
+    internal int DebugPortOrDefault()
+    {
+        var raw = _settings.ChromeDebuggingPort;
+        if (int.TryParse(raw, out var port) && port is > 0 and <= 65535)
+            return port;
+        return 9222;
     }
 
     private async void DashboardView_Loaded(object sender, RoutedEventArgs e)
@@ -108,12 +117,12 @@ public partial class DashboardView : UserControl
 
         try
         {
-            var debugReady = await _browserLauncher.IsRunningWithDebuggingAsync(browserType);
+            var debugReady = await _browserLauncher.IsRunningWithDebuggingAsync(browserType, DebugPortOrDefault());
             if (debugReady)
             {
                 ChromeStatusLabel.Text = $"{browserName} is ready.";
                 ChromeStatusLabel.Foreground = Green;
-                ChromeDetailLabel.Text = $"{browserName} is running with remote debugging on port 9222.";
+                ChromeDetailLabel.Text = $"{browserName} is running with remote debugging on the configured debug port.";
                 ChromeDetailLabel.Foreground = Gray;
                 BtnLaunchChrome.Content = $"RELAUNCH {browserName.ToUpper()}";
                 return;
@@ -149,7 +158,7 @@ public partial class DashboardView : UserControl
                 ChromeDetailLabel.Foreground = Gray;
                 BtnLaunchChrome.IsEnabled = false;
 
-                var launched = await _browserLauncher.LaunchAsync(browserType);
+                var launched = await _browserLauncher.LaunchAsync(browserType, DebugPortOrDefault());
                 _browserAutoLaunched = true;
 
                 if (launched)

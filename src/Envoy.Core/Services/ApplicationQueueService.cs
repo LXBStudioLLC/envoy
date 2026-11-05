@@ -245,9 +245,6 @@ public sealed class ApplicationQueueService : IDisposable
             if (item.Status == QueueItemStatus.AppReady && item.TailoredProfileId is not null
                 && _gate is not null && _gate.ShouldAutoSubmitNow(item, nowUtc))
             {
-                // APP-12: the gate consult honors the window via nowUtc. The
-                // submit call rewrites the row (Submitted / Failed /
-                // NeedsCaptcha / NeedsUserSend) inside TryFullAutoSubmitAsync.
                 await TryFullAutoSubmitAsync(item, nowUtc, ct);
             }
             else
