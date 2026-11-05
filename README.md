@@ -293,8 +293,9 @@ Hit a bug or a bad flag? [Open an issue](https://github.com/LXBStudioLLC/envoy/i
 - [x] Vault view for profile history and corrections
 - [x] Adaptive parser with a self-healing element locator
 - [x] Cloud LLM providers (OpenAI, Anthropic, Gemini), opt-in, keys encrypted
-- [ ] Full-auto apply for employer and ATS sites (aggregators stay copilot-only)
+- [x] Full-auto apply for employer and ATS sites (aggregators stay copilot-only; guarded toggle, SiteClassifier gate, host trust)
 - [ ] Multi-resume and multi-profile support
+- [ ] First-run wizard, tray notifications, night-drain UI polish ([#92](https://github.com/LXBStudioLLC/envoy/issues/92))
 
 ## License
 
