@@ -4,6 +4,21 @@ All notable changes to Envoy are documented in this file. Format is based on [Ke
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-05
+
+### Fixed — the deep audit (three batches, #97 / #98 / #99)
+
+- Full-Auto drain maps the generic-fill outcome honestly: a fill that hands the Send to you parks the row as NEEDS YOUR SEND — it never inflates the submitted count.
+- The generic-fill path keeps the browser page open for your Submit instead of closing it out from under the completed form.
+- CDP page-session command-response race removed; JS selectors and values are JSON-encoded before injection (multiline answers no longer produce malformed script); selects match only on exact option text.
+- The Apply view guards cross-flow entry: a running tailoring/fill can no longer be stomped by a second discovery tap or button press, and the needs-your-send outcome reports in plain language.
+- Queue items carry their master profile from the UI click (background tailoring could never match a profile before).
+- Batch-queue checkboxes are wired; QUEUE SELECTED no longer clobbers the results list.
+- The configured debug port is honored everywhere (probes, auto-launch, submit connection), not just port 9222.
+- A browser restart kills only processes running Envoy's own profile, never the user's personal browser windows.
+- Blocked duplicates are transient reasons, not accumulated queue rows; the queue panel subscribes once, not per navigation.
+- The outcome combo reverts when the database refuses the save; the PDF generator is registered singleton.
+
 ### Added — the Applications Escalator (apply-throughput)
 
 The apply flow is now a queue, not a form wizard. One profile, one queue, maximum honest applications; ghost detection stays the quality rail. Docs: [docs/APPLY-THROUGHPUT.md](docs/APPLY-THROUGHPUT.md).
