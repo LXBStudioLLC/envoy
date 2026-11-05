@@ -61,6 +61,29 @@ public class ApplicationOrchestrator
         return profile;
     }
 
+    /// <summary>
+    /// A prepared page held open from the prepare phase so the submit phase
+    /// can reuse it (APP-03 session continuity). Canonical URL key guards the
+    /// reuse; cleared after consumption, abandonment, or captcha hand-off.
+    /// </summary>
+    private sealed record PreparedPage(string CanonicalKey, string TargetId);
+    private PreparedPage? _preparedPage;
+
+    private static string CanonicalFor(string? url) =>
+        PostingKey.For(url, null, null);
+
+    private async Task DisposePreparedPageAsync()
+    {
+        var page = _preparedPage;
+        _preparedPage = null;
+        if (page != null && _browser.IsConnected)
+            await _browser.ClosePageAsync(page.TargetId);
+    }
+
+    /// <summary>Drops the recorded page reference without closing the browser page.
+    /// Used on the captcha hand-off, where the user must keep that page open.</summary>
+    private void ForgetPreparedPage() => _preparedPage = null;
+
     public async Task<PreparedApplication> PrepareApplicationAsync(Guid masterProfileId, string jobUrl, CancellationToken ct = default)
     {
         var master = await _profileRepo.GetByIdAsync(masterProfileId, ct)
@@ -87,32 +110,54 @@ public class ApplicationOrchestrator
         }
         else
         {
+            string? targetId = null;
             try
             {
-                var targetId = await _browser.CreatePageAsync(ct);
+                targetId = await _browser.CreatePageAsync(ct);
                 if (targetId != null)
                 {
                     await _browser.AttachToPageAsync(targetId, ct);
                     await _browser.NavigateAsync(jobUrl, ct);
                     jobDescription = await _browser.GetPageTextAsync(ct);
+
+                    // APP-03: keep the page + the connection for the submit
+                    // phase. This saves a second full page navigation per
+                    // application; the page is consumed or cleaned up there.
+                    _preparedPage = new PreparedPage(CanonicalFor(jobUrl), targetId);
                 }
                 else
                 {
                     _log.LogWarning("Failed to create CDP page for {JobUrl}; tailoring will run with empty job description", jobUrl);
                 }
             }
+            catch (OperationCanceledException)
+            {
+                // User cancel mid-navigation: mirror the WS-close behavior the
+                // old flow had, but still avoid leaving an orphan page behind.
+                if (targetId != null)
+                    await _browser.ClosePageAsync(targetId);
+                throw;
+            }
             catch (Exception ex)
             {
                 _log.LogWarning(ex, "Failed to fetch job description from {JobUrl}; tailoring will run with empty job description", jobUrl);
-            }
-            finally
-            {
-                await _browser.CloseAsync(CancellationToken.None);
+                if (targetId != null && _browser.IsConnected)
+                    await _browser.ClosePageAsync(targetId); // half-fetched page: don't hold it open
             }
         }
 
         // Step 2: Tailor resume
-        var tailored = await _tailoring.TailorAsync(masterProfileId, jobUrl, jobDescription, ct);
+        TailoredProfile tailored;
+        try
+        {
+            tailored = await _tailoring.TailorAsync(masterProfileId, jobUrl, jobDescription, ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // User cancel mid-tailoring: clean up the held page and surface.
+            await DisposePreparedPageAsync();
+            throw;
+        }
 
         // Step 3: Generate PDF
         if (tailored.SafetyResult.Passed)
@@ -218,19 +263,39 @@ public class ApplicationOrchestrator
                 return log;
             }
 
-            if (!await _browser.ConnectAsync(ct: ct))
+            // ── Browser page acquisition (APP-03 session continuity) ────────
+            var canonicalUrl = CanonicalFor(tailored.JobUrl);
+            var reusePage = _preparedPage is not null
+                && _browser.IsConnected
+                && string.Equals(_preparedPage.CanonicalKey, canonicalUrl, StringComparison.Ordinal);
+
+            if (reusePage)
             {
-                log.Status = ApplicationStatus.Failed;
-                log.ErrorMessage = "Could not connect to Chrome.";
-                await _logRepo.UpdateAsync(log, ct);
-                return log;
+                _log.LogInformation("Reusing the prepared page for {Url} (no second navigation)", tailored.JobUrl);
+            }
+            else
+            {
+                // A stale or different-URL prepared page is abandoned: close it
+                // so we don't orphan browser tabs, then take the fresh path.
+                await DisposePreparedPageAsync();
             }
 
-            var targetId = await _browser.CreatePageAsync(ct);
-            if (targetId != null)
-                await _browser.AttachToPageAsync(targetId, ct);
+            if (!reusePage)
+            {
+                if (!await _browser.ConnectAsync(ct: ct))
+                {
+                    log.Status = ApplicationStatus.Failed;
+                    log.ErrorMessage = "Could not connect to Chrome.";
+                    await _logRepo.UpdateAsync(log, ct);
+                    return log;
+                }
 
-            await _browser.NavigateAsync(tailored.JobUrl, ct);
+                var targetId = await _browser.CreatePageAsync(ct);
+                if (targetId != null)
+                    await _browser.AttachToPageAsync(targetId, ct);
+
+                await _browser.NavigateAsync(tailored.JobUrl, ct);
+            }
 
             // Capture before screenshot (honors the CaptureScreenshots opt-out)
             if (_settings.CaptureScreenshots)
@@ -293,6 +358,19 @@ public class ApplicationOrchestrator
         }
         finally
         {
+            // Don't close the page on a captcha hand-off: the user still needs
+            // it open in the browser to finish by hand. In every other case
+            // the page is consumed (or abandoned) and can be closed.
+            if (log.Status == ApplicationStatus.RequiresCaptcha)
+            {
+                ForgetPreparedPage();
+            }
+            else
+            {
+                try { await DisposePreparedPageAsync(); }
+                catch { /* cleanup must never mask the real outcome */ }
+            }
+
             log.CompletedAt = DateTime.UtcNow;
             await _logRepo.UpdateAsync(log, CancellationToken.None);
             await _browser.CloseAsync(CancellationToken.None);

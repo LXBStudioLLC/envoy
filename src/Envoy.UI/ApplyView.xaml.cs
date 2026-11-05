@@ -19,6 +19,7 @@ public partial class ApplyView : UserControl
     private string _jobDescription = "";
     private GhostScore? _ghostScore;
     private TaskCompletionSource<bool>? _confirmTcs;
+    private CancellationTokenSource? _flowCts;
 
     public ApplyView(ApplicationOrchestrator orchestrator, GhostScorer ghostScorer, EnvoySettings settings)
     {
@@ -27,6 +28,35 @@ public partial class ApplyView : UserControl
         _settings = settings;
         InitializeComponent();
         Loaded += (_, _) => RefreshModeOptions();
+    }
+
+    // APP-03: a running tailoring or fill is cancellable. The token flows
+    // through the orchestrator into the LLM completion (linked token) and the
+    // CDP commands (waits honor it), so a hung model or stuck page can no
+    // longer wedge the view.
+    private CancellationToken BeginFlow()
+    {
+        _flowCts?.Dispose();
+        _flowCts = new CancellationTokenSource();
+        BtnCancelFlow.Visibility = Visibility.Visible;
+        BtnCancelFlow.IsEnabled = true;
+        return _flowCts.Token;
+    }
+
+    private void EndFlow()
+    {
+        BtnCancelFlow.IsEnabled = false;
+        BtnCancelFlow.Visibility = Visibility.Collapsed;
+        _flowCts?.Dispose();
+        _flowCts = null;
+    }
+
+    private void BtnCancelFlow_Click(object sender, RoutedEventArgs e)
+    {
+        if (_flowCts is null) return;
+        _flowCts.Cancel();
+        StatusText.Text = "Cancelling...";
+        StatusText.Foreground = Yellow;
     }
 
     // Only offers the Stealth execution mode when stealth input is enabled (the guarded
@@ -80,17 +110,23 @@ public partial class ApplyView : UserControl
         }
 
         BtnInitiate.IsEnabled = false;
+        var token = BeginFlow();
         StatusText.Text = "Reading the posting and tailoring your resume...";
         StatusText.Foreground = Cyan;
         ResultPanel.Visibility = Visibility.Collapsed;
 
         try
         {
-            var prepared = await _orchestrator.PrepareApplicationAsync(_profileId, jobUrl);
+            var prepared = await _orchestrator.PrepareApplicationAsync(_profileId, jobUrl, token);
             _tailored = prepared.Tailored;
             _jobDescription = prepared.JobDescription;
             ShowResult();
-            await ScoreGhostRiskAsync(jobUrl);
+            await ScoreGhostRiskAsync(jobUrl, token);
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText.Text = "Tailoring cancelled. Nothing was changed.";
+            StatusText.Foreground = Yellow;
         }
         catch (Exception ex)
         {
@@ -100,12 +136,13 @@ public partial class ApplyView : UserControl
         finally
         {
             BtnInitiate.IsEnabled = true;
+            EndFlow();
         }
     }
 
     // Scores the posting in front of the user (full scoring; network signals OK for a
     // single job) and surfaces the ghost risk band + evidence before they apply.
-    private async Task ScoreGhostRiskAsync(string jobUrl)
+    private async Task ScoreGhostRiskAsync(string jobUrl, CancellationToken ct = default)
     {
         if (_tailored == null) return;
         try
@@ -119,7 +156,7 @@ public partial class ApplyView : UserControl
                 DescriptionText = _jobDescription
             };
 
-            var score = await _ghostScorer.ScoreAsync(posting);
+            var score = await _ghostScorer.ScoreAsync(posting, ct);
             // Held so the score in front of the user travels with the submit;
             // the log and the ledger record what the decision was made against.
             _ghostScore = score;
@@ -173,6 +210,7 @@ public partial class ApplyView : UserControl
         if (_tailored == null) return;
 
         BtnExecute.IsEnabled = false;
+        var token = BeginFlow();
 
         try
         {
@@ -188,7 +226,7 @@ public partial class ApplyView : UserControl
 
             var log = await _orchestrator.SubmitApplicationAsync(
                 _tailored.Id, mode, RequestSubmitConfirmationAsync, snapshot,
-                onDuplicateDetected: RequestDuplicateOverrideAsync);
+                onDuplicateDetected: RequestDuplicateOverrideAsync, ct: token);
 
             StatusText.Text = log.Status switch
             {
@@ -209,6 +247,11 @@ public partial class ApplyView : UserControl
                 _ => Red
             };
         }
+        catch (OperationCanceledException)
+        {
+            StatusText.Text = "Fill cancelled. The half-filled form stays in the browser; rerun when ready.";
+            StatusText.Foreground = Yellow;
+        }
         catch (Exception ex)
         {
             StatusText.Text = $"Something went wrong: {ex.Message}";
@@ -218,6 +261,7 @@ public partial class ApplyView : UserControl
         {
             ConfirmPanel.Visibility = Visibility.Collapsed;
             BtnExecute.IsEnabled = true;
+            EndFlow();
         }
     }
 

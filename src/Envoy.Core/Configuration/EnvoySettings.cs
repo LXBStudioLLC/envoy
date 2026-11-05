@@ -51,6 +51,15 @@ public class EnvoySettings
     /// at submit time in either case.
     /// </summary>
     public int DuplicateApplyWindowDays { get; set; } = 0;
+
+    /// <summary>
+    /// Hard cap on one LLM completion used for tailoring, in seconds
+    /// (APP-03). Local providers have no completion timeout of their own —
+    /// without this cap a hung local model froze the whole apply flow
+    /// indefinitely. On timeout, tailoring falls back to the original resume
+    /// (safety-flagged) instead of hanging.
+    /// </summary>
+    public int LLMCompletionTimeoutSeconds { get; set; } = 180;
     public int TypingSpeedVariance { get; set; } = 35;
     public int MousePathSteps { get; set; } = 25;
     public double RelocationConfidenceThreshold { get; set; } = 0.75;
