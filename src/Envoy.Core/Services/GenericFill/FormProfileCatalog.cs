@@ -41,7 +41,12 @@ public static class FormFieldPrompts
     /// </summary>
     public static bool QuestionLikely(string? label, string type)
     {
-        if (FormFieldInfo.FillableTypes.Contains(type) is false)
+        // Checkbox/radio/select eligibility questions ("Are you 18+", "US
+        // citizen") carry stored answers too — their text is what the bank
+        // matches. Text/textarea guesses stay keyword-based.
+        if (type is "checkbox" or "radio")
+            return (label ?? "").Length >= 4;
+        if (type is not "select" and not "textarea" and not "text" and not "email" and not "tel" and not "url" and not "number")
             return false;
 
         var l = (label ?? "").ToLowerInvariant();
@@ -62,7 +67,7 @@ public static class FormFieldPrompts
     public static (string Prompt, string System) BuildPrompt(
         IReadOnlyList<FormFieldInfo> fields,
         MasterProfile profile,
-        IReadOnlyList<(int Slot, int BankId, AnswerBankEntry Entry, string LiveLabel)> candidates)
+        IReadOnlyList<FormFieldMapper.SlotCandidate> candidates)
     {
         var system =
             "You are a careful job-application form filler. You map form fields to the user's own data. " +
@@ -71,7 +76,7 @@ public static class FormFieldPrompts
             "2. For one-off questions with no stored answer and no profile field, return action 'needs_human'.\n" +
             "3. Salary expectations, work authorization, visa/sponsorship, race/gender/veteran/disability (EEO), references: ALWAYS 'needs_human' unless a stored answer directly answers that exact question.\n" +
             "4. 'select' value_source must be the EXACT option text from the field's options list.\n" +
-            "5. 'toggle' value_source must be 'pf:true' or 'pf:false'.\n" +
+            "5. For checkbox/radio fields a stored answer normalizes to a clicked state: use '#<slot>' and the answer must clearly read yes/no.\n" +
             "6. Skip fields that are already visibly pre-filled with the user's data.\n" +
             "7. Output strict JSON: {\"fields\":[{\"index\":N,\"action\":\"fill|select|toggle|upload|skip|needs_human\",\"value_source\":\"...\",\"note\":\"short reason\"}]}";
 

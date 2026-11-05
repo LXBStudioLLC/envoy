@@ -15,6 +15,7 @@ public sealed class GenericFormFiller
     private readonly IFormFieldActuator _actuator;
     private readonly FormFieldMapper _mapper;
     private readonly ILogger<GenericFormFiller>? _log;
+    private IReadOnlyList<FormFieldMapper.SlotCandidate> _slots = Array.Empty<FormFieldMapper.SlotCandidate>();
 
     public GenericFormFiller(IFormFieldEnumerator enumerator, IFormFieldActuator actuator,
         FormFieldMapper mapper, ILogger<GenericFormFiller>? log = null)
@@ -42,7 +43,7 @@ public sealed class GenericFormFiller
             return new GenericFillResult { FieldCount = 0, FilledCount = 0, Notes = new[] { "No fillable form fields were found on this page." } };
         }
 
-        var (plans, error) = await _mapper.MapAsync(fields, profile, ct);
+        var (plans, slots, error) = await _mapper.MapAsync(fields, profile, ct);
         if (error is not null)
         {
             _log?.LogWarning("Generic fill aborted: mapping failed ({Error})", error);
@@ -70,7 +71,14 @@ public sealed class GenericFormFiller
             {
                 case FieldPlanAction.Fill:
                     {
-                        var value = FormProfileCatalog.Resolve(ExtractSource(plan.ValueSource), profile);
+                        string? value;
+                        if (plan.ValueSource is not null && plan.ValueSource.StartsWith("#", StringComparison.Ordinal)
+                            && int.TryParse(plan.ValueSource[1..], out var fillSlot)
+                            && fillSlot < slots.Count)
+                            value = slots[fillSlot].Text; // stored answer text, pre-matched to the question label
+                        else
+                            value = FormProfileCatalog.Resolve(ExtractSource(plan.ValueSource), profile);
+
                         if (value is not null)
                         {
                             if (await _actuator.FillTextAsync(field.Selector, value, ct))
@@ -109,8 +117,35 @@ public sealed class GenericFormFiller
 
                 case FieldPlanAction.Toggle:
                     {
-                        var want = string.Equals(plan.ValueSource, "pf:true", StringComparison.OrdinalIgnoreCase);
-                        if (await _actuator.SetCheckedAsync(field.Selector, want, ct))
+                        // pf:true / pf:false directly, or a bank slot whose
+                        // stored answer pre-normalized to a truth value at
+                        // candidate build. Prose answers were never slotted,
+                        // so prose never clicks.
+                        bool? want;
+                        if (plan.ValueSource?.ToLowerInvariant() is "pf:true" or "pf:false")
+                        {
+                            want = plan.ValueSource.EndsWith("true", StringComparison.OrdinalIgnoreCase);
+                        }
+                        else if (plan.ValueSource is not null
+                            && plan.ValueSource.StartsWith("#", StringComparison.Ordinal)
+                            && int.TryParse(plan.ValueSource[1..], out var toggleSlot)
+                            && toggleSlot < slots.Count)
+                        {
+                            want = slots[toggleSlot].Truth;
+                        }
+                        else
+                        {
+                            want = null;
+                        }
+
+                        if (want is null)
+                        {
+                            needsHuman.Add(field.Label + " (stored answer does not read as yes/no)");
+                            notes.Add($"toggle unresolved: {field.Label}");
+                            break;
+                        }
+
+                        if (await _actuator.SetCheckedAsync(field.Selector, want.Value, ct))
                             filled++;
                         else
                             needsHuman.Add(field.Label + " (control not found)");
@@ -154,4 +189,15 @@ public sealed class GenericFormFiller
         valueSource?.StartsWith("pf:", StringComparison.OrdinalIgnoreCase) == true
             ? valueSource[3..]
             : valueSource ?? string.Empty;
+
+    /// <summary>
+    /// Normalizes a stored bank answer ("Yes", "true", "1", "I agree" style
+    /// affirmatives) into a checkbox truth value. Anything that does not read
+    /// as an unambiguous yes/no returns null — prose never becomes a click.
+    /// </summary>
+    /// <summary>
+    /// Normalizes a stored bank answer ("Yes", "true", "1", "I agree" style
+    /// affirmatives) into a checkbox truth value. Anything that does not read
+    /// as an unambiguous yes/no returns null — prose never becomes a click.
+    /// </summary>
 }
