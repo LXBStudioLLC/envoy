@@ -23,6 +23,7 @@ public partial class ApplyView : UserControl
     private TaskCompletionSource<bool>? _confirmTcs;
     private CancellationTokenSource? _flowCts;
     private bool _tailoringInFlight;
+    private bool _flowRunning;
 
     /// <summary>APP-02: set when the posting arrived from discovery, so tailoring
     /// runs on the already-known description instead of re-scraping.</summary>
@@ -47,7 +48,19 @@ public partial class ApplyView : UserControl
     /// loaded straight from the store (no LLM, no scrape), carried ghost
     /// score displayed, result panel ready — the user just hits FILL.
     /// </summary>
-    public async void LoadPreparedApplication(Guid tailoredProfileId, GhostScoreSnapshot? snapshot)
+    public void LoadPreparedApplication(Guid tailoredProfileId, GhostScoreSnapshot? snapshot)
+    {
+        if (_flowRunning)
+        {
+            StatusText.Text = "A flow is already running. Wait for it (or cancel) first.";
+            StatusText.Foreground = Yellow;
+            return;
+        }
+
+        _ = LoadPreparedApplicationCoreAsync(tailoredProfileId, snapshot);
+    }
+
+    private async Task LoadPreparedApplicationCoreAsync(Guid tailoredProfileId, GhostScoreSnapshot? snapshot)
     {
         try
         {
@@ -137,6 +150,15 @@ public partial class ApplyView : UserControl
     /// </summary>
     public void LoadFromDiscovery(Envoy.GhostDetection.Models.JobPosting posting, GhostScoreSnapshot? snapshot)
     {
+        // APP-16 audit fix: a running flow owns this view — a second entry
+        // (discovery or manual) would stomp state mid-flight.
+        if (_flowRunning)
+        {
+            StatusText.Text = "A flow is already running. Wait for it (or cancel) before starting a new one.";
+            StatusText.Foreground = Yellow;
+            return;
+        }
+
         SetProfileId(_profileId); // resets whatever the previous flow left behind
 
         var known = ToKnownPosting(posting);
@@ -271,9 +293,13 @@ public partial class ApplyView : UserControl
 
     // A running tailoring or fill is cancellable. The token flows through the
     // orchestrator into the LLM completion (linked token) and the CDP commands
-    // (waits honor it), so a hung model or stuck page can no longer wedge the view.
+    // (waits honor it), so a hung model or stuck page can no longer wedge the
+    // view. APP-16 audit fix: the flag latches — a second flow (button handler,
+    // discovery tap, queue APPLY NOW) is refused by the entry points instead of
+    // silently disposing the first flow's cancellation source.
     private CancellationToken BeginFlow()
     {
+        _flowRunning = true;
         _flowCts?.Dispose();
         _flowCts = new CancellationTokenSource();
         BtnCancelFlow.Visibility = Visibility.Visible;
@@ -285,6 +311,7 @@ public partial class ApplyView : UserControl
     {
         BtnCancelFlow.IsEnabled = false;
         BtnCancelFlow.Visibility = Visibility.Collapsed;
+        _flowRunning = false;
         _flowCts?.Dispose();
         _flowCts = null;
     }
@@ -299,6 +326,13 @@ public partial class ApplyView : UserControl
 
     private async void BtnInitiate_Click(object sender, RoutedEventArgs e)
     {
+        if (_flowRunning)
+        {
+            StatusText.Text = "A flow is already running. Wait for it (or cancel) first.";
+            StatusText.Foreground = Yellow;
+            return;
+        }
+
         var jobUrl = TxtJobUrl.Text?.Trim() ?? "";
         if (string.IsNullOrWhiteSpace(jobUrl))
         {
@@ -422,9 +456,10 @@ public partial class ApplyView : UserControl
 
     private async void BtnExecute_Click(object sender, RoutedEventArgs e)
     {
-        if (_tailored == null) return;
+        if (_tailored == null || _flowRunning) return;
 
         BtnExecute.IsEnabled = false;
+        BtnInitiate.IsEnabled = false;
         var token = BeginFlow();
 
         var modeLabel = (CmbMode.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Safe";

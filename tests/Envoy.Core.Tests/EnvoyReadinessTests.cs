@@ -35,7 +35,7 @@ public sealed class EnvoyReadinessTests
         Assert.All(report.Steps, s => Assert.False(s.Complete));
         Assert.All(report.Steps, s => Assert.False(string.IsNullOrWhiteSpace(s.Fix)));
         Assert.Contains(report.Steps, s => s.Name == "Profile imported" && s.Fix.Contains("Dashboard"));
-        Assert.Contains(report.Steps, s => s.Name == "LLM reachable" && s.Fix.Contains("Ollama"));
+        Assert.Contains(report.Steps, s => s.Name == "LLM provider configured" && s.Fix.Contains("Ollama"));
     }
 
     [Fact]

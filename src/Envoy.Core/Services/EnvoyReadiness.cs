@@ -45,8 +45,8 @@ public static class EnvoyReadiness
                 "Drop a PDF on the Dashboard — it becomes your profile."));
 
         steps.Add(llmConnected
-            ? new ReadinessStep("LLM reachable", true, "a provider responds", "")
-            : new ReadinessStep("LLM reachable", false, "no provider answers",
+            ? new ReadinessStep("LLM provider configured", true, "a provider is set up in AI MODELS", "")
+            : new ReadinessStep("LLM provider configured", false, "none is set up",
                 "Install Ollama (or set a cloud key in AI MODELS) so tailoring can run."));
 
         steps.Add(browserDebug

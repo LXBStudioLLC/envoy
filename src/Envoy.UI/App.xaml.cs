@@ -58,7 +58,10 @@ public partial class App
                 services.AddEnvoyCore();
                 services.AddEnvoyGhostDetection();
                 services.AddEnvoyDiscovery();
-                services.AddScoped<IResumePdfGenerator, Envoy.Assets.Pdf.ResumePdfGenerator>();
+                // APP-16 audit fix: singleton, not scoped — the generator is
+                // consumed by the singleton ApplicationOrchestrator (a scoped
+                // registration there was a captive-dependency trap).
+                services.AddSingleton<IResumePdfGenerator, Envoy.Assets.Pdf.ResumePdfGenerator>();
                 services.AddSingleton<MainWindow>();
                 services.AddSingleton<ScoreboardView>();
                 services.AddSingleton<DashboardView>();
