@@ -266,7 +266,9 @@ public partial class BrowserSelectionView : UserControl
     {
         TxtDrainWindowStart.Text = _settings.FullAutoWindowStartHour?.ToString() ?? "";
         TxtDrainWindowEnd.Text = _settings.FullAutoWindowEndHour?.ToString() ?? "";
-        DrainWindowStatusText.Foreground = Gray;
+
+        // No color here: the Loaded path keeps the XAML's gray, and
+        // SaveDrainWindowResult colors the save feedback itself.
 
         DrainWindowStatusText.Text = (_settings.FullAutoWindowStartHour, _settings.FullAutoWindowEndHour) switch
         {
@@ -280,12 +282,17 @@ public partial class BrowserSelectionView : UserControl
     private bool SaveDrainWindowResult(string successMessage)
     {
         var saved = _settings.Save();
-        DrainWindowStatusText.Foreground = saved ? Green : Yellow;
         RefreshDrainWindow();
-        if (!saved)
-            DrainWindowStatusText.Text = "Applied for this session — settings.json was locked, so the change was not stored.";
-        else
+        if (saved)
+        {
             DrainWindowStatusText.Text = successMessage;
+            DrainWindowStatusText.Foreground = Green;
+        }
+        else
+        {
+            DrainWindowStatusText.Text = "Applied for this session — settings.json was locked, so the change was not stored.";
+            DrainWindowStatusText.Foreground = Yellow;
+        }
         return saved;
     }
 

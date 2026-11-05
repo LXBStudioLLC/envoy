@@ -463,8 +463,56 @@ public sealed class ApplicationQueueServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task NightOwl_TrustedHostWithoutFullAutoEnabled_DoesNotDrain()
+    public async Task NightOwl_ManualFlowHoldsTheBrowser_DrainStandsDown()
     {
+        // The human goes first: while a manual fill/tailor drives the shared
+        // browser (flag set by the Apply view), the drain never submits — the
+        // row stays parked, nothing moves; clearing the flag drains normally.
+        var settings = new EnvoySettings
+        {
+            FullAutoEnabled = true,
+            FullAutoTrustedHosts = { "boards.greenhouse.io" }
+        };
+        var gate = new QueueFullAutoGate(
+            new ApplicationLogRepository(_factory, Mock.Of<ILogger<ApplicationLogRepository>>()), () => settings);
+        var submitCalls = 0;
+        var submitter = new StubSubmitter((_, log) =>
+        {
+            Interlocked.Increment(ref submitCalls);
+            log.VerifiedSubmission = true;
+            return (log, null, false);
+        });
+        var auto = new ApplicationQueueService(_repo, _preparer, Mock.Of<ILogger<ApplicationQueueService>>(),
+            () => settings, submitter, gate);
+
+        _preparer.Handler = _ => Task.FromResult(Guid.NewGuid());
+        await auto.EnqueueAsync(Item("k-stall", "https://boards.greenhouse.io/acme/jobs/903", "Acme"), autoStart: false);
+        var item = (await _repo.GetAllAsync()).Single();
+
+        // The flag is set BEFORE the prepare pass too: even the submit consult
+        // at the end of ProcessItemAsync stands down when a manual flow runs.
+        auto.ManualBrowserFlowActive = true;
+        var now = new DateTime(2026, 11, 5, 23, 0, 0, DateTimeKind.Utc);
+        await auto.ProcessItemAsync(item, now, CancellationToken.None);
+
+        Assert.Equal(QueueItemStatus.AppReady, (await _repo.GetAllAsync()).Single().Status);
+        Assert.Equal(0, Interlocked.CompareExchange(ref submitCalls, 0, 0));
+
+        Assert.Null(await auto.DrainDueAsync(now, CancellationToken.None));
+        Assert.Equal(0, Interlocked.CompareExchange(ref submitCalls, 0, 0));
+        Assert.Equal(QueueItemStatus.AppReady, (await _repo.GetAllAsync()).Single().Status);
+
+        auto.ManualBrowserFlowActive = false;
+        var drained = await auto.DrainDueAsync(now, CancellationToken.None);
+        Assert.NotNull(drained);
+        var row = (await _repo.GetAllAsync()).Single();
+        Assert.Equal(QueueItemStatus.Submitted, row.Status);
+        Assert.Equal(1, Interlocked.CompareExchange(ref submitCalls, 0, 0));
+        Assert.NotNull(row.UpdatedAt); // queue transitions stamp their truth
+    }
+
+    [Fact]
+    public async Task NightOwl_TrustedHostWithoutFullAutoEnabled_DoesNotDrain()    {
         // The master switch is off: a parked row must never be released, hour
         // or no hour — the drain respects the same policy the gate does.
         var settings = new EnvoySettings
