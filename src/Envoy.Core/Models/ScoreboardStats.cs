@@ -16,7 +16,20 @@ public record ScoreboardStats(
     int Responses,
     double? ResponseRatePercent,
     int StreakDays,
-    IReadOnlyList<DodgeReceipt> RecentDodges);
+    IReadOnlyList<DodgeReceipt> RecentDodges,
+
+    // ── APP-14: verified-delivery stats ──────────────────────────────
+    /// <summary>Submissions whose post-submit verification passed. The headline number: these demonstrably reached a live ATS.</summary>
+    int SubmissionsVerified,
+
+    /// <summary>Completed submissions where the verify block could not confirm (never counted as verified).</summary>
+    int SubmissionsUnverified,
+
+    /// <summary>Verifying or verified submissions in the last 7 local days.</summary>
+    int SubmissionsThisWeek,
+
+    /// <summary>Verified submissions per UTC day (for the weekly distribution view).</summary>
+    IReadOnlyList<VerifiedSubmissionsPerDay> VerifiedPerDay);
 
 /// <summary>
 /// One dodged posting with the evidence that was on screen when the user
@@ -30,3 +43,6 @@ public record DodgeReceipt(
     double? RiskScore,
     string? Evidence,
     string JobUrl);
+
+/// <summary>One UTC day bucket, for the weekly verified-submissions distribution.</summary>
+public record VerifiedSubmissionsPerDay(string Day, int Count);

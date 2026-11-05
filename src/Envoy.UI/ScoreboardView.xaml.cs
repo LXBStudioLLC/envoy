@@ -58,6 +58,22 @@ public partial class ScoreboardView : UserControl
         SurfacedValue.Text = stats.GhostsSurfaced.ToString();
 
         ContextLine.Text = $"Screened {stats.PostingsScreened} posting{(stats.PostingsScreened == 1 ? "" : "s")}, sent {stats.Applications} application{(stats.Applications == 1 ? "" : "s")}.";
+
+        // APP-14: verified-delivery strip. "Verified" means the post-submit
+        // check passed; unverified sends are stated, never folded in.
+        var totalSends = stats.SubmissionsVerified + stats.SubmissionsUnverified;
+        if (totalSends > 0)
+        {
+            DeliveryLine.Text =
+                $"Verified submissions: {stats.SubmissionsVerified}/{totalSends} (this week: {stats.SubmissionsThisWeek}). " +
+                (stats.SubmissionsUnverified > 0
+                    ? $"{stats.SubmissionsUnverified} went out but the delivery check couldn't confirm them."
+                    : "Every send confirmed.");
+        }
+        else
+        {
+            DeliveryLine.Text = "";
+        }
         ColdStartLabel.Visibility = ledgerEmpty ? Visibility.Visible : Visibility.Collapsed;
 
         if (stats.SubmitsCompleted == 0)
