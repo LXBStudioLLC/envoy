@@ -280,6 +280,94 @@ public interface IJobEventRepository
     Task<int> RecordSightingsAsync(IReadOnlyList<JobEvent> sightings, CancellationToken ct = default);
 }
 
+// ── APP-07: the application queue ────────────────────────────────────────
+
+public interface IApplicationQueueRepository
+{
+    /// <summary>Persists a new queue item. Returns false when the posting is already queued (same PostingKey still Queued/Preparing/AppReady).</summary>
+    Task<bool> AddAsync(QueuedApplication item, CancellationToken ct = default);
+    Task<List<QueuedApplication>> GetAllAsync(CancellationToken ct = default);
+    Task<QueuedApplication?> GetNextQueuedAsync(Guid masterProfileId, CancellationToken ct = default);
+    Task UpdateAsync(QueuedApplication item, CancellationToken ct = default);
+    Task RemoveAsync(Guid id, CancellationToken ct = default);
+    Task<bool> HasActiveKeyAsync(string postingKey, CancellationToken ct = default);
+}
+
+public class ApplicationQueueRepository : IApplicationQueueRepository
+{
+    private readonly IDbContextFactory<EnvoyDbContext> _factory;
+    private readonly ILogger<ApplicationQueueRepository> _log;
+
+    public ApplicationQueueRepository(IDbContextFactory<EnvoyDbContext> factory, ILogger<ApplicationQueueRepository> log)
+    {
+        _factory = factory;
+        _log = log;
+    }
+
+    private static readonly QueueItemStatus[] ActiveStatuses =
+        { QueueItemStatus.Queued, QueueItemStatus.Preparing, QueueItemStatus.AppReady };
+
+    public async Task<bool> HasActiveKeyAsync(string postingKey, CancellationToken ct = default)
+    {
+        using var db = _factory.CreateDbContext();
+        return await db.QueuedApplications
+            .AnyAsync(q => q.PostingKey == postingKey && ActiveStatuses.Contains(q.Status), ct);
+    }
+
+    public async Task<bool> AddAsync(QueuedApplication item, CancellationToken ct = default)
+    {
+        if (await HasActiveKeyAsync(item.PostingKey, ct))
+        {
+            _log.LogInformation("Queue add skipped: {Key} is already active in the queue", item.PostingKey);
+            return false;
+        }
+
+        using var db = _factory.CreateDbContext();
+        db.QueuedApplications.Add(item);
+        await db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task<List<QueuedApplication>> GetAllAsync(CancellationToken ct = default)
+    {
+        using var db = _factory.CreateDbContext();
+        return await db.QueuedApplications
+            .OrderBy(q => q.Status == QueueItemStatus.Preparing ? 0 : 1)
+            .ThenBy(q => q.CreatedAt)
+            .ToListAsync(ct);
+    }
+
+    public async Task<QueuedApplication?> GetNextQueuedAsync(Guid masterProfileId, CancellationToken ct = default)
+    {
+        using var db = _factory.CreateDbContext();
+        return await db.QueuedApplications
+            .Where(q => q.MasterProfileId == masterProfileId && q.Status == QueueItemStatus.Queued)
+            .OrderBy(q => q.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    public async Task UpdateAsync(QueuedApplication item, CancellationToken ct = default)
+    {
+        using var db = _factory.CreateDbContext();
+        var tracked = await db.QueuedApplications.FirstOrDefaultAsync(q => q.Id == item.Id, ct);
+        if (tracked == null) return;
+
+        db.Entry(tracked).CurrentValues.SetValues(item);
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task RemoveAsync(Guid id, CancellationToken ct = default)
+    {
+        using var db = _factory.CreateDbContext();
+        var item = await db.QueuedApplications.FirstOrDefaultAsync(q => q.Id == id, ct);
+        if (item != null)
+        {
+            db.QueuedApplications.Remove(item);
+            await db.SaveChangesAsync(ct);
+        }
+    }
+}
+
 public class JobEventRepository : IJobEventRepository
 {
     private readonly IDbContextFactory<EnvoyDbContext> _factory;

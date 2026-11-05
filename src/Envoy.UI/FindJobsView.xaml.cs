@@ -19,6 +19,9 @@ public partial class FindJobsView : UserControl
     private readonly GhostScorer _scorer;
     private readonly EnvoySettings _settings;
     private readonly IJobEventRepository _jobEvents;
+    private readonly IApplicationLogRepository _appLogs;
+    private readonly ApplicationQueueService _queue;
+    private readonly IApplicationQueueRepository _queueRepo;
     private List<AtsBoardRef> _boards = new();
     private List<DiscoveredJobItem> _lastItems = new();
 
@@ -26,18 +29,29 @@ public partial class FindJobsView : UserControl
     /// MainWindow routes the carried posting + score into the Apply view.</summary>
     public event Action<DiscoveredJobItem>? ApplyRequested;
 
-    public FindJobsView(JobDiscoveryService discovery, GhostScorer scorer, EnvoySettings settings, IJobEventRepository jobEvents)
+    /// <summary>APP-07: raised for an AppReady queue item ("apply now" from the
+    /// queue panel); routes to a pre-tailored, review-ready session.</summary>
+    public event Action<QueuedApplication>? PreparedApplyRequested;
+
+    public FindJobsView(JobDiscoveryService discovery, GhostScorer scorer, EnvoySettings settings,
+        IJobEventRepository jobEvents, IApplicationLogRepository appLogs, ApplicationQueueService queue,
+        IApplicationQueueRepository queueRepo)
     {
         _discovery = discovery;
         _scorer = scorer;
         _settings = settings;
         _jobEvents = jobEvents;
+        _appLogs = appLogs;
+        _queue = queue;
+        _queueRepo = queueRepo;
         InitializeComponent();
         Loaded += FindJobsView_Loaded;
     }
 
     private void FindJobsView_Loaded(object sender, RoutedEventArgs e)
     {
+        _queue.QueueChanged += QueueChanged;
+        _ = RenderQueuePanelAsync();
         if (!string.IsNullOrEmpty(_settings.BraveSearchApiKeyEncrypted))
         {
             StatusText.Text = "Brave key saved. Leave the box blank to keep using it, or type a new one to replace it.";
@@ -329,6 +343,56 @@ public partial class FindJobsView : UserControl
         ApplyRequested?.Invoke(item);
     }
 
+    // APP-07: queue the carried posting for background tailoring. The
+    // duplicate guard runs at ENQUEUE time (completed applications), and the
+    // queue itself refuses a second active row for the same posting.
+    private async void BtnQueue_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not DiscoveredJobItem item) return;
+
+        if (item.Posting is null || string.IsNullOrWhiteSpace(item.Posting.DescriptionText))
+        {
+            StatusText.Text = $"No description came with this posting ({item.Company}) — open it, copy the link, and apply from the Apply tab.";
+            StatusText.Foreground = Yellow;
+            return;
+        }
+
+        var (enqueued, reason) = await _queue.EnqueueAsync(
+            new QueuedApplication
+            {
+                PostingKey = PostingKey.For(item.Posting.Url, item.Posting.CompanyName, item.Posting.JobTitle),
+                JobUrl = item.Posting.Url ?? string.Empty,
+                JobTitle = item.Posting.JobTitle ?? string.Empty,
+                Company = item.Posting.CompanyName ?? string.Empty,
+                DescriptionText = item.Posting.DescriptionText,
+                GhostRiskScore = item.Snapshot?.RiskScore,
+                GhostRiskBand = item.Snapshot?.Band
+            },
+            duplicateCheck: async q =>
+            {
+                var prior = await LoadAppLogCacheAsync();
+                var (blocked, message) = DuplicateApplyCheck.Evaluate(
+                    prior,
+                    q.JobUrl, q.Company, q.JobTitle, _settings.DuplicateApplyWindowDays, DateTime.UtcNow);
+                return (string?)(blocked ? message : null);
+            });
+
+        StatusText.Text = enqueued
+            ? $"Queued {item.Company} — tailoring runs in the background; watch YOUR QUEUE below."
+            : reason;
+        StatusText.Foreground = enqueued ? Cyan : Yellow;
+    }
+
+    // A tiny cache to avoid re-reading the log table on every queue click in a
+    // rapid burst; refreshed per click anyway (cheap read, correctness first).
+    private List<ApplicationLog>? appLogCache;
+
+    private async Task<List<ApplicationLog>> LoadAppLogCacheAsync()
+    {
+        appLogCache = await _appLogs.GetAllWithoutScreenshotsAsync();
+        return appLogCache;
+    }
+
     private void BtnSkip_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button btn || btn.Tag is not DiscoveredJobItem item) return;
@@ -358,6 +422,78 @@ public partial class FindJobsView : UserControl
             StatusText.Foreground = Cyan;
         }
     }
+
+    // ── APP-07: the queue panel ──────────────────────────────────────────
+
+    private void QueueChanged() =>
+        Dispatcher.BeginInvoke(new Action(async () => await RenderQueuePanelAsync()));
+
+    public sealed record QueueRow(string Label, string Meta, Brush LabelBrush, Visibility ApplyVisibility, QueuedApplication Item);
+
+    private (string Label, Brush Brush) Describe(QueueItemStatus status)
+    {
+        return status switch
+        {
+            QueueItemStatus.Queued => ("QUEUED", GrayBrush),
+            QueueItemStatus.Preparing => ("TAILORING…", Cyan),
+            QueueItemStatus.AppReady => ("READY TO FILL", Green),
+            QueueItemStatus.Submitted => ("SUBMITTED", Green),
+            QueueItemStatus.Failed => ("FAILED", Red),
+            QueueItemStatus.BlockedDuplicate => ("ALREADY APPLIED", Yellow),
+            QueueItemStatus.NeedsCaptcha => ("CAPTCHA", Yellow),
+            QueueItemStatus.Skipped => ("REMOVED", GrayBrush),
+            _ => (status.ToString().ToUpperInvariant(), GrayBrush)
+        };
+    }
+
+    // (kept null-checked: the StatusTo worker bytes can legally be unknown)
+    private static readonly Brush GrayBrush = new SolidColorBrush(Color.FromRgb(0x88, 0x92, 0xA4));
+
+    private async Task RenderQueuePanelAsync()
+    {
+        var items = await _queueRepo.GetAllAsync();
+        var rows = new List<QueueRow>();
+
+        foreach (var item in items
+            .OrderBy(i => i.Status == QueueItemStatus.Preparing ? 0 : 1)
+            .ThenBy(i => i.CreatedAt)
+            .Take(15))
+        {
+            var (statusLabel, brush) = item.Status switch
+            {
+                QueueItemStatus.Queued => ("QUEUED", Gray),
+                QueueItemStatus.Preparing => ("TAILORING…", Cyan),
+                QueueItemStatus.AppReady => ("READY TO FILL", Green),
+                QueueItemStatus.Submitted => ("SUBMITTED", Green),
+                QueueItemStatus.Failed => ("FAILED", Red),
+                QueueItemStatus.BlockedDuplicate => ("ALREADY APPLIED", Yellow),
+                QueueItemStatus.NeedsCaptcha => ("CAPTCHA", Yellow),
+                QueueItemStatus.Skipped => ("REMOVED", Gray),
+                _ => (item.Status.ToString().ToUpperInvariant(), Gray)
+            };
+
+            var note = string.IsNullOrWhiteSpace(item.Note) ? "" : $" — {item.Note}";
+            rows.Add(new QueueRow(
+                statusLabel,
+                $"{item.Company} · {item.JobTitle}{note}",
+                brush,
+                item.Status == QueueItemStatus.AppReady && item.TailoredProfileId is not null
+                    ? Visibility.Visible : Visibility.Collapsed,
+                item));
+        }
+
+        QueueList.ItemsSource = rows;
+        QueuePanel.Visibility = rows.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void BtnQueueFill_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not QueueRow row) return;
+        if (row.Item.Status != QueueItemStatus.AppReady || row.Item.TailoredProfileId is null) return;
+
+        PreparedApplyRequested?.Invoke(row.Item);
+    }
+
 
     private void ShowError(string message)
     {

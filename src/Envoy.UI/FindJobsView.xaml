@@ -144,6 +144,7 @@
                                         <TextBlock Text="{Binding RiskText}" Foreground="#0A0E17" FontSize="11" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}"/>
                                     </Border>
                                     <Button Content="APPLY" Tag="{Binding}" Click="BtnApply_Click" Style="{StaticResource CyberButton}" Padding="14,5" Margin="0,8,0,0" AutomationProperties.Name="Apply to this posting with Envoy"/>
+                                    <Button Content="QUEUE" Tag="{Binding}" Click="BtnQueue_Click" Style="{StaticResource CyberButton}" Padding="14,5" Margin="0,6,0,0" AutomationProperties.Name="Queue this posting for background tailoring"/>
                                     <Button Content="VIEW" Tag="{Binding}" Click="BtnView_Click" Style="{StaticResource CyberButton}" Padding="14,5" Margin="0,6,0,0" AutomationProperties.Name="Open this posting in the browser"/>
                                     <Button Content="SKIP" Tag="{Binding}" Click="BtnSkip_Click" Style="{StaticResource CyberButton}" Padding="14,5" Margin="0,6,0,0" AutomationProperties.Name="Pass on this posting"/>
                                 </StackPanel>
@@ -152,6 +153,38 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+
+            <!-- APP-07: the application queue panel -->
+            <Border x:Name="QueuePanel" Background="#0D1117" CornerRadius="3" BorderBrush="#1A3A4A" BorderThickness="1" Padding="16" Margin="0,16,0,0" Visibility="Collapsed">
+                <Border.Effect>
+                    <DropShadowEffect Color="#39FF14" BlurRadius="10" ShadowDepth="0" Opacity="0.12"/>
+                </Border.Effect>
+                <StackPanel>
+                    <TextBlock Text="YOUR QUEUE" Foreground="#39FF14" FontSize="14" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,2"/>
+                    <TextBlock Text="Tailoring runs in the background. READY TO FILL items wait for your one-click fill; the submit gate stays human." Foreground="#5A6678" FontSize="10" FontFamily="{StaticResource CyberFontBody}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                    <ItemsControl x:Name="QueueList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Background="{Binding LabelBrush}" CornerRadius="2" Padding="8,2" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Label}" Foreground="#0A0E17" FontSize="10" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}"/>
+                                    </Border>
+                                    <TextBlock Grid.Column="1" Text="{Binding Meta}" Foreground="#8892A4" FontSize="10" FontFamily="{StaticResource CyberFontBody}" TextWrapping="Wrap" Margin="8,0,8,0"/>
+                                    <Button Grid.Column="2" Content="APPLY NOW" Tag="{Binding}" Click="BtnQueueFill_Click"
+                                            Style="{StaticResource CyberButton}" Padding="10,3"
+                                            Visibility="{Binding ApplyVisibility}"
+                                            AutomationProperties.Name="Open this tailored application for review"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

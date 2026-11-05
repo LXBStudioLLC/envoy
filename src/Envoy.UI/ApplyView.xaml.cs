@@ -15,6 +15,7 @@ public partial class ApplyView : UserControl
     private readonly GhostScorer _ghostScorer;
     private readonly EnvoySettings _settings;
     private readonly IProfileRepository _profiles;
+    private readonly ITailoredProfileRepository _tailoredRepo;
     private Guid _profileId;
     private TailoredProfile? _tailored;
     private string _jobDescription = "";
@@ -28,14 +29,59 @@ public partial class ApplyView : UserControl
     private KnownPosting? _discoveryPosting;
 
     public ApplyView(ApplicationOrchestrator orchestrator, GhostScorer ghostScorer, EnvoySettings settings,
-        IProfileRepository profiles)
+        IProfileRepository profiles, ITailoredProfileRepository tailoredRepo)
     {
         _orchestrator = orchestrator;
         _ghostScorer = ghostScorer;
         _settings = settings;
         _profiles = profiles;
+        _tailoredRepo = tailoredRepo;
         InitializeComponent();
         Loaded += (_, _) => RefreshModeOptions();
+    }
+
+    // ── APP-07: open an AppReady queue item for review ───────────────────
+
+    /// <summary>
+    /// A prepared, review-ready application from the queue: tailored profile
+    /// loaded straight from the store (no LLM, no scrape), carried ghost
+    /// score displayed, result panel ready — the user just hits FILL.
+    /// </summary>
+    public async void LoadPreparedApplication(Guid tailoredProfileId, GhostScoreSnapshot? snapshot)
+    {
+        try
+        {
+            var tailored = await _tailoredRepo.GetByIdAsync(tailoredProfileId);
+            if (tailored is null)
+            {
+                StatusText.Text = "This queued application's tailored profile is gone — re-queue the posting.";
+                StatusText.Foreground = Red;
+                return;
+            }
+
+            SetProfileId(tailored.MasterProfileId); // full reset first
+            _tailored = tailored;
+            _jobDescription = tailored.JobDescriptionText ?? string.Empty;
+            TxtJobUrl.Text = tailored.JobUrl;
+
+            if (snapshot is not null && Enum.TryParse<RiskBand>(snapshot.Band, out var band))
+            {
+                _ghostScore = new GhostScore
+                {
+                    RiskScore = snapshot.RiskScore,
+                    Band = band,
+                    TopEvidence = snapshot.TopEvidence ?? Array.Empty<string>()
+                };
+                ShowGhostSnapshot(_ghostScore);
+            }
+
+            ShowResult();
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Something went wrong: {ex.Message}";
+            StatusText.Foreground = Red;
+        }
     }
 
     // Only offers the Stealth execution mode when stealth input is enabled (the guarded

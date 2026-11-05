@@ -54,6 +54,12 @@ public static class ServiceRegistration
         services.AddSingleton<TailoringEngine>();
         services.AddSingleton<ApplicationOrchestrator>();
 
+        // APP-07: the application queue — repo, orchestrator-backed preparer,
+        // and the single-flight worker (started lazily on first enqueue).
+        services.AddSingleton<IApplicationQueueRepository, ApplicationQueueRepository>();
+        services.AddSingleton<IApplicationPreparer, OrchestratorApplicationPreparer>();
+        services.AddSingleton<ApplicationQueueService>();
+
         return services;
     }
 }
