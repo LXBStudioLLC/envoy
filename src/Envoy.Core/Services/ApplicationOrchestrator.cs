@@ -174,6 +174,15 @@ public class ApplicationOrchestrator
         return new PreparedApplication(tailored, jobDescription);
     }
 
+    /// <summary>APP-16: the debug port finally read from settings (was dead config).</summary>
+    internal int DebugPortOrDefault()
+    {
+        var raw = _settings.ChromeDebuggingPort;
+        if (int.TryParse(raw, out var port) && port is > 0 and <= 65535)
+            return port;
+        return 9222;
+    }
+
     /// <summary>
     /// Extracted from PrepareApplicationAsync: scrape a JD through the CDP
     /// browser (with the session-continuity guarantees of APP-03), returning
@@ -182,9 +191,9 @@ public class ApplicationOrchestrator
     private async Task<string> ScrapeJobDescriptionAsync(string jobUrl, CancellationToken ct)
     {
         var browserType = _browserLauncher.GetSelectedBrowserType() ?? BrowserType.Chrome;
-        if (!await _browserLauncher.IsRunningWithDebuggingAsync(browserType))
+        if (!await _browserLauncher.IsRunningWithDebuggingAsync(browserType, DebugPortOrDefault()))
         {
-            var launched = await _browserLauncher.LaunchAsync(browserType);
+            var launched = await _browserLauncher.LaunchAsync(browserType, DebugPortOrDefault());
             if (!launched)
             {
                 throw new InvalidOperationException("Could not launch browser. Please ensure a supported browser is installed and try again.");
@@ -192,7 +201,9 @@ public class ApplicationOrchestrator
         }
 
         string jobDescription = "";
-        var connected = await _browser.ConnectAsync(ct: ct);
+        if (!int.TryParse(_settings.ChromeDebuggingPort, out var debugPort) || debugPort <= 0)
+            debugPort = 9222;
+        var connected = await _browser.ConnectAsync(debugPort, ct);
 
         if (!connected)
         {
@@ -307,9 +318,9 @@ public class ApplicationOrchestrator
         {
             // Ensure browser is running
             var browserType = _browserLauncher.GetSelectedBrowserType() ?? BrowserType.Chrome;
-            if (!await _browserLauncher.IsRunningWithDebuggingAsync(browserType))
+            if (!await _browserLauncher.IsRunningWithDebuggingAsync(browserType, DebugPortOrDefault()))
             {
-                var launched = await _browserLauncher.LaunchAsync(browserType);
+                var launched = await _browserLauncher.LaunchAsync(browserType, DebugPortOrDefault());
                 if (!launched)
                 {
                     log.Status = ApplicationStatus.Failed;

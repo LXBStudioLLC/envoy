@@ -25,7 +25,12 @@ public static class ServiceRegistration
 
         services.AddSingleton<HardwareProfiler>();
         services.AddSingleton<SafetyService>();
-        services.AddSingleton<HumanizationService>();
+        // APP-16: the typing-variance / mouse-path settings knobs actually feed the service now.
+        services.AddSingleton(sp =>
+        {
+            var settings = sp.GetRequiredService<EnvoySettings>();
+            return new HumanizationService(settings.TypingSpeedVariance, settings.MousePathSteps);
+        });
         services.AddSingleton<CdpBrowserService>();
         services.AddSingleton<IBrowserLauncher, BrowserLauncher>();
 
@@ -47,8 +52,15 @@ public static class ServiceRegistration
 
         services.AddSingleton<TemplateEngine>(sp =>
             new TemplateEngine(
-                Path.Combine(AppContext.BaseDirectory, "Templates"),
-                sp.GetRequiredService<IElementLocator>()));
+                ResolveTemplatesDir(sp), sp.GetRequiredService<IElementLocator>()));
+
+        static string ResolveTemplatesDir(IServiceProvider sp)
+        {
+            var settings = sp.GetRequiredService<EnvoySettings>();
+            if (!string.IsNullOrWhiteSpace(settings.TemplatesPath)) // APP-16: knob now wired
+                return settings.TemplatesPath;
+            return Path.Combine(AppContext.BaseDirectory, "Templates");
+        }
 
         services.AddSingleton<ResumeParserService>();
         services.AddSingleton<TailoringEngine>();

@@ -4,11 +4,23 @@ public record Point(double X, double Y);
 
 public class HumanizationService
 {
+    private readonly int _typingVariance;
+    private readonly int _mousePathBaseSteps;
+
+    /// <summary>
+    /// APP-16: the settings knobs finally wired. Defaults match the previous
+    /// hard-coded values (variance 35, path steps 15–20); a settings value
+    /// shifts the base path-step count and the typing variance.
+    /// </summary>
+    public HumanizationService(int typingVariance = 35, int mousePathBaseSteps = 15)
+    {
+        _typingVariance = Math.Clamp(typingVariance, 0, 150);
+        _mousePathBaseSteps = Math.Clamp(mousePathBaseSteps, 5, 120);
+    }
+
     public int GetTypingDelay()
     {
-        var baseDelay = 85;
-        var variance = 35;
-        return Math.Max(30, baseDelay + (int)(variance * NormalRandom()));
+        return Math.Max(30, 85 + (int)(_typingVariance * NormalRandom()));
     }
 
     public int GetClickDelay()
@@ -38,7 +50,7 @@ public class HumanizationService
     public List<Point> GenerateMousePath(double fromX, double fromY, double toX, double toY)
     {
         var points = new List<Point>();
-        var steps = 15 + Random.Shared.Next(0, 20);
+        var steps = _mousePathBaseSteps + Random.Shared.Next(0, Math.Max(1, _mousePathBaseSteps / 2));
 
         var midX = (fromX + toX) / 2;
         var midY = (fromY + toY) / 2;
