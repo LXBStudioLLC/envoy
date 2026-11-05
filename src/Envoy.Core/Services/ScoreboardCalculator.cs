@@ -45,6 +45,28 @@ public static class ScoreboardCalculator
         var responses = submits.Count(s => s.Status == ApplicationStatus.Completed
                                            && s.Outcome != ResponseOutcome.None);
 
+        // ── APP-14: verified delivery ─────────────────────────────────────
+        // "Applications sent" is what the competition reports; "applications
+        // that demonstrably landed in a live ATS" is what we do. Unverified
+        // completions stay honest and are shown distinct, never folded into
+        // the verified number.
+        var completedList = submits
+            .Where(s => s.Status == ApplicationStatus.Completed)
+            .ToList();
+        var verified = completedList.Count(s => s.VerifiedSubmission == true);
+        var unverified = completedList.Count(s => s.VerifiedSubmission != true);
+        var verifiedByUtcDay = completedList
+            .Where(s => s.VerifiedSubmission == true && s.CompletedAt is not null)
+            .GroupBy(s => s.CompletedAt!.Value.Date)
+            .Select(g => new VerifiedSubmissionsPerDay(
+                g.Key.ToString("yyyy-MM-dd"), g.Count()))
+            .OrderBy(d => d.Day)
+            .ToList();
+        var nowUtc = nowLocal.ToUniversalTime();
+        var weekAgo = nowUtc.AddDays(-7);
+        var thisWeek = completedList.Count(s =>
+            s.VerifiedSubmission == true && (s.CompletedAt ?? s.StartedAt) >= weekAgo);
+
         return new ScoreboardStats(
             GhostsDodged: dodges.Count,
             HoursSaved: Math.Round(dodges.Count * minutesPerApplication / 60.0, 1),
@@ -58,7 +80,11 @@ public static class ScoreboardCalculator
                 ? Math.Round(100.0 * responses / completed)
                 : null,
             StreakDays: ComputeStreak(events, nowLocal),
-            RecentDodges: receipts);
+            RecentDodges: receipts,
+            SubmissionsVerified: verified,
+            SubmissionsUnverified: unverified,
+            SubmissionsThisWeek: thisWeek,
+            VerifiedPerDay: verifiedByUtcDay);
     }
 
     private static bool IsFlagged(JobEvent e) => e.RiskBand is BandElevated or BandHigh;
