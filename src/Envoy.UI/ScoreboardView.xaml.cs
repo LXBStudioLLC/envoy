@@ -16,15 +16,17 @@ public partial class ScoreboardView : UserControl
     private readonly IApplicationLogRepository _appLogs;
     private readonly EnvoySettings _settings;
     private readonly WarnRefresher _warnRefresher;
+    private readonly PermIndexBuilder _permIndexBuilder;
     private bool _suppressMinutesChanged;
 
     public ScoreboardView(IJobEventRepository jobEvents, IApplicationLogRepository appLogs,
-        EnvoySettings settings, WarnRefresher warnRefresher)
+        EnvoySettings settings, WarnRefresher warnRefresher, PermIndexBuilder permIndexBuilder)
     {
         _jobEvents = jobEvents;
         _appLogs = appLogs;
         _settings = settings;
         _warnRefresher = warnRefresher;
+        _permIndexBuilder = permIndexBuilder;
         InitializeComponent();
         SelectMinutesItem(_settings.MinutesPerApplicationEstimate);
         Loaded += async (_, _) => await RefreshAsync();
@@ -159,22 +161,49 @@ public partial class ScoreboardView : UserControl
     private async void BtnRefreshWarn_Click(object sender, RoutedEventArgs e)
     {
         BtnRefreshWarn.IsEnabled = false;
-        WarnRefreshStatus.Text = "Refreshing WARN notices from public agency pages…";
+        DataRefreshStatus.Text = "Refreshing WARN notices from public agency pages…";
         try
         {
             var result = await _warnRefresher.RefreshAsync();
             var banner = result.Success ? result.Summary : $"Refresh failed: {result.Error}";
             if (result.Notes.Count > 0)
                 banner += " (" + string.Join("; ", result.Notes) + ")";
-            WarnRefreshStatus.Text = banner;
+            DataRefreshStatus.Text = banner;
         }
         catch (Exception ex)
         {
-            WarnRefreshStatus.Text = $"Refresh failed: {ex.Message}";
+            DataRefreshStatus.Text = $"Refresh failed: {ex.Message}";
         }
         finally
         {
             BtnRefreshWarn.IsEnabled = true;
+        }
+    }
+
+    /// <summary>
+    /// Rebuild the PERM filing index from the latest public DOL OFLC
+    /// disclosure file. A large download (~150 MB) parsed in-stream; result
+    /// quality is sanity-gated before the old index is replaced.
+    /// </summary>
+    private async void BtnRefreshPerm_Click(object sender, RoutedEventArgs e)
+    {
+        BtnRefreshPerm.IsEnabled = false;
+        DataRefreshStatus.Text = "Downloading the latest public DOL PERM disclosure file (~150 MB)…";
+        try
+        {
+            var result = await _permIndexBuilder.BuildAsync(new Progress<string>(s =>
+            {
+                DataRefreshStatus.Text = s;
+            }));
+            DataRefreshStatus.Text = result.Success ? result.Summary : $"PERM refresh failed: {result.Error}";
+        }
+        catch (Exception ex)
+        {
+            DataRefreshStatus.Text = $"PERM refresh failed: {ex.Message}";
+        }
+        finally
+        {
+            BtnRefreshPerm.IsEnabled = true;
         }
     }
 

@@ -58,13 +58,33 @@ small; normalization happens at load time in C#.
 Loaded once and cached for the process lifetime. No network access in
 evaluation, ever.
 
-## Refresh cadence — future work (`PermIndexBuilder`)
+## Refreshing the index (shipped: `PermIndexBuilder`)
 
 DOL publishes decisions on a quarterly-ish cadence, and because PERM cases are
 typically decided 8–12 months after filing, the "received in the last 12
-months" slice of any snapshot ages exactly as fast as the calendar. A small
-`PermIndexBuilder` data-provider (separate class, never inside
-`EvaluateAsync`, 8-second per-request timeout, graceful failure) can download
-the newest quarterly file, run the same shrink steps, and write the cache file
-under `%LOCALAPPDATA%\Envoy`. Equip a scheduled or on-demand refresh path and
-drop the envelope date so the UI can show index freshness.
+months" slice of any snapshot ages exactly as fast as the calendar.
+`PermIndexBuilder` (`src/Envoy.GhostDetection/Services/PermIndexBuilder.cs`)
+regenerates the index on demand:
+
+- **Candidates, newest first**: `PERM_Disclosure_Data_FY…_Q….xlsx` for the
+  current OFLC fiscal-year quarter and earlier, then the previous fiscal year
+  (the first URL that downloads and passes the sanity gate wins; FY2026 Q3 —
+  the file this seed was cut from — is always in the list).
+- **Download**: streamed straight to a temp file (never buffered whole in
+  RAM), then deleted after parsing either way. dol.gov 403s generic crawler
+  user agents, so the request sends the plain `curl/8.0.1` UA that worked when
+  the seed was cut.
+- **Parse**: a minimal streaming XLSX reader (`ZipArchive` + `XmlReader`, no
+  Excel package dependency) handles shared strings, inline strings, and Excel
+  serial dates. Verified against the real FY2026 Q3 file: 149 MB parsed in
+  ~9 s with flat memory.
+- **Shrink**: filter to `RECEIVED_DATE` within the last 12 months; dedupe on
+  (normalized employer, lowercase title, state) keeping the most recent
+  filing date; sanity gate — fewer than 500 kept rows **rejects** the build
+  rather than writing a bad index.
+- **Write**: the exact envelope format above (positional rows), atomically, to
+  `%LOCALAPPDATA%\Envoy\perm-index.json`, then the in-memory index is swapped
+  so the next posting scores with fresh data. The bundled seed is never touched.
+
+In the app: Scoreboard → **PUBLIC DATA → REFRESH PERM INDEX**. A cadence that
+follows the DOL quarterly release cycle keeps the 12-month window meaningful.

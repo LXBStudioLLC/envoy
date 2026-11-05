@@ -28,6 +28,14 @@ public static class ServiceRegistration
             c.DefaultRequestHeaders.UserAgent.ParseAdd("Envoy/1.0 (+https://github.com/LXBStudioLLC/envoy)");
         });
 
+        // PERM index builder: multi-minute download + parse of a large public
+        // disclosure file; maintenance step, not a signal.
+        services.AddHttpClient<PermIndexBuilder>(c =>
+        {
+            c.Timeout = TimeSpan.FromMinutes(10);
+            c.DefaultRequestHeaders.UserAgent.ParseAdd("Envoy/1.0 (+https://github.com/LXBStudioLLC/envoy)");
+        });
+
         var assembly = Assembly.GetExecutingAssembly();
         var signalTypes = assembly.GetTypes()
             .Where(t => t.IsClass && !t.IsAbstract && typeof(IGhostSignal).IsAssignableFrom(t))
