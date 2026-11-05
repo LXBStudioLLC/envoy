@@ -19,17 +19,27 @@ public partial class ScoreboardView : UserControl
     private readonly PermIndexBuilder _permIndexBuilder;
     private bool _suppressMinutesChanged;
 
+    private readonly ApplicationQueueService _queue;
+    private readonly IApplicationQueueRepository _queueRepo;
+
     public ScoreboardView(IJobEventRepository jobEvents, IApplicationLogRepository appLogs,
-        EnvoySettings settings, WarnRefresher warnRefresher, PermIndexBuilder permIndexBuilder)
+        EnvoySettings settings, WarnRefresher warnRefresher, PermIndexBuilder permIndexBuilder,
+        ApplicationQueueService queue, IApplicationQueueRepository queueRepo)
     {
         _jobEvents = jobEvents;
         _appLogs = appLogs;
         _settings = settings;
         _warnRefresher = warnRefresher;
         _permIndexBuilder = permIndexBuilder;
+        _queue = queue;
+        _queueRepo = queueRepo;
         InitializeComponent();
         SelectMinutesItem(_settings.MinutesPerApplicationEstimate);
-        Loaded += async (_, _) => await RefreshAsync();
+        Loaded += async (_, _) =>
+        {
+            await RefreshAsync();
+            await RenderQueueLineAsync();
+        };
     }
 
     public async Task RefreshAsync()
@@ -64,11 +74,15 @@ public partial class ScoreboardView : UserControl
         var totalSends = stats.SubmissionsVerified + stats.SubmissionsUnverified;
         if (totalSends > 0)
         {
+            var perDay = stats.VerifiedPerDay.Count > 0
+                ? string.Join(", ", stats.VerifiedPerDay.Select(d => $"{d.Day}: {d.Count}"))
+                : "none yet";
             DeliveryLine.Text =
                 $"Verified submissions: {stats.SubmissionsVerified}/{totalSends} (this week: {stats.SubmissionsThisWeek}). " +
                 (stats.SubmissionsUnverified > 0
                     ? $"{stats.SubmissionsUnverified} went out but the delivery check couldn't confirm them."
-                    : "Every send confirmed.");
+                    : "Every send confirmed.") +
+                $" Per day: {perDay}.";
         }
         else
         {
@@ -111,6 +125,26 @@ public partial class ScoreboardView : UserControl
         ApplicationsList.ItemsSource = items;
         NoApplicationsLabel.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
+
+    private async Task RenderQueueLineAsync()
+    {
+        try
+        {
+            var items = await _queueRepo.GetAllAsync();
+            var byStatus = items
+                .Where(q => q.Status is QueueItemStatus.Queued or QueueItemStatus.Preparing or QueueItemStatus.AppReady or QueueItemStatus.NeedsCaptcha)
+                .GroupBy(q => q.Status)
+                .Select(g => $"{g.Key}: {g.Count()}")
+                .ToArray();
+            QueueLine.Text = byStatus.Length > 0
+                ? "Queue — " + string.Join(" · ", byStatus)
+                : "";
+            QueueLine.Visibility = byStatus.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+        catch { /* scoreboard must never crash on queue access */ }
+    }
+
+    
 
     private async void OutcomeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
