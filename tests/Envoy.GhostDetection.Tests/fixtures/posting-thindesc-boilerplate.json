@@ -1,0 +1,18 @@
+// Boilerplate-heavy scenario: the description passes any length check, but over
+// 80% of the text is standard EEO / benefits / legal boilerplate and almost no
+// role-specific content is left.
+// Expected: ThinDescriptionSignal fires Weak with a low score.
+{
+  "Id": "00000000-0000-0000-0000-000000000311",
+  "Source": 0,
+  "CompanyName": "Acme Corp",
+  "JobTitle": "Account Manager",
+  "Location": "Denver, CO",
+  "DescriptionText": "We are hiring an Account Manager for our western region. You will own a portfolio of mid-market clients and coordinate renewals with our customer success team. We are an equal opportunity employer and all qualified applicants will receive consideration for employment without regard to race, color, religion, sex, national origin, disability, or veteran status. We offer a comprehensive benefits package including medical, dental, and vision coverage, retirement plans, paid time off, and employee assistance programs. Employment is contingent upon successful completion of a background check and, where permitted by state law, a drug screen. If you need a reasonable accommodation during the application or hiring process, please let us know and we will work with you to meet your needs. We are committed to diversity and to building an inclusive workplace where everyone can do their best work. To apply, submit your resume and cover letter through our careers page.",
+  "Url": "https://boards.greenhouse.io/acme/jobs/2002",
+  "PostedAtUtc": "2026-10-25T00:00:00Z",
+  "LastUpdatedUtc": "2026-10-25T00:00:00Z",
+  "SalaryText": null,
+  "RawSourceId": "2002",
+  "Extra": {}
+}

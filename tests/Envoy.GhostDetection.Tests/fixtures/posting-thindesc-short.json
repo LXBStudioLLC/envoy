@@ -1,0 +1,17 @@
+// Thin-description scenario: a real-shaped posting whose description is far
+// shorter than any substantive listing would be.
+// Expected: ThinDescriptionSignal fires Weak with a low score.
+{
+  "Id": "00000000-0000-0000-0000-000000000310",
+  "Source": 5,
+  "CompanyName": "Acme Corp",
+  "JobTitle": "Customer Support Representative",
+  "Location": "Remote",
+  "DescriptionText": "We are looking for a Customer Support Representative. Please apply online.",
+  "Url": "https://jobs.ashbyhq.com/acme/2001",
+  "PostedAtUtc": "2026-10-25T00:00:00Z",
+  "LastUpdatedUtc": "2026-10-25T00:00:00Z",
+  "SalaryText": "$40,000 - $55,000",
+  "RawSourceId": "2001",
+  "Extra": {}
+}
