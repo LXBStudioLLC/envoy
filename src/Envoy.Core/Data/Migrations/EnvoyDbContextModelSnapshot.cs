@@ -29,6 +29,9 @@ namespace Envoy.Core.Data.Migrations
                     b.Property<byte[]>("BeforeScreenshot")
                         .HasColumnType("BLOB");
 
+                    b.Property<int?>("FilledFieldCount")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Company")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -59,6 +62,9 @@ namespace Envoy.Core.Data.Migrations
                     b.Property<int>("Outcome")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("RequiredFieldCount")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("SiteTemplateId")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -71,6 +77,12 @@ namespace Envoy.Core.Data.Migrations
 
                     b.Property<Guid>("TailoredProfileId")
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("VerificationNote")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool?>("VerifiedSubmission")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 

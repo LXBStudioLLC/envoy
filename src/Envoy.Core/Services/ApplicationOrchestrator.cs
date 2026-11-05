@@ -325,7 +325,7 @@ public class ApplicationOrchestrator
             // Execute template. The submit step is human-gated in EVERY mode: the
             // final click only fires after explicit approval. Stealth changes how
             // input is typed, never whether the human confirms the submission.
-            await _templates.ExecuteTemplateAsync(template, _browser, tailored, async msg =>
+            var run = await _templates.ExecuteTemplateAsync(template, _browser, tailored, async msg =>
             {
                 log.Status = ApplicationStatus.SafeModeStopped;
                 await _logRepo.UpdateAsync(log, ct);
@@ -341,6 +341,27 @@ public class ApplicationOrchestrator
                 return approved;
             }, ct);
 
+            // ── APP-05: honest completion ───────────────────────────────────
+            log.RequiredFieldCount = run.RequiredTotal;
+            log.FilledFieldCount = run.RequiredTotal - run.RequiredMissing;
+
+            if (run.RequiredMissing > 0 || (run.RequiredTotal > 0 && run.SkippedCount > 0 && run.RequiredTotal == run.RequiredMissing))
+            {
+                // The engine skipped required fields (element missing, unknown
+                // profile field, missing file). A "Completed" here would be a
+                // lie; fail with what actually happened.
+                log.Status = ApplicationStatus.Failed;
+                log.ErrorMessage = $"Filled {run.RequiredTotal - run.RequiredMissing} of {run.RequiredTotal} required fields " +
+                                   $"({run.SkippedCount} step(s) skipped). The page likely changed or the profile is missing data; " +
+                                   "try again, or check the template/profile.";
+                log.VerificationNote = "required-missing: " + run.RequiredMissing;
+
+                // Final screenshot still valuable for diagnosis
+                if (_settings.CaptureScreenshots)
+                    log.AfterScreenshot = await _browser.CaptureScreenshotAsync(ct);
+                return log;
+            }
+
             // Final screenshot (honors the CaptureScreenshots opt-out)
             if (_settings.CaptureScreenshots)
                 log.AfterScreenshot = await _browser.CaptureScreenshotAsync(ct);
@@ -349,6 +370,9 @@ public class ApplicationOrchestrator
                 && log.Status != ApplicationStatus.DeclinedByUser)
             {
                 log.Status = ApplicationStatus.Completed;
+                log.VerifiedSubmission = run.VerifyPassed;
+                if (run.VerifyNote is not null)
+                    log.VerificationNote = run.VerifyNote;
             }
         }
         catch (Exception ex)

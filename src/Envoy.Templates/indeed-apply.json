@@ -19,7 +19,9 @@
         },
         "label_text": "Apply now",
         "text_content": "Apply now",
-        "ancestor_chain": ["div.jobsearch-ViewJobLayout"],
+        "ancestor_chain": [
+          "div.jobsearch-ViewJobLayout"
+        ],
         "position_index": 0
       }
     },
@@ -39,9 +41,13 @@
           "name": "email"
         },
         "label_text": "Email Address",
-        "ancestor_chain": ["div.ia-ApplyFormWrapper", "div.ia-FormField"],
+        "ancestor_chain": [
+          "div.ia-ApplyFormWrapper",
+          "div.ia-FormField"
+        ],
         "position_index": 0
-      }
+      },
+      "required": true
     },
     {
       "action": "upload",
@@ -55,9 +61,13 @@
           "name": "resume"
         },
         "label_text": "Resume",
-        "ancestor_chain": ["div.ia-ApplyFormWrapper", "div.ia-FormField"],
+        "ancestor_chain": [
+          "div.ia-ApplyFormWrapper",
+          "div.ia-FormField"
+        ],
         "position_index": 1
-      }
+      },
+      "required": true
     },
     {
       "action": "conditional_click",
@@ -71,8 +81,13 @@
         },
         "label_text": "Continue",
         "text_content": "Continue",
-        "ancestor_chain": ["div.ia-ApplyFormWrapper"],
-        "siblings_before": ["Email Address", "Resume"],
+        "ancestor_chain": [
+          "div.ia-ApplyFormWrapper"
+        ],
+        "siblings_before": [
+          "Email Address",
+          "Resume"
+        ],
         "position_index": 2
       }
     },
@@ -88,8 +103,12 @@
         },
         "label_text": "Submit",
         "text_content": "Submit Application",
-        "ancestor_chain": ["div.ia-ApplyFormWrapper"],
-        "siblings_before": ["Continue"],
+        "ancestor_chain": [
+          "div.ia-ApplyFormWrapper"
+        ],
+        "siblings_before": [
+          "Continue"
+        ],
         "position_index": 3
       }
     }

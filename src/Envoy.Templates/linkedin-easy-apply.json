@@ -19,7 +19,10 @@
         },
         "label_text": "Apply",
         "text_content": "Apply",
-        "ancestor_chain": ["div.jobs-unified-top-card", "div.jobs-search__job-details"],
+        "ancestor_chain": [
+          "div.jobs-unified-top-card",
+          "div.jobs-search__job-details"
+        ],
         "position_index": 0
       }
     },
@@ -40,9 +43,13 @@
           "name": "email"
         },
         "label_text": "Email Address",
-        "ancestor_chain": ["div.jobs-easy-apply-form", "div.form-section"],
+        "ancestor_chain": [
+          "div.jobs-easy-apply-form",
+          "div.form-section"
+        ],
         "position_index": 0
-      }
+      },
+      "required": true
     },
     {
       "action": "upload",
@@ -56,10 +63,16 @@
           "name": "resume"
         },
         "label_text": "Resume",
-        "ancestor_chain": ["div.jobs-easy-apply-form", "div.form-section"],
-        "siblings_before": ["Email Address"],
+        "ancestor_chain": [
+          "div.jobs-easy-apply-form",
+          "div.form-section"
+        ],
+        "siblings_before": [
+          "Email Address"
+        ],
         "position_index": 1
-      }
+      },
+      "required": true
     },
     {
       "action": "conditional_click",
@@ -73,8 +86,13 @@
         },
         "label_text": "Submit application",
         "text_content": "Submit Application",
-        "ancestor_chain": ["div.jobs-easy-apply-form"],
-        "siblings_before": ["Email Address", "Resume"],
+        "ancestor_chain": [
+          "div.jobs-easy-apply-form"
+        ],
+        "siblings_before": [
+          "Email Address",
+          "Resume"
+        ],
         "position_index": 2
       }
     }

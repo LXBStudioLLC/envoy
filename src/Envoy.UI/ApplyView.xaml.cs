@@ -230,7 +230,9 @@ public partial class ApplyView : UserControl
 
             StatusText.Text = log.Status switch
             {
-                ApplicationStatus.Completed => "Application submitted.",
+                ApplicationStatus.Completed => log.VerifiedSubmission == false
+                    ? "Application submitted (delivery could not be verified — check the browser)."
+                    : "Application submitted.",
                 ApplicationStatus.DuplicateSkipped => log.ErrorMessage ?? "Already applied — nothing was sent.",
                 ApplicationStatus.DeclinedByUser => "You said no. Nothing was sent.",
                 ApplicationStatus.SafeModeStopped => "Held for your review. Nothing was sent.",
