@@ -33,6 +33,72 @@ public partial class FindJobsView : UserControl
     /// queue panel); routes to a pre-tailored, review-ready session.</summary>
     public event Action<QueuedApplication>? PreparedApplyRequested;
 
+    // ── APP-11: batch queue selection ────────────────────────────────────
+
+    private void BtnSelectAll_Click(object sender, RoutedEventArgs e) => SetBatchSelection(true);
+
+    private void BtnClearSelection_Click(object sender, RoutedEventArgs e) => SetBatchSelection(false);
+
+    private void SetBatchSelection(bool value)
+    {
+        // Mutate the full history first (survives re-sorts), then the visible list.
+        foreach (var item in _lastItems.Where(i => i.Posting is not null && !string.IsNullOrWhiteSpace(i.Posting.DescriptionText)))
+            item.Selected = value;
+
+        if (ResultsList.ItemsSource is IEnumerable<DiscoveredJobItem> visible)
+            foreach (var item in visible)
+                item.Selected = value;
+
+        ResultsList.ItemsSource = (ResultsList.ItemsSource as IEnumerable<DiscoveredJobItem>)?.ToList();
+    }
+
+    private async void BtnQueueSelected_Click(object sender, RoutedEventArgs e)
+    {
+        var targets = (ResultsList.ItemsSource as IEnumerable<DiscoveredJobItem>)?.Where(i => i.Selected).ToList()
+            ?? new List<DiscoveredJobItem>();
+        if (targets.Count == 0)
+        {
+            StatusText.Text = "Check the boxes on the results you want queued first.";
+            StatusText.Foreground = Yellow;
+            return;
+        }
+
+        var prior = await LoadAppLogCacheAsync();
+        var enqueued = 0;
+        var skipped = new List<string>();
+
+        foreach (var item in targets)
+        {
+            var (ok, reason) = await _queue.EnqueueAsync(
+                new QueuedApplication
+                {
+                    PostingKey = PostingKey.For(item.Posting!.Url, item.Posting.CompanyName, item.Posting.JobTitle),
+                    JobUrl = item.Posting.Url ?? string.Empty,
+                    JobTitle = item.Posting.JobTitle ?? string.Empty,
+                    Company = item.Posting.CompanyName ?? string.Empty,
+                    DescriptionText = item.Posting.DescriptionText,
+                    GhostRiskScore = item.Snapshot?.RiskScore,
+                    GhostRiskBand = item.Snapshot?.Band
+                },
+                duplicateCheck: q =>
+                {
+                    var (blocked, message) = DuplicateApplyCheck.Evaluate(
+                        prior, q.JobUrl, q.Company, q.JobTitle, _settings.DuplicateApplyWindowDays, DateTime.UtcNow);
+                    return Task.FromResult<string?>(blocked ? message : null);
+                });
+
+            if (ok) enqueued++; else skipped.Add($"{item.Company}: {reason}");
+            item.Selected = false;
+        }
+
+        StatusText.Text = enqueued > 0
+            ? $"Queued {enqueued}. " + (skipped.Count > 0 ? "Skipped: " + string.Join("; ", skipped) : "")
+            : "Nothing queued. " + string.Join("; ", skipped);
+
+        StatusText.Foreground = enqueued > 0 ? Cyan : Yellow;
+        ResultsList.ItemsSource = targets.Cast<DiscoveredJobItem>().ToList();
+    }
+
     public FindJobsView(JobDiscoveryService discovery, GhostScorer scorer, EnvoySettings settings,
         IJobEventRepository jobEvents, IApplicationLogRepository appLogs, ApplicationQueueService queue,
         IApplicationQueueRepository queueRepo)
@@ -513,6 +579,9 @@ public class DiscoveredJobItem
     public string Evidence { get; init; } = "";
     public Visibility EvidenceVisibility { get; init; } = Visibility.Collapsed;
     public string Url { get; init; } = "";
+
+    /// <summary>APP-11 per-row batch selector; survives re-sorts within the view.</summary>
+    public bool Selected { get; set; }
 
     // Raw posting + score snapshot so user actions on this row can be recorded
     // in the ledger with the evidence that was on screen.

@@ -29,9 +29,12 @@
                         <CheckBox x:Name="ChkRemote" Grid.Column="1" Content="Remote only" Foreground="#8892A4" VerticalAlignment="Bottom" Margin="0,0,0,6" FontFamily="{StaticResource CyberFontBody}"/>
                     </Grid>
 
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,4">
                         <Button x:Name="BtnScanBoards" Content="SCAN BOARDS" Click="BtnScanBoards_Click" Style="{StaticResource CyberButton}" Padding="20,10" Margin="0,0,12,0" AutomationProperties.Name="Scan public ATS boards"/>
                         <Button x:Name="BtnWebSearch" Content="WEB SEARCH" Click="BtnWebSearch_Click" Style="{StaticResource CyberButton}" Padding="20,10" AutomationProperties.Name="Search the web via Brave"/>
+                        <Button x:Name="BtnQueueSelected" Content="QUEUE SELECTED" Click="BtnQueueSelected_Click" Style="{StaticResource CyberButton}" Padding="20,10" Margin="12,0,0,0" AutomationProperties.Name="Queue the checked results for background tailoring"/>
+                        <Button x:Name="BtnSelectAll" Content="SELECT ALL" Click="BtnSelectAll_Click" Style="{StaticResource CyberButton}" Padding="14,10" Margin="8,0,0,0"/>
+                        <Button x:Name="BtnClearSelection" Content="CLEAR" Click="BtnClearSelection_Click" Style="{StaticResource CyberButton}" Padding="14,10" Margin="8,0,0,0"/>
                     </StackPanel>
 
                     <Grid Margin="0,8,0,0">
@@ -143,6 +146,7 @@
                                     <Border Background="{Binding RiskBrush}" CornerRadius="2" Padding="8,3" HorizontalAlignment="Right">
                                         <TextBlock Text="{Binding RiskText}" Foreground="#0A0E17" FontSize="11" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}"/>
                                     </Border>
+                                    <CheckBox Tag="{Binding}" Margin="0,8,0,0" HorizontalAlignment="Right" AutomationProperties.Name="Select for batch queue"/>
                                     <Button Content="APPLY" Tag="{Binding}" Click="BtnApply_Click" Style="{StaticResource CyberButton}" Padding="14,5" Margin="0,8,0,0" AutomationProperties.Name="Apply to this posting with Envoy"/>
                                     <Button Content="QUEUE" Tag="{Binding}" Click="BtnQueue_Click" Style="{StaticResource CyberButton}" Padding="14,5" Margin="0,6,0,0" AutomationProperties.Name="Queue this posting for background tailoring"/>
                                     <Button Content="VIEW" Tag="{Binding}" Click="BtnView_Click" Style="{StaticResource CyberButton}" Padding="14,5" Margin="0,6,0,0" AutomationProperties.Name="Open this posting in the browser"/>

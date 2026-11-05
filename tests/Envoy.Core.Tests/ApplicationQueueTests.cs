@@ -1,3 +1,4 @@
+using Envoy.Core.Configuration;
 using Envoy.Core.Data;
 using Envoy.Core.Models;
 using Envoy.Core.Services;
@@ -167,13 +168,13 @@ public sealed class ApplicationQueueServiceTests : IDisposable
         _connection.Dispose();
     }
 
-    private QueuedApplication Item(string key, string url) => new()
+    private static QueuedApplication Item(string key, string url, string company = "Acme") => new()
     {
         MasterProfileId = Profile,
         PostingKey = key,
         JobUrl = url,
         JobTitle = "Engineer",
-        Company = "Acme",
+        Company = company,
         DescriptionText = new string('x', 200)
     };
 
@@ -198,7 +199,6 @@ public sealed class ApplicationQueueServiceTests : IDisposable
 
         Assert.True(enqueued);
         Assert.True(_service.IsRunning);
-        var id2ref = (await _repo.GetAllAsync()).Single();
         await WaitUntilAsync(
             async () => (await _repo.GetAllAsync()).Single().Status == QueueItemStatus.AppReady,
             TimeSpan.FromSeconds(6));
@@ -269,5 +269,57 @@ public sealed class ApplicationQueueServiceTests : IDisposable
         // Let the worker settle; a second worker would have processed the row twice.
         await Task.Delay(700);
         Assert.Equal(1, Interlocked.CompareExchange(ref calls, 0, 0));
+    }
+
+    // ── APP-11: batch guardrails ─────────────────────────────────────────
+
+    [Fact]
+    public async Task PerCompanyThrottle_SecondActiveRefused()
+    {
+        _preparer.Handler = _ => Task.FromResult(Guid.NewGuid()); // keep rows active (AppReady)
+        var (ok1, _) = await _service.EnqueueAsync(Item("k1", "https://x.com/1", "Acme"));
+        var (ok2, reason2) = await _service.EnqueueAsync(Item("k2", "https://x.com/2", "Acme"));
+
+        Assert.True(ok1);
+        Assert.False(ok2);
+        Assert.Contains("one active per company", reason2);
+
+        // A different company sails through.
+        var (ok3, _) = await _service.EnqueueAsync(Item("k3", "https://x.com/3", "Beta"));
+        Assert.True(ok3);
+    }
+
+    [Fact]
+    public async Task DailyCap_BoundsTheBatch()
+    {
+        _preparer.Handler = _ => Task.FromResult(Guid.NewGuid()); // keep rows active (AppReady)
+        var capped = new ApplicationQueueService(_repo, _preparer, Mock.Of<ILogger<ApplicationQueueService>>(),
+            () => new EnvoySettings { QueueDailyCap = 2 });
+
+        var (ok1, _) = await capped.EnqueueAsync(Item("k1", "https://x.com/1", "Acme"));
+        var (ok2, _) = await capped.EnqueueAsync(Item("k2", "https://x.com/2", "Beta"));
+        var (ok3, reason3) = await capped.EnqueueAsync(Item("k3", "https://x.com/3", "Gamma"));
+
+        Assert.True(ok1);
+        Assert.True(ok2);
+        Assert.False(ok3);
+        Assert.Contains("Daily cap reached (2", reason3);
+        capped.Dispose();
+    }
+
+    [Fact]
+    public async Task CapZero_DisablesTheCap()
+    {
+        var uncapped = new ApplicationQueueService(_repo, _preparer, Mock.Of<ILogger<ApplicationQueueService>>(),
+            () => new EnvoySettings { QueueDailyCap = 0 });
+
+        var enqueuedCount = 0;
+        for (var i = 0; i < 4; i++)
+        {
+            var (ok, _) = await uncapped.EnqueueAsync(Item("k" + i, "https://x.com/" + i, "Co " + i), autoStart: false);
+            if (ok) enqueuedCount++;
+        }
+        uncapped.Dispose();
+        Assert.Equal(4, enqueuedCount);
     }
 }
