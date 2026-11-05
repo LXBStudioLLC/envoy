@@ -29,7 +29,13 @@ public record ScoreboardStats(
     int SubmissionsThisWeek,
 
     /// <summary>Verified submissions per UTC day (for the weekly distribution view).</summary>
-    IReadOnlyList<VerifiedSubmissionsPerDay> VerifiedPerDay);
+    IReadOnlyList<VerifiedSubmissionsPerDay> VerifiedPerDay,
+
+    // ── #92: taps per application ────────────────────────────────────────
+    /// <summary>Average recorded user-journey taps (queued → opened → filled →
+    /// confirm) per application that finished in the last 30 days, joined by
+    /// posting identity. Null until at least one application finished.</summary>
+    double? TapsPerApplication);
 
 /// <summary>
 /// One dodged posting with the evidence that was on screen when the user

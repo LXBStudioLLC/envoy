@@ -78,8 +78,15 @@ public static class FullAutoPolicy
     {
         if (string.IsNullOrWhiteSpace(url))
             return string.Empty;
-        if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri))
+        if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri)
+            // Trust-list entries are bare hosts ("boards.greenhouse.io" — that
+            // is what the settings example documents), so a scheme-less string
+            // is parsed with a synthetic scheme instead of being dropped.
+            // (#92 Night-Owl diagnosis: without this, explicit trust lists
+            // never matched and the drain could never admit a host.)
+            && !Uri.TryCreate("https://" + url.Trim(), UriKind.Absolute, out uri))
             return string.Empty;
+
         var host = uri.Host.ToLowerInvariant();
         return host.StartsWith("www.", StringComparison.Ordinal) ? host[4..] : host;
     }

@@ -168,6 +168,9 @@ public sealed class ApplicationQueueService : IDisposable
                 // prepare keeps the shared browser safe despite that.
                 var item = await _queue.GetNextQueuedAnyProfileAsync(ct);
                 if (item is null)
+                    item = await DrainDueAsync(DateTime.UtcNow, ct); // Night Owl: parked rows drain when the window opens
+
+                if (item is null)
                 {
                     await WaitAsync(TimeSpan.FromSeconds(5), ct);
                     continue;
@@ -185,6 +188,14 @@ public sealed class ApplicationQueueService : IDisposable
                         continue;
                     }
                     item.MasterProfileId = fallback.Value;
+                }
+
+                if (item.Status == QueueItemStatus.AppReady)
+                {
+                    // Night Owl row surfaced by the drain consult: already
+                    // prepared and already gate-admitted — submit, never re-prepare.
+                    await TryFullAutoSubmitAsync(item, DateTime.UtcNow, ct);
+                    continue;
                 }
 
                 await ProcessItemAsync(item, DateTime.UtcNow, ct);
@@ -277,6 +288,34 @@ public sealed class ApplicationQueueService : IDisposable
             await Task.Delay(delay, ct);
         }
         catch (OperationCanceledException) { }
+    }
+
+    /// <summary>
+    /// Night-Owl drain (#92): the next parked AppReady row (oldest first) when
+    /// the Full-Auto policy gate admits content at <paramref name="nowUtc"/>;
+    /// the row is submitted and returned, so the caller can see what moved.
+    /// Rows prepared outside the window (or before Full-Auto was enabled) drain
+    /// the moment the gate says yes — no manual nudge, and never a re-prepare.
+    /// Public + injectable "now" so the window contract is testable offline.
+    /// </summary>
+    public async Task<QueuedApplication?> DrainDueAsync(DateTime nowUtc, CancellationToken ct)
+    {
+        if (_submitter is null || _gate is null)
+            return null;
+
+        var all = await _queue.GetAllAsync(ct);
+        var parked = all
+            .Where(q => q.Status == QueueItemStatus.AppReady && q.TailoredProfileId is not null)
+            .OrderBy(q => q.UpdatedAt ?? q.CreatedAt)
+            .FirstOrDefault();
+        if (parked is null)
+            return null;
+
+        if (!_gate.ShouldAutoSubmitNow(parked, nowUtc))
+            return null;
+
+        await TryFullAutoSubmitAsync(parked, nowUtc, ct);
+        return parked;
     }
 
     /// <summary>Submits one prepared item without the human gate (the Full-Auto

@@ -108,7 +108,14 @@ public partial class FindJobsView : UserControl
                     return Task.FromResult<string?>(blocked ? message : null);
                 });
 
-            if (ok) enqueued++; else skipped.Add($"{item.Company}: {reason}");
+            // #92: tap telemetry — one journey tap per committed job; the
+            // batch amortization stays visible as one TapQueued row per job.
+            if (ok)
+            {
+                enqueued++;
+                RecordItemEvent(item, JobEventType.TapQueued);
+            }
+            else skipped.Add($"{item.Company}: {reason}");
             item.Selected = false;
         }
 
@@ -464,6 +471,7 @@ public partial class FindJobsView : UserControl
         }
 
         RecordItemEvent(item, JobEventType.Viewed); // an apply intent is engagement; the submit itself will record Applied
+        RecordItemEvent(item, JobEventType.TapOpened); // #92: opening the Apply view is a journey tap
         ApplyRequested?.Invoke(item);
     }
 
@@ -517,6 +525,26 @@ public partial class FindJobsView : UserControl
             ? $"Queued {item.Company} — tailoring runs in the background; watch YOUR QUEUE below."
             : reason;
         StatusText.Foreground = enqueued ? Cyan : Yellow;
+
+        // #92: tap telemetry — the queue click is a journey tap per committed job.
+        if (enqueued)
+            RecordItemEvent(item, JobEventType.TapQueued);
+    }
+
+    /// <summary>The queue-row APPLY NOW tap: a journey tap recorded from the
+    /// row's own identity (posting transient upstream, so the event carries it).</summary>
+    private void RecordQueueRowTap(QueuedApplication item, JobEventType type)
+    {
+        GhostScoreSnapshot? snapshot = item.GhostRiskScore is null
+            ? null
+            : new GhostScoreSnapshot(item.GhostRiskScore.Value, item.GhostRiskBand ?? "Neutral", Array.Empty<string>());
+        var jobEvent = JobEvent.ForPosting(type, item.JobUrl, item.JobTitle, item.Company, source: "", snapshot);
+
+        _ = Task.Run(async () =>
+        {
+            try { await _jobEvents.AddAsync(jobEvent); }
+            catch { /* bookkeeping only */ }
+        });
     }
 
     // A tiny cache to avoid re-reading the log table on every queue click in a
@@ -628,6 +656,7 @@ public partial class FindJobsView : UserControl
         if (sender is not Button btn || btn.Tag is not QueueRow row) return;
         if (row.Item.Status != QueueItemStatus.AppReady || row.Item.TailoredProfileId is null) return;
 
+        RecordQueueRowTap(row.Item, JobEventType.TapOpened); // #92: opening a prepared application is a journey tap
         PreparedApplyRequested?.Invoke(row.Item);
     }
 

@@ -28,14 +28,16 @@ public sealed class EnvoyReadinessTests
             profileCount: 0,
             llmConnected: false,
             browserDebug: false,
+            completedApplicationCount: 0,
             settings: settings);
 
         Assert.False(report.AllComplete);
-        Assert.Equal(5, report.Steps.Count);
+        Assert.Equal(6, report.Steps.Count);
         Assert.All(report.Steps, s => Assert.False(s.Complete));
         Assert.All(report.Steps, s => Assert.False(string.IsNullOrWhiteSpace(s.Fix)));
         Assert.Contains(report.Steps, s => s.Name == "Profile imported" && s.Fix.Contains("Dashboard"));
         Assert.Contains(report.Steps, s => s.Name == "LLM provider configured" && s.Fix.Contains("Ollama"));
+        Assert.Contains(report.Steps, s => s.Name == "First application" && s.Fix.Contains("FIND JOBS"));
     }
 
     [Fact]
@@ -43,9 +45,9 @@ public sealed class EnvoyReadinessTests
     {
         // Real bundled templates directory: the app always ships them (APP-01),
         // so the default path must be present in any build output.
-        var report = EnvoyReadiness.Compute(1, true, true, OkSettings());
+        var report = EnvoyReadiness.Compute(1, true, true, 3, OkSettings());
 
-        Assert.Equal(5, report.Steps.Count);
+        Assert.Equal(6, report.Steps.Count);
         Assert.All(report.Steps, s => Assert.True(s.Complete, $"{s.Name}: {s.Status}"));
         Assert.True(report.AllComplete);
     }
@@ -60,7 +62,7 @@ public sealed class EnvoyReadinessTests
         var settings = OkSettings();
         settings.TemplatesPath = tmp;
 
-        var report = EnvoyReadiness.Compute(1, true, true, settings);
+        var report = EnvoyReadiness.Compute(1, true, true, 1, settings);
 
         Assert.True(report.AllComplete);
         Assert.True(report.Steps.All(s => s.Complete));
@@ -72,7 +74,7 @@ public sealed class EnvoyReadinessTests
         var settings = OkSettings();
         settings.ChromeDebuggingPort = "not-a-port";
 
-        var report = EnvoyReadiness.Compute(0, false, false, settings);
+        var report = EnvoyReadiness.Compute(0, false, false, 0, settings);
 
         var port = report.Steps.First(s => s.Name == "Debug port setting");
         Assert.False(port.Complete);
@@ -82,15 +84,28 @@ public sealed class EnvoyReadinessTests
     [Fact]
     public void EachIncompleteStep_LetsTheUserSkipAheadSafely()
     {
-        // Two of five complete is a real mid-setup state: the strip must show
+        // Three of six complete is a real mid-setup state: the strip must show
         // exactly which steps are missing rather than a boolean blob.
         var settings = OkSettings();
         settings.TemplatesPath = Path.Combine(Path.GetTempPath(), "envoy-readiness-none-" + Guid.NewGuid());
 
-        var report = EnvoyReadiness.Compute(1, true, false, settings);
+        var report = EnvoyReadiness.Compute(1, true, false, 0, settings);
 
         var complete = report.Steps.Count(s => s.Complete);
         Assert.Equal(3, complete);
         Assert.All(report.Steps.Where(s => !s.Complete), s => Assert.NotEmpty(s.Fix));
+    }
+
+    [Fact]
+    public void FirstApplication_StepsOnlyOnALedgerThatFinished()
+    {
+        // A finished attempt is Completed or NeedsUserSubmit — parked captcha
+        // rows and failures are attempts, not the finish line.
+        Assert.True(EnvoyReadiness
+            .Compute(1, true, true, 0, OkSettings())
+            .Steps.First(s => s.Name == "First application").Complete == false);
+        Assert.True(EnvoyReadiness
+            .Compute(1, true, true, 1, OkSettings())
+            .Steps.First(s => s.Name == "First application").Complete);
     }
 }

@@ -21,6 +21,7 @@ public partial class ScoreboardView : UserControl
 
     private readonly ApplicationQueueService _queue;
     private readonly IApplicationQueueRepository _queueRepo;
+    private TrayPresence? _tray;
 
     public ScoreboardView(IJobEventRepository jobEvents, IApplicationLogRepository appLogs,
         EnvoySettings settings, WarnRefresher warnRefresher, PermIndexBuilder permIndexBuilder,
@@ -41,6 +42,10 @@ public partial class ScoreboardView : UserControl
             await RenderQueueLineAsync();
         };
     }
+
+    /// <summary>#92: MainWindow hands its (window-owned) tray presence here so
+    /// the WARN/PERM refresh flows can balloon on completion.</summary>
+    public void SetTray(TrayPresence? tray) => _tray = _tray ?? tray;
 
     public async Task RefreshAsync()
     {
@@ -87,6 +92,19 @@ public partial class ScoreboardView : UserControl
         else
         {
             DeliveryLine.Text = "";
+        }
+
+        // #92: taps per application — recorded journey interactions per finished
+        // application (last 30 days). Stated with its input, never as a bare number.
+        if (stats.TapsPerApplication is { } taps)
+        {
+            TapsLine.Text = $"Taps per application: {taps:0.0} (last 30 days — queued/opened/filled/confirm journey events per finished application).";
+            TapsLine.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            TapsLine.Text = "";
+            TapsLine.Visibility = Visibility.Collapsed;
         }
         ColdStartLabel.Visibility = ledgerEmpty ? Visibility.Visible : Visibility.Collapsed;
 
@@ -224,10 +242,12 @@ public partial class ScoreboardView : UserControl
             if (result.Notes.Count > 0)
                 banner += " (" + string.Join("; ", result.Notes) + ")";
             DataRefreshStatus.Text = banner;
+            _tray?.Toast("WARN REFRESH DONE", result.Success ? result.Summary : $"Refresh failed: {result.Error}", !result.Success);
         }
         catch (Exception ex)
         {
             DataRefreshStatus.Text = $"Refresh failed: {ex.Message}";
+            _tray?.Toast("WARN REFRESH FAILED", ex.Message, true);
         }
         finally
         {
@@ -251,10 +271,12 @@ public partial class ScoreboardView : UserControl
                 DataRefreshStatus.Text = s;
             }));
             DataRefreshStatus.Text = result.Success ? result.Summary : $"PERM refresh failed: {result.Error}";
+            _tray?.Toast("PERM INDEX REBUILT", result.Success ? result.Summary : $"PERM refresh failed: {result.Error}", !result.Success);
         }
         catch (Exception ex)
         {
             DataRefreshStatus.Text = $"PERM refresh failed: {ex.Message}";
+            _tray?.Toast("PERM REFRESH FAILED", ex.Message, true);
         }
         finally
         {

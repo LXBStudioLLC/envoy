@@ -174,4 +174,79 @@ public class ScoreboardCalculatorTests
         Assert.Equal("Closed on the company ATS", stats.RecentDodges[0].Evidence);
         Assert.True(stats.RecentDodges[0].OccurredAtUtc > stats.RecentDodges[9].OccurredAtUtc);
     }
+
+    // ── #92: taps per application ────────────────────────────────────────
+
+    [Fact]
+    public void TapsPerApplication_JourneyEventsPerFinishedApplication_Over30Days()
+    {
+        var log = Submit(ApplicationStatus.Completed);
+        log.CompletedAt = UtcDaysAgo(1);
+        log.StartedAt = UtcDaysAgo(2);
+        var key = Services.PostingKey.For(log.JobUrl, log.Company, log.JobTitle);
+
+        var events = new[]
+        {
+            Ev(JobEventType.TapQueued, daysAgo: 4),
+            Ev(JobEventType.TapOpened, daysAgo: 3),
+            Ev(JobEventType.TapFilled, daysAgo: 1),
+            Ev(JobEventType.TapConfirmed, daysAgo: 1),
+            Ev(JobEventType.Skipped, "High", daysAgo: 5),   // a dodge is not a tap
+            Ev(JobEventType.Viewed, daysAgo: 6)             // a view is not a tap
+        };
+        foreach (var e in events) e.PostingKey = key;
+
+        var stats = ScoreboardCalculator.Compute(events, new[] { log }, 45, NowLocal);
+
+        Assert.Equal(4.0, stats.TapsPerApplication);
+    }
+
+    [Fact]
+    public void TapsPerApplication_OnlyJourneysInsideTheWindowCount()
+    {
+        var log = Submit(ApplicationStatus.Completed);
+        log.CompletedAt = UtcDaysAgo(1);
+        log.StartedAt = UtcDaysAgo(2);
+        var key = Services.PostingKey.For(log.JobUrl, log.Company, log.JobTitle);
+
+        // Only tap left inside the window is the confirmed one; taps 31+ days
+        // old stay out (the window is 30 days), and the average reflects that.
+        var events = new[]
+        {
+            Ev(JobEventType.TapConfirmed, daysAgo: 1),
+            Ev(JobEventType.TapQueued, daysAgo: 31)
+        };
+        foreach (var e in events) e.PostingKey = key;
+
+        var stats = ScoreboardCalculator.Compute(events, new[] { log }, 45, NowLocal);
+
+        Assert.Equal(1.0, stats.TapsPerApplication);
+    }
+
+    [Fact]
+    public void TapsPerApplication_NullWhenNothingFinished()
+    {
+        var events = new[] { Ev(JobEventType.TapQueued), Ev(JobEventType.TapFilled) };
+
+        var stats = ScoreboardCalculator.Compute(events, Array.Empty<ApplicationLog>(), 45, NowLocal);
+
+        Assert.Null(stats.TapsPerApplication);
+    }
+
+    [Fact]
+    public void TapsPerApplication_NeedsUserSubmitCountsAsFinished()
+    {
+        // The generic-fill path ends with the human pressing the site's own
+        // Submit — the journey completed; the stat does not pretend it didn't.
+        var log = Submit(ApplicationStatus.NeedsUserSubmit);
+        log.CompletedAt = UtcDaysAgo(1);
+        log.StartedAt = UtcDaysAgo(2);
+        var key = Services.PostingKey.For(log.JobUrl, log.Company, log.JobTitle);
+        var events = new[] { Ev(JobEventType.TapOpened), Ev(JobEventType.TapFilled) };
+        foreach (var e in events) e.PostingKey = key;
+
+        var stats = ScoreboardCalculator.Compute(events, new[] { log }, 45, NowLocal);
+
+        Assert.Equal(2.0, stats.TapsPerApplication);
+    }
 }

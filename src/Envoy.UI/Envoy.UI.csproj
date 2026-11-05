@@ -6,6 +6,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <!-- The notification-area (!) tray icon + balloon toasts are System.Windows.Forms
+         primitives #92 leans on; WPF has no first-class NotifyIcon support. -->
+    <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>Envoy</AssemblyName>
     <RootNamespace>Envoy.UI</RootNamespace>
     <Version>1.2.0</Version>
@@ -31,6 +34,14 @@
 
   <ItemGroup>
     <Resource Include="Fonts\**\*.ttf" />
+  </ItemGroup>
+
+  <!-- #92 leans on WinForms' NotifyIcon for the tray, but the SDK's implicit
+       usings would then shadow WPF names (UserControl, Brush, Image…) in every
+       view. TrayPresence.cs carries its own explicit usings instead. -->
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
   </ItemGroup>
 
 </Project>

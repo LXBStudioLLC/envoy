@@ -26,13 +26,23 @@ public partial class MainWindow : Window
     private readonly HardwareProfiler _hardwareProfiler;
     private readonly IUpdateCheckService _updateCheck;
     private readonly EnvoySettings _settings;
+    private readonly ApplicationQueueService _queue;
+    private readonly IApplicationQueueRepository _queueRepo;
+    private TrayPresence? _tray;
+    private bool _exiting;
+    private bool _minimizedToastShown;
+    private string _queueTooltip = "Envoy";
+    private int _lastActiveQueueCount;
+    private bool _lastActiveQueueCountKnown;
+    private readonly Dictionary<Guid, QueueItemStatus> _lastQueueStatus = new();
+    private readonly object _queueStatusLock = new();
     private string? _updateUrl;
     private DispatcherTimer? _glitchTimer;
     private DispatcherTimer? _statusTimer;
     private readonly TranslateTransform _titleTransform = new(0, 0);
     private Random _rng = new();
 
-    public MainWindow(ScoreboardView scoreboard, DashboardView dashboard, FindJobsView find, ApplyView apply, VaultView vault, BrowserSelectionView browser, LLMSettingsView llmSettings, IBrowserLauncher browserLauncher, HardwareProfiler hardwareProfiler, IUpdateCheckService updateCheck, EnvoySettings settings)
+    public MainWindow(ScoreboardView scoreboard, DashboardView dashboard, FindJobsView find, ApplyView apply, VaultView vault, BrowserSelectionView browser, LLMSettingsView llmSettings, IBrowserLauncher browserLauncher, HardwareProfiler hardwareProfiler, IUpdateCheckService updateCheck, EnvoySettings settings, ApplicationQueueService queue, IApplicationQueueRepository queueRepo)
     {
         _scoreboard = scoreboard;
         _dashboard = dashboard;
@@ -45,6 +55,8 @@ public partial class MainWindow : Window
         _hardwareProfiler = hardwareProfiler;
         _updateCheck = updateCheck;
         _settings = settings;
+        _queue = queue;
+        _queueRepo = queueRepo;
 
         // APP-02: route the Find Jobs APPLY action straight into the Apply
         // view, carrying the posting + ghost snapshot so nothing re-scrapes.
@@ -58,7 +70,18 @@ public partial class MainWindow : Window
         TitleText.RenderTransform = _titleTransform;
 
         Closed += MainWindow_Closed;
+        Closing += MainWindow_Closing;
 
+        // ── #92: tray presence + queue notifications. The tray observes the
+        // queue, never drives it: toasts are advisory, the worker owns its loop.
+        _queue.QueueChanged += () => QueueChangedOnTrayAsync();
+        _tray = new TrayPresence(
+            tooltipProvider: () => _queueTooltip,
+            restoreWindow: () => { Show(); WindowState = WindowState.Normal; Activate(); },
+            exitApplication: () => { _exiting = true; Application.Current.Shutdown(); });
+
+        // The scoreboard observes the same tray for refresh-finished toasts.
+        _scoreboard.SetTray(_tray);
         // The scoreboard is the front door: opening Envoy should feel like
         // checking the score, not starting a chore.
         NavigateTo(_scoreboard);
@@ -67,10 +90,129 @@ public partial class MainWindow : Window
         StartGlitchEffect();
     }
 
+    // ── #92: tray + queue notifications ──────────────────────────────────
+
+    /// <summary>Cached one-line queue state for the tray tooltip. Refreshed on
+    /// every QueueChanged; the provider closure never touches the database on
+    /// the tooltip thread.</summary>
+    private async void QueueChangedOnTrayAsync()
+    {
+        List<QueuedApplication> rows;
+        try { rows = await _queueRepo.GetAllAsync(); }
+        catch { return; }
+
+        var toasts = new List<(string Title, string Body, bool Warning)>();
+        var sentThisCycle = 0;
+        var failedThisCycle = 0;
+
+        lock (_queueStatusLock)
+        {
+            foreach (var row in rows)
+            {
+                var previous = _lastQueueStatus.TryGetValue(row.Id, out var prev)
+                    ? prev
+                    : QueueItemStatus.Queued;
+                if (row.Status != previous)
+                {
+                    switch (row.Status)
+                    {
+                        case QueueItemStatus.AppReady:
+                            toasts.Add(("READY TO FILL",
+                                $"{row.Company}: tailoring finished — one click in FIND JOBS finishes the review.", false));
+                            break;
+                        case QueueItemStatus.NeedsCaptcha:
+                            toasts.Add(("CAPTCHA NEEDS YOU",
+                                $"{row.Company}: solve it in the browser, then requeue. Envoy never solves them.", true));
+                            break;
+                        case QueueItemStatus.NeedsUserSend:
+                            toasts.Add(("PRESS THE SITE'S SUBMIT",
+                                $"{row.Company}: the form is filled — the send button stays yours.", false));
+                            break;
+                        case QueueItemStatus.Failed:
+                            toasts.Add(("QUEUE ITEM FAILED",
+                                $"{row.Company}: {row.Note}", true));
+                            failedThisCycle++;
+                            break;
+                        case QueueItemStatus.Submitted:
+                            sentThisCycle++;
+                            break;
+                    }
+                }
+                _lastQueueStatus[row.Id] = row.Status;
+            }
+
+            // Rows removed from the queue (expired / user removed) fall out of state.
+            var liveIds = rows.Select(r => r.Id).ToHashSet();
+            var stale = _lastQueueStatus.Keys.Where(k => !liveIds.Contains(k)).ToList();
+            foreach (var id in stale)
+                _lastQueueStatus.Remove(id);
+
+            var queued = rows.Count(r => r.Status == QueueItemStatus.Queued);
+            var ready = rows.Count(r => r.Status == QueueItemStatus.AppReady);
+            var sentToday = rows.Count(r => r.Status == QueueItemStatus.Submitted
+                && (r.UpdatedAt ?? r.CreatedAt).Date == DateTime.UtcNow.Date);
+            var activeCount = rows.Count(r =>
+                r.Status is QueueItemStatus.Queued or QueueItemStatus.Preparing or QueueItemStatus.AppReady);
+
+            // The drain is done when nothing is active anymore: say so, once,
+            // with the honest counts of what the cycle produced.
+            if (_lastActiveQueueCountKnown && _lastActiveQueueCount > 0 && activeCount == 0
+                && sentThisCycle + failedThisCycle > 0)
+            {
+                toasts.Add(("QUEUE FINISHED",
+                    $"Drain complete: {sentThisCycle} sent, {failedThisCycle} failed. The scoreboard has the verified detail.", false));
+            }
+
+            _queueTooltip = activeCount > 0
+                ? $"Envoy — queue: {queued} waiting · {ready} ready · {sentToday} sent today"
+                : sentToday > 0
+                    ? $"Envoy — idle · {sentToday} sent today"
+                    : "Envoy";
+            _lastActiveQueueCount = activeCount;
+            _lastActiveQueueCountKnown = true;
+        }
+
+        await Dispatcher.InvokeAsync(() =>
+        {
+            _tray?.RefreshTooltip();
+            foreach (var (title, body, warning) in toasts)
+                _tray?.Toast(title, body, warning);
+        });
+    }
+
+    private void MainWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        if (_exiting) return; // EXIT from the tray: let the window close for real
+
+        // #92: closing minimizes to the tray so a background queue keeps
+        // draining with notifications intact. EXIT is the tray's own menu item.
+        e.Cancel = true;
+        Hide();
+        if (!_minimizedToastShown)
+        {
+            _minimizedToastShown = true;
+            _tray?.Toast("ENVOY IS IN THE TRAY", "The queue keeps draining. Right-click the tray icon for EXIT.", false);
+        }
+    }
+
+    public void NavigateToLLM()
+    {
+        NavigateTo(_llmSettings);
+        UpdateNavButtons("LLM");
+    }
+
+    public void NavigateToFindJobs()
+    {
+        NavigateTo(_find);
+        UpdateNavButtons("Find");
+    }
+
     private void MainWindow_Closed(object? sender, EventArgs e)
     {
         _glitchTimer?.Stop();
         _statusTimer?.Stop();
+        _tray?.Dispose(); // never leave a ghost icon in the tray after shutdown
+        _tray = null;
     }
 
     private void StartGlitchEffect()
@@ -356,7 +498,7 @@ public partial class MainWindow : Window
     }
 
     private void BtnMinimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
-    private void BtnClose_Click(object sender, RoutedEventArgs e) => Application.Current.Shutdown();
+    private void BtnClose_Click(object sender, RoutedEventArgs e) => Close(); // #92: minimize to tray (Closing decides)
 
     public void NavigateToApply(Guid profileId)
     {

@@ -4,6 +4,15 @@ All notable changes to Envoy are documented in this file. Format is based on [Ke
 
 ## [Unreleased]
 
+### Added — #92 remainder shipped: the shell of the product
+
+- **Dashboard first-run checklist, fully wired.** The readiness strip now ends where the product starts: profile → LLM configured → browser bridge → templates present → debug port → **first application** (finished attempts in the ledger count; parked captcha rows don't). Every incomplete row carries one action — IMPORT PDF / SET UP AI / LAUNCH BROWSER / SHOW FOLDER / SHOW SETTINGS / FIND JOBS — and the strip auto-hides the moment everything is green.
+- **Tray presence.** A notification-area icon lives while Envoy runs: live queue counts ("queue: 2 waiting · 1 ready · 4 sent today"), click to restore, right-click menu with EXIT. Closing the window minimizes to the tray so a draining queue stays alive; menu → EXIT is the real way out.
+- **Notifications on what needs you.** Balloon toasts for: ready to fill, captcha hand-off ("Envoy never solves them"), needs-your-send, queue failures, queue finished (sent/failed counts), and WARN/PERM public-data refresh completion — coalesced so a drain never becomes a wall of popups.
+- **Night Owl drain window.** The Full-Auto page gains START/END UTC hour fields and an ANY TIME clear (settings example documented). The worker now wakes on the window: rows prepared outside the drain window (or before Full-Auto was enabled) are re-consulted and submitted the moment the window opens — no manual nudge, never a re-prepare.
+- **Taps per application, measured honestly.** The journey click stream (queued → opened → filled → gate confirm) now records one ledger row per committed action; the Scoreboard shows average taps per application that finished in the last 30 days, joined by posting identity — the formula is stated on screen, and batch queueing stays visible as amortization, not hidden.
+- **Full-Auto trust-list fix found during the Night-Owl work.** `HostOf` demanded an absolute URL, so a bare-host trust entry ("boards.greenhouse.io", the documented form) could never match — explicit trust lists were silently dead. Scheme-less entries parse now; regression test pins it.
+
 ### Added — multi-profile queue (multi-resume support)
 
 - **Queue rows carry their resume.** Every queued posting is stamped with the profile it was queued for; the background worker tailors for whichever row is oldest regardless of which resume it belongs to — a second profile's rows no longer starve behind the first profile's batch. Legacy rows persisted before stamping keep the old single-profile binding, so upgrades stay smooth.
