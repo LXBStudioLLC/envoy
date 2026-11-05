@@ -504,6 +504,7 @@ public partial class FindJobsView : UserControl
             QueueItemStatus.Preparing => ("TAILORING…", Cyan),
             QueueItemStatus.AppReady => ("READY TO FILL", Green),
             QueueItemStatus.Submitted => ("SUBMITTED", Green),
+            QueueItemStatus.NeedsUserSend => ("NEEDS YOUR SEND", Green),
             QueueItemStatus.Failed => ("FAILED", Red),
             QueueItemStatus.BlockedDuplicate => ("ALREADY APPLIED", Yellow),
             QueueItemStatus.NeedsCaptcha => ("CAPTCHA", Yellow),

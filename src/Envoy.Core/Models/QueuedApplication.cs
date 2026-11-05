@@ -61,5 +61,10 @@ public enum QueueItemStatus
     BlockedDuplicate,
 
     /// <summary>The page hands off to the user for a captcha; resume when solved.</summary>
-    NeedsCaptcha
+    NeedsCaptcha,
+
+    /// <summary>APP-12: the generic fill prepared the form; the user must press
+    /// the site's own Submit (Envoy never auto-clicks on this path). Honest
+    /// distinct state — not Submitted, since nothing was sent yet.</summary>
+    NeedsUserSend
 }

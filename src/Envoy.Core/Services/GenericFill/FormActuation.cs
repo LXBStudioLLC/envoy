@@ -64,8 +64,7 @@ public interface IFormFieldActuator
     Task<bool> UploadFileAsync(string selector, string filePath, CancellationToken ct = default);
 
     /// <summary>True when an element matching the selector exists and is visible.</summary>
-    Task<bool> ExistsAsync(string selector, CancellationToken ct = default);
-}
+    Task<bool> ExistsAsync(string selector, CancellationToken ct = default);}
 
 /// <summary>
 /// CDP-backed actuator. All typing goes through page-level JS with native
@@ -82,11 +81,12 @@ public sealed class CdpFormFieldActuator : IFormFieldActuator
         _cdp = cdp;
     }
 
-    private async Task<JsonElement?> Eval(string expression, string selector, CancellationToken ct)
+    private async Task<JsonElement?> Eval(string expressionTemplate, string selector, CancellationToken ct)
     {
+        var selectorJs = JsonSerializer.Serialize(selector);
         var result = await _cdp.SendCommandAsync("Runtime.evaluate", new
         {
-            expression = expression.Replace("{sel}", selector.Replace("'", "\\'")),
+            expression = expressionTemplate.Replace("{sel}", selectorJs),
             returnByValue = true
         }, ct);
 
@@ -97,45 +97,48 @@ public sealed class CdpFormFieldActuator : IFormFieldActuator
 
     public async Task<bool> FillTextAsync(string selector, string value, CancellationToken ct = default)
     {
+        // The value is JSON-encoded so multiline answers and quotes survive as
+        // a single valid JS string literal (textareas are real targets).
+        var jsValue = JsonSerializer.Serialize(value);
         return await Eval(@"
 (() => {
-  const el = document.querySelector('{sel}');
+  const el = document.querySelector({sel});
   if (!el) return false;
   const proto = Object.getPrototypeOf(el);
   const desc = Object.getOwnPropertyDescriptor(proto, 'value');
-  if (desc && desc.set) desc.set.call(el, '{vval}');
-  else el.value = '{vval}';
+  if (desc && desc.set) desc.set.call(el, {vjs});
+  else el.value = {vjs};
   el.dispatchEvent(new Event('input', { bubbles: true }));
   el.dispatchEvent(new Event('change', { bubbles: true }));
   return true;
-})()".Replace("{vval}", value.Replace("\\", "\\\\").Replace("'", "\\'")), selector, ct) is JsonElement v && v.ValueKind == JsonValueKind.True;
+})()".Replace("{vjs}", jsValue), selector, ct) is JsonElement v && v.ValueKind == JsonValueKind.True;
     }
 
     public async Task<bool> SelectOptionAsync(string selector, string optionText, CancellationToken ct = default)
     {
+        var jsValue = JsonSerializer.Serialize(optionText);
         return await Eval(@"
 (() => {
-  const el = document.querySelector('{sel}');
+  const el = document.querySelector({sel});
   if (!el || el.tagName !== 'SELECT') return false;
-  const opts = [...el.options].filter((o) => o.disabled === false);
-  let chosen = opts.find((o) => (o.text || '').trim().toLowerCase() === '{vval}'.trim().toLowerCase());
-  if (!chosen) chosen = opts.find((o) => (o.text || '').trim().toLowerCase().includes('{vval}'.trim().toLowerCase()));
-  if (!chosen && opts.length > 1) { /* still refuse: ambiguity beats a wrong answer */ chosen = null; }
-  if (!chosen) return false;
+  const wanted = {vjs}.trim().toLowerCase();
+  const opts = Array.prototype.filter.call(el.options || [], (o) => !o.disabled);
+  let chosen = opts.find((o) => (o.text || '').trim().toLowerCase() === wanted);
+  if (!chosen) return false; // ambiguity beats a wrong answer: exact match only
   const desc = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value');
   if (desc && desc.set) desc.set.call(el, chosen.value);
   else el.value = chosen.value;
   el.dispatchEvent(new Event('input', { bubbles: true }));
   el.dispatchEvent(new Event('change', { bubbles: true }));
   return true;
-})()".Replace("{vval}", optionText.Replace("\\", "\\\\").Replace("'", "\\'")), selector, ct) is JsonElement v && v.ValueKind == JsonValueKind.True;
+})()".Replace("{vjs}", jsValue), selector, ct) is JsonElement v && v.ValueKind == JsonValueKind.True;
     }
 
     public async Task<bool> SetCheckedAsync(string selector, bool isChecked, CancellationToken ct = default)
     {
         return await Eval(@"
 (() => {
-  const el = document.querySelector('{sel}');
+  const el = document.querySelector({sel});
   if (!el || (el.type !== 'checkbox' && el.type !== 'radio')) return false;
   el.checked = 'vbool' === 'true';
   el.dispatchEvent(new Event('change', { bubbles: true }));
@@ -168,6 +171,6 @@ public sealed class CdpFormFieldActuator : IFormFieldActuator
 
     public async Task<bool> ExistsAsync(string selector, CancellationToken ct = default)
     {
-        return await Eval("!!document.querySelector('{sel}')", selector, ct) is JsonElement v && v.ValueKind == JsonValueKind.True;
+        return await Eval("!!document.querySelector({sel})", selector, ct) is JsonElement v && v.ValueKind == JsonValueKind.True;
     }
 }

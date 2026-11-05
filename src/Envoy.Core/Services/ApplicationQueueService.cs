@@ -242,17 +242,19 @@ public sealed class ApplicationQueueService : IDisposable
                 _log.LogWarning(ex, "Queue prepare failed for {Url}", item.JobUrl);
             }
 
-            if (item.Status == QueueItemStatus.AppReady && item.TailoredProfileId is not null)
+            if (item.Status == QueueItemStatus.AppReady && item.TailoredProfileId is not null
+                && _gate is not null && _gate.ShouldAutoSubmitNow(item, nowUtc))
             {
-                // APP-12: the gate consult honors the window via nowUtc.
-                if (_gate is not null && _gate.ShouldAutoSubmitNow(item, nowUtc))
-                {
-                    await TryFullAutoSubmitAsync(item, nowUtc, ct);
-                }
+                // APP-12: the gate consult honors the window via nowUtc. The
+                // submit call rewrites the row (Submitted / Failed /
+                // NeedsCaptcha / NeedsUserSend) inside TryFullAutoSubmitAsync.
+                await TryFullAutoSubmitAsync(item, nowUtc, ct);
             }
-
-            await _queue.UpdateAsync(item, ct);
-            Notify();
+            else
+            {
+                await _queue.UpdateAsync(item, ct);
+                Notify();
+            }
         }
         finally
         {
@@ -269,31 +271,50 @@ public sealed class ApplicationQueueService : IDisposable
         catch (OperationCanceledException) { }
     }
 
-    /// <summary>Submits one prepared item without the human gate (policy already
-    /// decided at the gate consult; nowUtc flows for window checks downstream).</summary>
+    /// <summary>Submits one prepared item without the human gate (the Full-Auto
+    /// policy gate already consulted with the injected "now"). The submitter's
+    /// returned ApplicationLog decides the honest queue outcome: Completed →
+    /// Submitted; NeedsUserSubmit → NeedsUserSend (the human clicks the site's
+    /// own Submit on this path); captcha → parked; everything else → Failed.</summary>
     private async Task TryFullAutoSubmitAsync(QueuedApplication item, DateTime nowUtc, CancellationToken ct)
     {
-        if (_gate is null && _submitter is null) return;
-        if (_gate is not null && !_gate.ShouldAutoSubmitNow(item, DateTime.UtcNow)) return;
-
         try
         {
-            var (submitted, error, captcha) = await _submitter!.SubmitAsync(item, ct);
-            if (submitted)
-            {
-                item.Status = QueueItemStatus.Submitted;
-                item.Note = null;
-            }
-            else if (captcha)
-            {
-                item.Status = QueueItemStatus.NeedsCaptcha;
-                item.Note = "captcha during Full-Auto submit — finish in the browser, then requeue";
-            }
-            else
+            var (resultLog, error, captcha) = await _submitter!.SubmitAsync(item, ct);
+            if (resultLog is null)
             {
                 item.Status = QueueItemStatus.Failed;
                 item.Note = error;
             }
+            else if (resultLog.Status == ApplicationStatus.Completed)
+            {
+                item.Status = QueueItemStatus.Submitted;
+                item.Note = resultLog.VerifiedSubmission == true
+                    ? "verified"
+                    : "sent; delivery not verified";
+            }
+            else if (resultLog.Status == ApplicationStatus.RequiresCaptcha)
+            {
+                item.Status = QueueItemStatus.NeedsCaptcha;
+                item.Note = "captcha during Full-Auto submit — finish in the browser, then requeue";
+            }
+            else if (resultLog.Status == ApplicationStatus.NeedsUserSubmit)
+            {
+                // The generic fill completed but there is no auto-click on
+                // this path — the row parks for the user's hand instead of
+                // lying in the submitted count.
+                item.Status = QueueItemStatus.NeedsUserSend;
+                item.Note = "filled; press the site's Submit in the browser";
+            }
+            else
+            {
+                item.Status = QueueItemStatus.Failed;
+                item.Note = error ?? resultLog.ErrorMessage ?? resultLog.Status.ToString();
+            }
+
+            if (!string.IsNullOrWhiteSpace(resultLog?.VerificationNote) && string.IsNullOrWhiteSpace(item.Note))
+                item.Note = resultLog.VerificationNote;
+
             await _queue.UpdateAsync(item, ct);
             Notify();
         }
