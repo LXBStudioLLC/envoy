@@ -54,7 +54,7 @@ public class HiringFreezeSignal : IGhostSignal
                 return Task.FromResult<SignalResult?>(null);
 
             var matches = new List<WarnNotice>();
-            var stateMatch = StateMatch.Unknown;
+            var stateMatch = SignalStateMatch.Unknown;
             foreach (var notice in notices)
             {
                 var since = (reference - notice.NoticeDate).TotalDays;
@@ -64,13 +64,13 @@ public class HiringFreezeSignal : IGhostSignal
                 if (DomScorer.NormalizedSimilarity(normalizedCompany, NormalizeEmployer(notice.Employer)) < EmployerNameMatch)
                     continue;
 
-                var matchState = SameState(posting.Location, notice);
-                if (matchState == StateMatch.Mismatch)
+                var matchState = LocationStateMatcher.Match(posting.Location, notice.State, notice.Location);
+                if (matchState == SignalStateMatch.Mismatch)
                     continue; // clearly different state: too weak to fire
 
                 matches.Add(notice);
-                if (matchState == StateMatch.Confirmed)
-                    stateMatch = StateMatch.Confirmed;
+                if (matchState == SignalStateMatch.Confirmed)
+                    stateMatch = SignalStateMatch.Confirmed;
             }
 
             if (matches.Count == 0)
@@ -114,116 +114,13 @@ public class HiringFreezeSignal : IGhostSignal
 
     // ── Employer-name normalization ────────────────────────────────────
 
-    private static readonly string[] LegalSuffixes =
-    {
-        "incorporated", "inc", "llc", "llp", "lp", "plc", "ltd",
-        "corp", "corporation", "company", "co", "limited", "holdings", "group"
-    };
-
-    private static string NormalizeEmployer(string? employer)
-    {
-        if (string.IsNullOrWhiteSpace(employer))
-            return string.Empty;
-
-        var sb = new System.Text.StringBuilder(employer.Length);
-        foreach (var ch in employer)
-            sb.Append(char.IsLetterOrDigit(ch) ? char.ToLowerInvariant(ch) : ' ');
-
-        var tokens = sb.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var kept = new List<string>(tokens.Length);
-        var dbaIndex = Array.IndexOf(tokens, "dba");
-        var take = dbaIndex >= 0 ? dbaIndex : tokens.Length;
-
-        for (var i = 0; i < take; i++)
-        {
-            // A trailing legal-suffix token is dropped ("...USA, LLC." -> "...usa").
-            if (i == take - 1 && LegalSuffixes.Contains(tokens[i]))
-                continue;
-            kept.Add(tokens[i]);
-        }
-
-        return string.Join(' ', kept);
-    }
-
-    // ── State matching ─────────────────────────────────────────────────
-    // WARN is employer-level, but a notice in a different state than a clearly
-    // located posting is weak enough to drop. Unknown or ambiguous locations
-    // stay in play (the evidence then flags the caution).
-
-    private enum StateMatch
-    {
-        Confirmed,   // posting location clearly sits in the notice's state
-        Mismatch,    // posting location clearly sits in a different state
-        Unknown      // no / ambiguous location — employer-level match only
-    }
-
-    private static StateMatch SameState(string? postingLocation, WarnNotice notice)
-    {
-        var noticeState = notice.State?.Trim().ToUpperInvariant();
-        if (string.IsNullOrWhiteSpace(noticeState))
-            return StateMatch.Unknown;
-        if (string.IsNullOrWhiteSpace(postingLocation))
-            return StateMatch.Unknown;
-
-        var loc = postingLocation.ToLowerInvariant();
-
-        var segments = postingLocation.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        var trailingCode = segments.Length > 0 ? segments[^1].Trim().ToUpperInvariant() : string.Empty;
-
-        // "Redmond, WA" and the notice is a WA notice
-        if (trailingCode.Length == 2 && trailingCode == noticeState)
-            return StateMatch.Confirmed;
-
-        // A full state name in the location, e.g. "Interlake Ave N, Washington"
-        if (StateNames.TryGetValue(noticeState, out var stateName) &&
-            loc.Contains(stateName, StringComparison.OrdinalIgnoreCase))
-            return StateMatch.Confirmed;
-
-        // The notice's city/town appearing in the location, e.g. notice "Redmond"
-        if (!string.IsNullOrWhiteSpace(notice.Location))
-        {
-            var noticeCity = notice.Location.Split(',')[0].Trim();
-            if (noticeCity.Length >= 4 && loc.Contains(noticeCity, StringComparison.OrdinalIgnoreCase))
-                return StateMatch.Confirmed;
-        }
-
-        // Scan for any other full state name in the location, e.g. "Tacoma,
-        // Washington" where the notice was filed in California.
-        foreach (var (code, name) in StateNames)
-        {
-            if (code != noticeState && loc.Contains(name, StringComparison.OrdinalIgnoreCase))
-                return StateMatch.Mismatch;
-        }
-
-        // "Redmond, OR" where the notice was filed in WA — different state.
-        if (trailingCode.Length == 2 && StateNames.ContainsKey(trailingCode) && trailingCode != noticeState)
-            return StateMatch.Mismatch;
-
-        // No usable state signal in the location → employer-level match.
-        return StateMatch.Unknown;
-    }
-
-    private static readonly Dictionary<string, string> StateNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["AL"] = "alabama", ["AK"] = "alaska", ["AZ"] = "arizona", ["AR"] = "arkansas",
-        ["CA"] = "california", ["CO"] = "colorado", ["CT"] = "connecticut", ["DE"] = "delaware",
-        ["FL"] = "florida", ["GA"] = "georgia", ["HI"] = "hawaii", ["ID"] = "idaho",
-        ["IL"] = "illinois", ["IN"] = "indiana", ["IA"] = "iowa", ["KS"] = "kansas",
-        ["KY"] = "kentucky", ["LA"] = "louisiana", ["ME"] = "maine", ["MD"] = "maryland",
-        ["MA"] = "massachusetts", ["MI"] = "michigan", ["MN"] = "minnesota", ["MS"] = "mississippi",
-        ["MO"] = "missouri", ["MT"] = "montana", ["NE"] = "nebraska", ["NV"] = "nevada",
-        ["NH"] = "new hampshire", ["NJ"] = "new jersey", ["NM"] = "new mexico", ["NY"] = "new york",
-        ["NC"] = "north carolina", ["ND"] = "north dakota", ["OH"] = "ohio", ["OK"] = "oklahoma",
-        ["OR"] = "oregon", ["PA"] = "pennsylvania", ["RI"] = "rhode island", ["SC"] = "south carolina",
-        ["SD"] = "south dakota", ["TN"] = "tennessee", ["TX"] = "texas", ["UT"] = "utah",
-        ["VT"] = "vermont", ["VA"] = "virginia", ["WA"] = "washington", ["WV"] = "west virginia",
-        ["WI"] = "wisconsin", ["WY"] = "wyoming", ["DC"] = "district of columbia"
-    };
+    private static string NormalizeEmployer(string? employer) =>
+        EmployerNormalizer.Normalize(employer);
 
     // ── Scoring ────────────────────────────────────────────────────────
 
     private static (double Score, double Confidence) ComputeScoreAndConfidence(
-        List<WarnNotice> matches, WarnNotice newest, DateTime reference, StateMatch stateMatch)
+        List<WarnNotice> matches, WarnNotice newest, DateTime reference, SignalStateMatch stateMatch)
     {
         var daysSince = Math.Max(0, (int)(reference - newest.NoticeDate).TotalDays);
 
@@ -246,7 +143,7 @@ public class HiringFreezeSignal : IGhostSignal
 
         // A confirmed state (posting location agrees with the notice) tightens
         // the correlation.
-        if (stateMatch == StateMatch.Confirmed)
+        if (stateMatch == SignalStateMatch.Confirmed)
             confidence += 0.10;
 
         // Several notices in the window make the freeze picture solid.
@@ -260,7 +157,7 @@ public class HiringFreezeSignal : IGhostSignal
     // ── Evidence ───────────────────────────────────────────────────────
 
     private static string[] BuildEvidence(
-        List<WarnNotice> matches, WarnNotice newest, StateMatch stateMatch)
+        List<WarnNotice> matches, WarnNotice newest, SignalStateMatch stateMatch)
     {
         var workers = newest.AffectedCount > 0
             ? $" for {newest.AffectedCount} workers"
@@ -269,7 +166,7 @@ public class HiringFreezeSignal : IGhostSignal
         var noticeState = newest.State?.Trim().ToUpperInvariant() ?? string.Empty;
         var place = !string.IsNullOrWhiteSpace(newest.Location)
             ? newest.Location.Trim()
-            : (StateNames.TryGetValue(noticeState, out var stateName) ? stateName : noticeState);
+            : (LocationStateMatcher.StateName(noticeState) ?? noticeState);
 
         var lines = new List<string>
         {
@@ -279,7 +176,7 @@ public class HiringFreezeSignal : IGhostSignal
         if (matches.Count > 1)
             lines.Add($"{matches.Count} WARN notices from this employer fall within the last {RecentWindowDays} days, which strengthens the correlation.");
 
-        if (stateMatch == StateMatch.Unknown)
+        if (stateMatch == SignalStateMatch.Unknown)
             lines.Add("The posting's location could not be compared with the state on the notice, so treat this as employer-level evidence.");
 
         lines.Add("A WARN notice does not mean this specific role was cut — employers often keep hiring in other divisions.");

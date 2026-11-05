@@ -1,0 +1,7 @@
+[
+  { "Employer": "Narnia Interactive Inc.", "JobTitle": "Senior Software Engineer", "State": "CA", "SocCode": "15-1252.00", "ReceivedDate": "2026-05-14" },
+  { "Employer": "Narnia Interactive Inc.", "JobTitle": "Software Engineer", "State": "CA", "SocCode": "15-1252.00", "ReceivedDate": "2026-03-02" },
+  { "Employer": "Bottleneck Analytics LLC", "JobTitle": "Data Scientist", "State": "NY", "SocCode": "15-2051.00", "ReceivedDate": "2026-01-20" },
+  { "Employer": "Old Harbor Press Corp", "JobTitle": "Content Strategist", "State": "TX", "SocCode": "27-3031.00", "ReceivedDate": "2026-02-11" },
+  { "Employer": "Lakeshore Systems, Ltd", "JobTitle": "Marketing Coordinator", "State": "WI", "SocCode": "11-2021.00", "ReceivedDate": "2024-02-01" }
+]
