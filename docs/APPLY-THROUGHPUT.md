@@ -13,6 +13,9 @@
 >
 > Work items are `APP-01` … `APP-17`. P0 = make the funnel exist, P1 = the
 > throughput engine, P2 = volume, safely, P3 = "least hassle" polish.
+>
+> **Status:** P0 shipped 2026-11-05 (APP-01..06; PRs #72, #76, #74, #73, #75, #77).
+> Issues live at #55–#71; the `throughput` label tracks them.
 
 ## Evidence base (what audits + research found, Nov 2026)
 
