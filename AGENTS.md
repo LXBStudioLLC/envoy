@@ -53,13 +53,21 @@ src/
       JobPosting.cs
       SignalResult.cs
       GhostScore.cs
-    Signals/                         — 5 implemented + tested signals
+    Signals/                         — 9 implemented + tested signals
       AtsCrossCheckSignal.cs       — Deterministic, network (public Greenhouse/Lever APIs)
       ScamPatternSignal.cs         — Deterministic, local regex (scam-pattern detection)
       PostingAgeSignal.cs          — Probabilistic, local (age vs. seniority baseline)
       DuplicateJdSignal.cs         — Weak, local (cross-company near-duplicate JD)
       RepostFrequencySignal.cs     — Weak, local (unchanged re-listing)
-      (Hiring Freeze, PERM cross-check — planned; see issues #5 / #1)
+      SalaryAbsenceSignal.cs       — Weak, local (pay range missing in pay-transparency jurisdictions)
+      ThinDescriptionSignal.cs     — Weak, local (short or boilerplate-only description)
+      HiringFreezeSignal.cs        — Probabilistic, local (public WARN Act notices; bundled WA seed)
+      PermCrossCheckSignal.cs      — Probabilistic, local (pre-shrunk DOL PERM filing index)
+      Services/
+        EmployerNormalizer.cs        — shared company-name normalization
+        LocationStateMatcher.cs      — shared posting-vs-state matching
+        WarnDataset.cs / PermIndex.cs — dataset loaders (cache → bundled seed → empty)
+      warn-notices.json / perm-index.json — bundled real-data seeds (see docs/WARN-NOTICES.md, docs/PERM-INDEX.md)
     IGhostSignal.cs                  — Name, Tier, RequiresNetwork, EvaluateAsync
     GhostScorer.cs                   — aggregates signals → Neutral / Elevated / High
     ServiceRegistration.cs           — AddEnvoyGhostDetection() (reflection auto-discovery)

@@ -57,7 +57,7 @@ You tailor the resume, fill out the same fields again, hit submit, and never hea
 Envoy is in early beta. It works end to end and every release is signed, but so far it has run on a small number of machines against a limited slice of real postings. That is the gap you can close.
 
 - **Test it.** Install it, run your real searches, and open an issue for anything that looks wrong: a real job flagged as risky, an obvious ghost scored OK, a crash, a screen that confused you. A five-minute report genuinely moves the project.
-- **Contribute.** Five starter issues are open, graded easy to moderate, including two self-contained ghost signals and a new job-board source. [CONTRIBUTING.md](CONTRIBUTING.md) has the step-by-step, including how to hand a signal spec to a coding agent.
+- **Contribute.** More starter work is open on the tracker, graded easy to moderate: ghost-signal upgrades, a data refresher service, and job-board sources. [CONTRIBUTING.md](CONTRIBUTING.md) has the step-by-step, including how to hand a signal spec to a coding agent.
 
 Everyone who helps gets credited. Merged PRs are listed in the notes of the release they ship in, and so are the people whose bug reports and test sessions led to a fix. If you would rather not be named, say so in your issue or PR.
 
@@ -119,7 +119,7 @@ Signals come in three tiers:
 - **Probabilistic** is a strong correlation. For example, the posting has been live far longer than most roles at its level.
 - **Weak** is a softer hint that still counts for something. For example, the description is a near-duplicate of another company's post.
 
-Four signals run in the app today, all unit-tested:
+Eight signals run in the app today, all unit-tested:
 
 | Signal | Tier | Data |
 |---|---|---|
@@ -127,8 +127,12 @@ Four signals run in the app today, all unit-tested:
 | Posting Age | Probabilistic | Local (posting date from the discovery feed) |
 | Duplicate JD | Weak | Local (cross-company text match within a batch) |
 | Scam Pattern | Deterministic | Local regex (off-platform redirects, upfront fee or PII asks, crypto and gift-card payment, check and overpayment fraud) |
+| Salary Absence | Weak | Local: pay range missing where a pay-transparency law (CA, CO, NY, WA, …) requires one |
+| Thin Description | Weak | Local: very short description, or nearly all recruiter boilerplate with almost no role detail |
+| Hiring Freeze | Probabilistic | Local (public WARN Act layoff notices, bundled seed; see [docs/WARN-NOTICES.md](docs/WARN-NOTICES.md)) |
+| PERM Filing Cross-Check | Probabilistic | Local (public DOL PERM labor-certification filings, pre-shrunk index; see [docs/PERM-INDEX.md](docs/PERM-INDEX.md)) |
 
-A fifth signal, Repost Frequency, watches for listings that get re-posted to look new. Its stronger path needs listing history across sessions, which this build doesn't keep yet, but a timestamp fallback can already fire when a posting's own dates show it was bumped long after it first went up.
+A ninth signal, Repost Frequency, watches for listings that get re-posted to look new. Its stronger path needs listing history across sessions, which this build doesn't keep yet, but a timestamp fallback can already fire when a posting's own dates show it was bumped long after it first went up.
 
 Each signal says whether it needs the network. That lets Envoy score a whole list locally in the Find Jobs view and save the network calls for when you open a single posting.
 
@@ -142,7 +146,7 @@ Each signal says whether it needs the network. That lets Envoy score a whole lis
 | Elevated | A few signals line up and suggest caution. | Two or more probabilistic signals at 0.60 or higher. |
 | High | Strong deterministic evidence that this one may waste your time. | A deterministic signal at 0.80 or higher, with confidence 0.70 or higher. |
 
-Envoy leans toward precision. Flagging a real job is worse than missing a ghost, so when it isn't sure, it stays Neutral. Worth knowing: the Elevated band needs two probabilistic signals, and only Posting Age is active right now, so in practice a posting lands on Neutral or High.
+Envoy leans toward precision. Flagging a real job is worse than missing a ghost, so when it isn't sure, it stays Neutral. Worth knowing: the Elevated band needs two probabilistic signals firing together on the same posting, so a single strong hit still lands as High only when the evidence is deterministic.
 
 ---
 
@@ -279,12 +283,12 @@ Hit a bug or a bad flag? [Open an issue](https://github.com/LXBStudioLLC/envoy/i
 ## Roadmap
 
 - [x] Ghost-detection signal framework, wired into the app
-- [x] Four active signals: ATS cross-check, posting age, duplicate JD, scam pattern
+- [x] Core signals: ATS cross-check, posting age, duplicate JD, scam pattern
 - [x] The Scoreboard: ghosts dodged, hours saved, day streak, and response tracking, as the app's start view
 - [ ] Repost frequency signal, full history-backed detection (the timestamp fallback ships today; the cross-session listing history it needs started accruing in 1.1.0)
 - [x] Job search over public ATS feeds plus optional Brave Search, every posting scored
 - [x] In-app update check with a title-bar link when a new version is out
-- [ ] More signals: hiring freeze ([#5](https://github.com/LXBStudioLLC/envoy/issues/5)), PERM filings ([#1](https://github.com/LXBStudioLLC/envoy/issues/1))
+- [x] More signals: hiring freeze ([#5](https://github.com/LXBStudioLLC/envoy/issues/5) [#45](https://github.com/LXBStudioLLC/envoy/pull/45)), PERM filings ([#1](https://github.com/LXBStudioLLC/envoy/issues/1) [#46](https://github.com/LXBStudioLLC/envoy/pull/46)), salary absence, thin description
 - [x] Windows zip and signed installer
 - [x] Vault view for profile history and corrections
 - [x] Adaptive parser with a self-healing element locator
