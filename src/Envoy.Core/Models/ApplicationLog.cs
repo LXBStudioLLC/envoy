@@ -75,5 +75,12 @@ public enum ApplicationStatus
 public enum ExecutionMode
 {
     Stealth,
-    Safe
+
+    /// <summary>Human-gated everywhere: the fill runs, the human confirms the send.</summary>
+    Safe,
+
+    /// <summary>APP-12: unattended submission — restricted to trusted company/ATS sites
+    /// (the SiteClassifier gate), explicitly opted in, and windowed when configured.
+    /// Aggregators and unknown sites NEVER pass; the human gate stays for those.</summary>
+    FullAuto
 }

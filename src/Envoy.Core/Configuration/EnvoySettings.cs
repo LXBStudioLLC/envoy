@@ -50,6 +50,27 @@ public class EnvoySettings
     /// </summary>
     public int QueueDailyCap { get; set; } = 25;
 
+    // ── APP-12: Full-Auto ──────────────────────────────────────────────────
+
+    /// <summary>
+    /// Master switch for unattended submission (Full-Auto). OFF by default;
+    /// even when ON, a site only auto-submits if the SiteClassifier calls it a
+    /// company ATS AND the host is trusted (three verified completions, or an
+    /// explicit entry in <see cref="FullAutoTrustedHosts"/>). Aggregators and
+    /// unknown sites are structurally excluded — enforced in the policy class,
+    /// not by convention.
+    /// </summary>
+    public bool FullAutoEnabled { get; set; } = false;
+
+    /// <summary>Explicitly trusted board hosts (e.g. "boards.greenhouse.io"). The trust list default is empty.</summary>
+    public List<string> FullAutoTrustedHosts { get; set; } = new();
+
+    /// <summary>Optional UTC hour window for the overnight drain (start inclusive). Null = any time.</summary>
+    public int? FullAutoWindowStartHour { get; set; }
+
+    /// <summary>Optional UTC hour window end (exclusive). Null with a start means "start hour only matters if end set too".</summary>
+    public int? FullAutoWindowEndHour { get; set; }
+
     //
     // How many days back a completed application to the same posting blocks a
     /// re-submit (APP-04 duplicate guard). 0 (default) means a prior completed

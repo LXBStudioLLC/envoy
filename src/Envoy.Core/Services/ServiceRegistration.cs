@@ -67,7 +67,12 @@ public static class ServiceRegistration
         // and the single-flight worker (started lazily on first enqueue).
         services.AddSingleton<IApplicationQueueRepository, ApplicationQueueRepository>();
         services.AddSingleton<IApplicationPreparer, OrchestratorApplicationPreparer>();
+        // APP-12: submitter + Full-Auto gate (the worker only submits for
+        // policy-allowed sites; enforcement re-checks at gate time anyway).
+        services.AddSingleton<IApplicationSubmitter, OrchestratorApplicationSubmitter>();
+        services.AddSingleton<IFullAutoGate, QueueFullAutoGate>();
         services.AddSingleton<ApplicationQueueService>();
+        services.AddSingleton<Func<EnvoySettings>>(sp => sp.GetRequiredService<EnvoySettings>);
 
         return services;
     }

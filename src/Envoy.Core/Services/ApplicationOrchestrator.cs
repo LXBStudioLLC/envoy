@@ -391,11 +391,25 @@ public class ApplicationOrchestrator
 
             log.SiteTemplateId = template.Id;
 
-            // Execute template. The submit step is human-gated in EVERY mode: the
-            // final click only fires after explicit approval. Stealth changes how
-            // input is typed, never whether the human confirms the submission.
-            var run = await _templates.ExecuteTemplateAsync(template, _browser, tailored, async msg =>
+            // ── APP-12: the gate wrapper ─────────────────────────────────
+            // The gate decides: Full-Auto auto-approves ONLY when the policy
+            // allows this posting (company ATS + trusted host + window) —
+            // aggregator/unknown sites and inhabitants of the human gate stay
+            // human. `mode` and the ledger keep the record honest either way.
+            var logsForPolicy = Append(log, priorLogs);
+            var autoApprovesGate = mode == ExecutionMode.FullAuto
+                && FullAutoPolicy.IsAllowed(tailored.JobUrl, _settings, logsForPolicy, DateTime.UtcNow);
+
+            if (autoApprovesGate)
             {
+                log.VerificationNote = "full-auto: policy-approved submission";
+                _log.LogInformation("Full-Auto submitting {Url} (policy allowed)", tailored.JobUrl);
+            }
+
+            Func<string, Task<bool>> gate = async msg =>
+            {
+                if (autoApprovesGate)
+                    return true;
                 log.Status = ApplicationStatus.SafeModeStopped;
                 await _logRepo.UpdateAsync(log, ct);
 
@@ -408,7 +422,9 @@ public class ApplicationOrchestrator
                     : ApplicationStatus.DeclinedByUser;
                 await _logRepo.UpdateAsync(log, ct);
                 return approved;
-            }, ct);
+            };
+
+            var run = await _templates.ExecuteTemplateAsync(template, _browser, tailored, gate, ct);
 
             // ── APP-05: honest completion ───────────────────────────────────
             log.RequiredFieldCount = run.RequiredTotal;
@@ -472,6 +488,15 @@ public class ApplicationOrchestrator
         await RecordLedgerEventAsync(log, ghostScore);
 
         return log;
+    }
+
+    private static List<ApplicationLog> Append(ApplicationLog extra, List<ApplicationLog> existing)
+    {
+        // The just-started InProgress row isn't on disk yet; appending it
+        // locally keeps the policy's trust count total.
+        var copy = existing.ToList();
+        copy.Add(extra);
+        return copy;
     }
 
     // The scoreboard ledger is bookkeeping — failing to record it must never
