@@ -57,8 +57,22 @@ public sealed class ApplicationQueueService : IDisposable
     /// Adds a posting to the queue. The duplicate guard runs at enqueue time
     /// via <paramref name="duplicateCheck"/> (e.g. the completed-apply check
     /// from APP-04) and inside the queue itself (one active row per posting
-    /// key). Returns false + a reason when blocked.
+    /// key). The per-company throttle (APP-11) refuses a second active row
+    /// for the same company, and the configured daily cap bounds the batch.
+    /// Returns false + a reason when blocked.
     /// </summary>
+    private static readonly QueueItemStatus[] ActiveStatuses =
+        { QueueItemStatus.Queued, QueueItemStatus.Preparing, QueueItemStatus.AppReady };
+
+    private static string NormalizeCompany(string? company)
+    {
+        if (string.IsNullOrWhiteSpace(company)) return string.Empty;
+        var sb = new System.Text.StringBuilder(company.Length);
+        foreach (var ch in company.ToLowerInvariant())
+            sb.Append(char.IsLetterOrDigit(ch) ? ch : ' ');
+        return string.Join(' ', sb.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+    }
+
     public async Task<(bool Enqueued, string Reason)> EnqueueAsync(
         QueuedApplication item,
         Func<QueuedApplication, Task<string?>>? duplicateCheck = null,
@@ -70,6 +84,36 @@ public sealed class ApplicationQueueService : IDisposable
 
         if (!string.IsNullOrWhiteSpace(item.DescriptionText) && item.DescriptionText.Length < 120)
             return (false, "The posting's description is too short to tailor reliably; open it and apply manually.");
+
+        // APP-11: one active application per company — the "same posting,
+        // different role" corner is allowed only as separate rows that the
+        // user reviews individually, but two active rows for one company with
+        // identical post titles are just duplicates.
+        var companyKey = NormalizeCompany(item.Company);
+        if (companyKey.Length > 0)
+        {
+            var all = await _queue.GetAllAsync(ct);
+            var activeSameCompany = all.Any(q => ActiveStatuses.Contains(q.Status)
+                && NormalizeCompany(q.Company) == companyKey
+                && q.PostingKey != item.PostingKey);
+            if (activeSameCompany)
+                return (false, $"{item.Company} already has an application in the queue (one active per company).");
+        }
+
+        if (_settings is not null)
+        {
+            var settings = _settings();
+            if (settings.QueueDailyCap > 0)
+            {
+                var queueDay = DateTime.UtcNow.Date;
+                var all = await _queue.GetAllAsync(ct);
+                var enqueuedToday = all.Count(q =>
+                    (ActiveStatuses.Contains(q.Status) || q.Status == QueueItemStatus.Submitted) &&
+                    ((q.Status == QueueItemStatus.Submitted ? q.UpdatedAt : q.CreatedAt) ?? q.CreatedAt) >= queueDay);
+                if (enqueuedToday >= settings.QueueDailyCap)
+                    return (false, $"Daily cap reached ({settings.QueueDailyCap} queued today). The cap protects you from a velocity flag; it resets tomorrow.");
+            }
+        }
 
         if (duplicateCheck is not null)
         {

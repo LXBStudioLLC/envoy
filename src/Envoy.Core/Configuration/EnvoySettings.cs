@@ -44,7 +44,14 @@ public class EnvoySettings
     public int MinutesPerApplicationEstimate { get; set; } = 45;
 
     /// <summary>
-    /// How many days back a completed application to the same posting blocks a
+    /// Hard cap on queue additions per UTC day (APP-11). 0 disables the cap.
+    /// The runaway-volume protection: ATS velocity flags and recruiter block
+    /// lists are real, so the default keeps a batch honest.
+    /// </summary>
+    public int QueueDailyCap { get; set; } = 25;
+
+    //
+    // How many days back a completed application to the same posting blocks a
     /// re-submit (APP-04 duplicate guard). 0 (default) means a prior completed
     /// application blocks forever; a positive window lets re-applying after X
     /// days through the same guard. An explicit user override is still asked
