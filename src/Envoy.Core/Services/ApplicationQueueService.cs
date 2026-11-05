@@ -125,9 +125,9 @@ public sealed class ApplicationQueueService : IDisposable
             var blockReason = await duplicateCheck(item);
             if (blockReason is not null)
             {
-                item.Status = QueueItemStatus.BlockedDuplicate;
-                item.Note = blockReason;
-                await _queue.AddAsync(item, ct);
+                // APP-11 audit fix: blocked rows are TRANSIENT reasons shown to
+                // the user — persisting a fresh "ALREADY APPLIED" row on every
+                // click accumulated duplicates in the panel.
                 Notify();
                 return (false, blockReason);
             }

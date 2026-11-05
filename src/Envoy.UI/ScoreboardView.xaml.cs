@@ -132,7 +132,8 @@ public partial class ScoreboardView : UserControl
         {
             var items = await _queueRepo.GetAllAsync();
             var byStatus = items
-                .Where(q => q.Status is QueueItemStatus.Queued or QueueItemStatus.Preparing or QueueItemStatus.AppReady or QueueItemStatus.NeedsCaptcha)
+                .Where(q => q.Status is QueueItemStatus.Queued or QueueItemStatus.Preparing or QueueItemStatus.AppReady
+                    or QueueItemStatus.NeedsCaptcha or QueueItemStatus.NeedsUserSend or QueueItemStatus.BlockedDuplicate)
                 .GroupBy(q => q.Status)
                 .Select(g => $"{g.Key}: {g.Count()}")
                 .ToArray();
@@ -174,6 +175,10 @@ public partial class ScoreboardView : UserControl
         }
         catch (Exception ex)
         {
+            // APP-16 audit fix: revert the combo (and the in-memory item) so the
+            // UI never shows a value the database refused to store.
+            item.OutcomeIndex = (int)item.Log.Outcome;
+            combo.SelectedIndex = item.OutcomeIndex;
             StatusLine.Text = $"Couldn't save that: {ex.Message}";
             StatusLine.Foreground = Red;
         }

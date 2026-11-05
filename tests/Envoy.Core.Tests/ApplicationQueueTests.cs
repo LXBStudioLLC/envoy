@@ -236,9 +236,11 @@ public sealed class ApplicationQueueServiceTests : IDisposable
         Assert.False(enqueued);
         Assert.Contains("already completed", reason);
 
+        // APP-11 audit fix: a blocked duplicate is a TRANSIENT verdict — it is
+        // returned to the caller, not persisted. Rows enqueued on every click
+        // of a blocked posting would otherwise accumulate in the panel.
         var rows = await _repo.GetAllAsync();
-        Assert.Single(rows);
-        Assert.Equal(QueueItemStatus.BlockedDuplicate, rows[0].Status);
+        Assert.Empty(rows);
     }
 
     [Fact]
