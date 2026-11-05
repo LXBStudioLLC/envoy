@@ -176,48 +176,7 @@ public sealed class ApplicationQueueService : IDisposable
                     continue;
                 }
 
-                await PrepareSingleFlight.WaitAsync(ct);
-                try
-                {
-                    item.Status = QueueItemStatus.Preparing;
-                    await _queue.UpdateAsync(item, ct);
-                    Notify();
-
-                    try
-                    {
-                        item.TailoredProfileId = await _preparer.PrepareAsync(item, ct);
-                        item.Status = QueueItemStatus.AppReady;
-                        item.Note = null;
-                    }
-                    catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-                    {
-                        // Per-item cap (preparer's own timeout): honest failure.
-                        item.Status = QueueItemStatus.Failed;
-                        item.Note = "Tailoring timed out.";
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        throw;
-                    }
-                    catch (Exception ex)
-                    {
-                        item.Status = QueueItemStatus.Failed;
-                        item.Note = ex.Message;
-                        _log.LogWarning(ex, "Queue prepare failed for {Url}", item.JobUrl);
-                    }
-
-                    await _queue.UpdateAsync(item, ct);
-                    Notify();
-
-                    if (item.Status == QueueItemStatus.AppReady && _submitter is not null && _settings is not null)
-                    {
-                        await TryFullAutoSubmitAsync(item, ct);
-                    }
-                }
-                finally
-                {
-                    PrepareSingleFlight.Release();
-                }
+                await ProcessItemAsync(item, DateTime.UtcNow, ct);
             }
         }
         catch (OperationCanceledException)
@@ -246,6 +205,61 @@ public sealed class ApplicationQueueService : IDisposable
         return queued?.MasterProfileId is var id && id != Guid.Empty ? id : null;
     }
 
+    /// <summary>
+    /// One item's full worker pass (prepare → Full-Auto submit when the gate
+    /// admits). Extracted so the night-window drain can be tested with an
+    /// injected "now" — the worker passes DateTime.UtcNow.
+    /// </summary>
+    public async Task ProcessItemAsync(QueuedApplication item, DateTime nowUtc, CancellationToken ct)
+    {
+        await PrepareSingleFlight.WaitAsync(ct);
+        try
+        {
+            item.Status = QueueItemStatus.Preparing;
+            await _queue.UpdateAsync(item, ct);
+            Notify();
+
+            try
+            {
+                item.TailoredProfileId = await _preparer.PrepareAsync(item, ct);
+                item.Status = QueueItemStatus.AppReady;
+                item.Note = null;
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                // Per-item cap (preparer's own timeout): honest failure.
+                item.Status = QueueItemStatus.Failed;
+                item.Note = "Tailoring timed out.";
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                item.Status = QueueItemStatus.Failed;
+                item.Note = ex.Message;
+                _log.LogWarning(ex, "Queue prepare failed for {Url}", item.JobUrl);
+            }
+
+            if (item.Status == QueueItemStatus.AppReady && item.TailoredProfileId is not null)
+            {
+                // APP-12: the gate consult honors the window via nowUtc.
+                if (_gate is not null && _gate.ShouldAutoSubmitNow(item, nowUtc))
+                {
+                    await TryFullAutoSubmitAsync(item, nowUtc, ct);
+                }
+            }
+
+            await _queue.UpdateAsync(item, ct);
+            Notify();
+        }
+        finally
+        {
+            PrepareSingleFlight.Release();
+        }
+    }
+
     private static async Task WaitAsync(TimeSpan delay, CancellationToken ct)
     {
         try
@@ -255,13 +269,9 @@ public sealed class ApplicationQueueService : IDisposable
         catch (OperationCanceledException) { }
     }
 
-    /// <summary>
-    /// APP-12: when the Full-Auto gate admits the item, the worker submits it
-    /// right after prepare — no human gate — and records the outcome on the
-    /// queue row (Submitted / Failed / NeedsCaptcha). Captcha hand-offs park
-    /// the row for the user; everything else is an honest status.
-    /// </summary>
-    private async Task TryFullAutoSubmitAsync(QueuedApplication item, CancellationToken ct)
+    /// <summary>Submits one prepared item without the human gate (policy already
+    /// decided at the gate consult; nowUtc flows for window checks downstream).</summary>
+    private async Task TryFullAutoSubmitAsync(QueuedApplication item, DateTime nowUtc, CancellationToken ct)
     {
         if (_gate is null && _submitter is null) return;
         if (_gate is not null && !_gate.ShouldAutoSubmitNow(item, DateTime.UtcNow)) return;

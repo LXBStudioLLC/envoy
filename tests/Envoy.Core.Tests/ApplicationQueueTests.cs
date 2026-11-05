@@ -145,6 +145,7 @@ public sealed class ApplicationQueueServiceTests : IDisposable
 
     private readonly SqliteConnection _connection;
     private readonly ApplicationQueueRepository _repo;
+    private readonly TestFactory _factory;
     private readonly StubPreparer _preparer = new();
     private readonly ApplicationQueueService _service;
     private static readonly Guid Profile = Guid.NewGuid();
@@ -157,7 +158,8 @@ public sealed class ApplicationQueueServiceTests : IDisposable
         var options = new DbContextOptionsBuilder<EnvoyDbContext>().UseSqlite(_connection).Options;
         using var db = new EnvoyDbContext(options);
         db.Database.EnsureCreated();
-        _repo = new ApplicationQueueRepository(new TestFactory(options), Mock.Of<ILogger<ApplicationQueueRepository>>());
+        _factory = new TestFactory(options);
+        _repo = new ApplicationQueueRepository(_factory, Mock.Of<ILogger<ApplicationQueueRepository>>());
         _service = new ApplicationQueueService(_repo, _preparer, Mock.Of<ILogger<ApplicationQueueService>>());
         _service.QueueChanged += () => Interlocked.Increment(ref _changeEvents);
     }
@@ -305,6 +307,66 @@ public sealed class ApplicationQueueServiceTests : IDisposable
         Assert.False(ok3);
         Assert.Contains("Daily cap reached (2", reason3);
         capped.Dispose();
+    }
+
+    [Theory]
+    [InlineData(2, null, null)]      // no window: any hour
+    [InlineData(2, 22, 6)]           // overnight wrap: 02:00 inside 22→06
+    [InlineData(23, 22, 6)]          // 23:00 inside
+    [InlineData(5, 22, 6)]           // 05:00 inside (end exclusive)
+    public void InWindow_HonorsTheDrainWindow(int nowHour, int? start, int? end)
+    {
+        var now = new DateTime(2026, 11, 5, nowHour, 0, 0, DateTimeKind.Utc);
+        Assert.True(FullAutoPolicy.InWindow(start, end, now));
+    }
+
+    [Theory]
+    [InlineData(12, 22, 6)]          // 12:00 outside 22→06
+    [InlineData(6, 22, 6)]           // end exclusive
+    [InlineData(12, null, 6)]        // half-set window = misconfiguration
+    public void InWindow_OutsideOrMisconfigured_Denies(int nowHour, int? start, int? end)
+    {
+        var now = new DateTime(2026, 11, 5, nowHour, 0, 0, DateTimeKind.Utc);
+        Assert.False(FullAutoPolicy.InWindow(start, end, now));
+    }
+
+    [Fact]
+    public async Task OutsideWindow_RowStaysAppReady_PolicyGateDeniesAtNoon()
+    {
+        var submitCalls = 0;
+        var submitter = new StubSubmitter(_ => { Interlocked.Increment(ref submitCalls); return (true, null, false); });
+
+        // The REAL policy gate: FullAutoEnabled + company-ATS + trusted host —
+        // with a night window 22→06 UTC, drained at noon UTC: the window denies.
+        var logRepo = new ApplicationLogRepository(_factory, Mock.Of<ILogger<ApplicationLogRepository>>());
+        var settings = new EnvoySettings
+        {
+            FullAutoEnabled = true,
+            FullAutoWindowStartHour = 22,
+            FullAutoWindowEndHour = 6,
+            FullAutoTrustedHosts = { "boards.greenhouse.io" }
+        };
+        var realGate = new QueueFullAutoGate(logRepo, () => settings);
+
+        var auto = new ApplicationQueueService(_repo, _preparer, Mock.Of<ILogger<ApplicationQueueService>>(),
+            () => settings, submitter, realGate);
+        var tailored = Guid.NewGuid();
+        _preparer.Handler = _ => Task.FromResult(tailored);
+
+        var item = Item("k-w", "https://boards.greenhouse.io/acme/jobs/30");
+        await auto.EnqueueAsync(item, autoStart: false);
+        var stored = (await _repo.GetAllAsync()).Single();
+
+        await auto.ProcessItemAsync(stored, new DateTime(2026, 11, 5, 12, 0, 0, DateTimeKind.Utc), CancellationToken.None);
+
+        var rows = await _repo.GetAllAsync();
+        Assert.Equal(QueueItemStatus.AppReady, rows.Single().Status);
+        Assert.Equal(0, submitCalls);
+    }
+
+    private sealed class CountingGate(bool admits, Action onCall) : IFullAutoGate
+    {
+        public bool ShouldAutoSubmitNow(QueuedApplication item, DateTime nowUtc) { onCall(); return admits; }
     }
 
     [Fact]

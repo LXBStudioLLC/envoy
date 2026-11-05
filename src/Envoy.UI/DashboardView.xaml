@@ -8,6 +8,23 @@
             <TextBlock Text="DASHBOARD" Style="{StaticResource CyberHeading}" Margin="0,0,0,4"/>
             <TextBlock Text="Import a resume, pick a profile, and go." Style="{StaticResource CyberSubheading}" Margin="0,0,0,20"/>
 
+            <!-- #92: first-run readiness strip — per-step states, fix per incomplete step -->
+            <Border x:Name="ReadinessPanel" Background="#0D1117" CornerRadius="3" BorderBrush="#1A3A4A" BorderThickness="1" Padding="16" Visibility="Collapsed" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="READY TO RUN?" Foreground="#39FF14" FontSize="13" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,6"/>
+                    <ItemsControl x:Name="ReadinessList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
+                                    <TextBlock Text="{Binding Marker}" Foreground="{Binding MarkerBrush}" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Width="16" VerticalAlignment="Top"/>
+                                    <TextBlock Text="{Binding Step}" Foreground="#8892A4" FontSize="11" FontFamily="{StaticResource CyberFontBody}" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <Border x:Name="ImportDropZone" Background="#111827" CornerRadius="3" BorderBrush="#1A3A4A" BorderThickness="1" Padding="20" Margin="0,0,0,16"
                     AllowDrop="True" DragEnter="ImportDropZone_DragEnter" DragLeave="ImportDropZone_DragLeave" DragOver="ImportDropZone_DragOver" Drop="ImportDropZone_Drop"
                     AutomationProperties.Name="Drop a PDF resume here or use the Select PDF File button">

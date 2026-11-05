@@ -1,3 +1,4 @@
+using Envoy.Core.Configuration;
 using Envoy.Core.Models;
 using Envoy.Core.Services;
 using Microsoft.Win32;
@@ -14,16 +15,61 @@ public partial class DashboardView : UserControl
     private readonly ApplicationOrchestrator _orchestrator;
     private readonly IProfileRepository _profileRepo;
     private readonly IBrowserLauncher _browserLauncher;
+    private readonly EnvoySettings _settings;
     private List<MasterProfile> _profiles = new();
     private bool _browserAutoLaunched;
 
-    public DashboardView(ApplicationOrchestrator orchestrator, IProfileRepository profileRepo, IBrowserLauncher browserLauncher)
+    public DashboardView(ApplicationOrchestrator orchestrator, IProfileRepository profileRepo,
+        IBrowserLauncher browserLauncher, EnvoySettings settings)
     {
         _orchestrator = orchestrator;
         _profileRepo = profileRepo;
         _browserLauncher = browserLauncher;
+        _settings = settings;
         InitializeComponent();
         Loaded += DashboardView_Loaded;
+    }
+
+    private async Task RenderReadinessStripAsync(int profileCount)
+    {
+        try
+        {
+            var llmConnected = false;
+            try
+            {
+                var detection = _orchestrator.GetType().Name; // LLMDetection is reachable through DI in App; probe cheaply via settings
+                llmConnected = !string.IsNullOrEmpty(_settings.ActiveLLMProvider)
+                    || !string.IsNullOrEmpty(_settings.OpenAIApiKeyEncrypted)
+                    || !string.IsNullOrEmpty(_settings.AnthropicApiKeyEncrypted)
+                    || !string.IsNullOrEmpty(_settings.GeminiApiKeyEncrypted);
+            }
+            catch { }
+
+            var browserType = _browserLauncher.GetSelectedBrowserType() ?? BrowserType.Chrome;
+            var browserDebug = await _browserLauncher.IsRunningWithDebuggingAsync(browserType);
+
+            var report = EnvoyReadiness.Compute(profileCount, llmConnected, browserDebug, _settings);
+
+            var rows = report.Steps.Select(s => new ReadinessStripRow
+            {
+                Marker = s.Complete ? "✓" : "·",
+                MarkerBrush = s.Complete ? Brushes.SpringGreen : Brushes.Goldenrod,
+                Step = s.Complete
+                    ? $"{s.Name} — {s.Status}"
+                    : $"{s.Name} — not ready. {s.Fix}"
+            }).ToList();
+
+            ReadinessList.ItemsSource = rows;
+            ReadinessPanel.Visibility = Visibility.Visible;
+        }
+        catch { /* the strip is best-effort: never crash the dashboard */ }
+    }
+
+    private sealed class ReadinessStripRow
+    {
+        public string Marker { get; set; } = "";
+        public System.Windows.Media.Brush MarkerBrush { get; set; } = System.Windows.Media.Brushes.Gray;
+        public string Step { get; set; } = "";
     }
 
     private async void DashboardView_Loaded(object sender, RoutedEventArgs e)
@@ -32,6 +78,7 @@ public partial class DashboardView : UserControl
         {
             await LoadProfilesAsync();
             await RefreshBrowserStatusAsync();
+            await RenderReadinessStripAsync(_profiles.Count);
         }
         catch (Exception ex)
         {
@@ -201,6 +248,8 @@ public partial class DashboardView : UserControl
         {
             var profile = await _orchestrator.ImportResumeAsync(pdfPath);
             await LoadProfilesAsync();
+            await RefreshBrowserStatusAsync();
+            await RenderReadinessStripAsync(_profiles.Count);
             ImportStatus.Text = $"Profile imported: {profile.Name}";
             ImportStatus.Foreground = Green;
         }
