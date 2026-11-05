@@ -22,6 +22,10 @@ public partial class FindJobsView : UserControl
     private List<AtsBoardRef> _boards = new();
     private List<DiscoveredJobItem> _lastItems = new();
 
+    /// <summary>APP-02: raised when the user hits APPLY on a result row; the
+    /// MainWindow routes the carried posting + score into the Apply view.</summary>
+    public event Action<DiscoveredJobItem>? ApplyRequested;
+
     public FindJobsView(JobDiscoveryService discovery, GhostScorer scorer, EnvoySettings settings, IJobEventRepository jobEvents)
     {
         _discovery = discovery;
@@ -308,6 +312,21 @@ public partial class FindJobsView : UserControl
             try { Process.Start(new ProcessStartInfo(item.Url) { UseShellExecute = true }); }
             catch (Exception ex) { ShowError($"Could not open link: {ex.Message}"); }
         }
+    }
+
+    private void BtnApply_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not DiscoveredJobItem item) return;
+
+        if (item.Posting is null || string.IsNullOrWhiteSpace(item.Posting.DescriptionText))
+        {
+            StatusText.Text = $"No description came with this posting ({item.Company}) — open it, copy the link, and apply from the Apply tab.";
+            StatusText.Foreground = Yellow;
+            return;
+        }
+
+        RecordItemEvent(item, JobEventType.Viewed); // an apply intent is engagement; the submit itself will record Applied
+        ApplyRequested?.Invoke(item);
     }
 
     private void BtnSkip_Click(object sender, RoutedEventArgs e)

@@ -14,26 +14,202 @@ public partial class ApplyView : UserControl
     private readonly ApplicationOrchestrator _orchestrator;
     private readonly GhostScorer _ghostScorer;
     private readonly EnvoySettings _settings;
+    private readonly IProfileRepository _profiles;
     private Guid _profileId;
     private TailoredProfile? _tailored;
     private string _jobDescription = "";
     private GhostScore? _ghostScore;
     private TaskCompletionSource<bool>? _confirmTcs;
     private CancellationTokenSource? _flowCts;
+    private bool _tailoringInFlight;
 
-    public ApplyView(ApplicationOrchestrator orchestrator, GhostScorer ghostScorer, EnvoySettings settings)
+    /// <summary>APP-02: set when the posting arrived from discovery, so tailoring
+    /// runs on the already-known description instead of re-scraping.</summary>
+    private KnownPosting? _discoveryPosting;
+
+    public ApplyView(ApplicationOrchestrator orchestrator, GhostScorer ghostScorer, EnvoySettings settings,
+        IProfileRepository profiles)
     {
         _orchestrator = orchestrator;
         _ghostScorer = ghostScorer;
         _settings = settings;
+        _profiles = profiles;
         InitializeComponent();
         Loaded += (_, _) => RefreshModeOptions();
     }
 
-    // APP-03: a running tailoring or fill is cancellable. The token flows
-    // through the orchestrator into the LLM completion (linked token) and the
-    // CDP commands (waits honor it), so a hung model or stuck page can no
-    // longer wedge the view.
+    // Only offers the Stealth execution mode when stealth input is enabled (the guarded
+    // opt-in from the Browser view); otherwise Safe is the only option.
+    private void RefreshModeOptions()
+    {
+        CmbMode.Items.Clear();
+        CmbMode.Items.Add(new ComboBoxItem { Content = "Safe", IsSelected = true });
+        if (_settings.StealthModeEnabled)
+            CmbMode.Items.Add(new ComboBoxItem { Content = "Stealth" });
+    }
+
+    public void SetProfileId(Guid profileId)
+    {
+        _profileId = profileId;
+        _tailored = null;
+        _jobDescription = "";
+        _ghostScore = null;
+        _discoveryPosting = null;
+        // Clear inputs left over from the previous profile so two job apps
+        // for two different people don't accidentally cross-pollinate.
+        TxtJobUrl.Text = "";
+        ResultPanel.Visibility = Visibility.Collapsed;
+        GhostRiskPanel.Visibility = Visibility.Collapsed;
+        ConfirmPanel.Visibility = Visibility.Collapsed;
+        StatusText.Text = "";
+    }
+
+    // ── APP-02: discovery entrypoint ─────────────────────────────────────
+
+    /// <summary>
+    /// A posting arrived from Find Jobs with its description and ghost score
+    /// already in hand. Prefills the view, shows the carried score instantly,
+    /// and (with exactly one profile, or the already-selected one) starts
+    /// tailoring right away — one click from a search result to a filled,
+    /// review-ready application.
+    /// </summary>
+    public void LoadFromDiscovery(Envoy.GhostDetection.Models.JobPosting posting, GhostScoreSnapshot? snapshot)
+    {
+        SetProfileId(_profileId); // resets whatever the previous flow left behind
+
+        var known = ToKnownPosting(posting);
+
+        if (_profileId != Guid.Empty)
+        {
+            StartDiscoveryApply(known, snapshot);
+            return;
+        }
+
+        // No profile selected yet: pick the only one automatically, or tell the
+        // user exactly what to do (no silent no-op).
+        _ = AutoSelectProfileAndTailorAsync(known, snapshot);
+    }
+
+    private async Task AutoSelectProfileAndTailorAsync(KnownPosting posting, GhostScoreSnapshot? snapshot)
+    {
+        try
+        {
+            var profiles = await _profiles.GetAllAsync();
+            if (profiles.Count == 0)
+            {
+                StatusText.Text = "No profile yet. Import your resume on the Dashboard, then this job applies in one click.";
+                StatusText.Foreground = Yellow;
+                return;
+            }
+            if (profiles.Count > 1)
+            {
+                StatusText.Text = $"You have {profiles.Count} profiles — pick one on the Dashboard first, then APPLY.";
+                StatusText.Foreground = Yellow;
+                return;
+            }
+
+            StartDiscoveryApply(posting, snapshot, profiles[0].Id);
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Something went wrong: {ex.Message}";
+            StatusText.Foreground = Red;
+        }
+    }
+
+    /// <summary>Arms the view with a discovery posting (and optional carried
+    /// score) and runs the no-scrape tailor flow. Profile is either already
+    /// selected or passed in.</summary>
+    private void StartDiscoveryApply(KnownPosting posting, GhostScoreSnapshot? snapshot, Guid? profileId = null)
+    {
+        if (profileId is { } id)
+            SetProfileId(id); // full reset; then re-arm below
+
+        _discoveryPosting = posting;
+        TxtJobUrl.Text = posting.JobUrl;
+        _jobDescription = posting.DescriptionText;
+
+        // The score travels with the posting: no re-scoring when a snapshot exists.
+        if (snapshot is not null && Enum.TryParse<RiskBand>(snapshot.Band, out var band))
+        {
+            _ghostScore = new GhostScore
+            {
+                RiskScore = snapshot.RiskScore,
+                Band = band,
+                TopEvidence = snapshot.TopEvidence ?? Array.Empty<string>()
+            };
+            ShowGhostSnapshot(_ghostScore);
+        }
+
+        _ = TailorForPreparedPostingAsync(posting.JobUrl);
+    }
+
+    private void ShowGhostSnapshot(GhostScore score)
+    {
+        var (badge, label) = score.Band switch
+        {
+            RiskBand.High => (Red, "HIGH"),
+            RiskBand.Elevated => (Yellow, "ELEVATED"),
+            _ => (Green, "OK")
+        };
+
+        GhostBadge.Background = badge;
+        GhostBandText.Text = score.Band == RiskBand.Neutral ? "OK" : $"{label}  ·  {score.RiskScore:0}";
+        GhostEvidenceText.Text = score.TopEvidence.Length > 0
+            ? string.Join("\n", score.TopEvidence.Select(ev => "- " + ev))
+            : "No ghost-risk signals detected on this posting.";
+        GhostRiskPanel.Visibility = Visibility.Visible;
+    }
+
+    private static KnownPosting ToKnownPosting(Envoy.GhostDetection.Models.JobPosting p) =>
+        new(p.Url ?? string.Empty, p.CompanyName ?? string.Empty, p.JobTitle ?? string.Empty, p.DescriptionText ?? string.Empty);
+
+    /// <summary>
+    /// The tailor flow for prepared postings: the description is already
+    /// known, so the orchestrator runs tailoring + PDF with no scrape.
+    /// </summary>
+    private async Task TailorForPreparedPostingAsync(string jobUrl)
+    {
+        if (_tailoringInFlight) return;
+        _tailoringInFlight = true;
+
+        BtnInitiate.IsEnabled = false;
+        var token = BeginFlow();
+        StatusText.Text = "Tailoring your resume for this posting...";
+        StatusText.Foreground = Cyan;
+        ResultPanel.Visibility = Visibility.Collapsed;
+
+        try
+        {
+            var prepared = await _orchestrator.PrepareApplicationAsync(_profileId, jobUrl, _discoveryPosting, token);
+            _tailored = prepared.Tailored;
+            _jobDescription = prepared.JobDescription;
+            ShowResult();
+            await ScoreGhostRiskAsync(jobUrl, token);
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText.Text = "Tailoring cancelled. Nothing was changed.";
+            StatusText.Foreground = Yellow;
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Something went wrong: {ex.Message}";
+            StatusText.Foreground = Red;
+        }
+        finally
+        {
+            _tailoringInFlight = false;
+            BtnInitiate.IsEnabled = true;
+            EndFlow();
+        }
+    }
+
+    // ── APP-03: cancellable flows ────────────────────────────────────────
+
+    // A running tailoring or fill is cancellable. The token flows through the
+    // orchestrator into the LLM completion (linked token) and the CDP commands
+    // (waits honor it), so a hung model or stuck page can no longer wedge the view.
     private CancellationToken BeginFlow()
     {
         _flowCts?.Dispose();
@@ -57,31 +233,6 @@ public partial class ApplyView : UserControl
         _flowCts.Cancel();
         StatusText.Text = "Cancelling...";
         StatusText.Foreground = Yellow;
-    }
-
-    // Only offers the Stealth execution mode when stealth input is enabled (the guarded
-    // opt-in from the Browser view); otherwise Safe is the only option.
-    private void RefreshModeOptions()
-    {
-        CmbMode.Items.Clear();
-        CmbMode.Items.Add(new ComboBoxItem { Content = "Safe", IsSelected = true });
-        if (_settings.StealthModeEnabled)
-            CmbMode.Items.Add(new ComboBoxItem { Content = "Stealth" });
-    }
-
-    public void SetProfileId(Guid profileId)
-    {
-        _profileId = profileId;
-        _tailored = null;
-        _jobDescription = "";
-        _ghostScore = null;
-        // Clear inputs left over from the previous profile so two job apps
-        // for two different people don't accidentally cross-pollinate.
-        TxtJobUrl.Text = "";
-        ResultPanel.Visibility = Visibility.Collapsed;
-        GhostRiskPanel.Visibility = Visibility.Collapsed;
-        ConfirmPanel.Visibility = Visibility.Collapsed;
-        StatusText.Text = "";
     }
 
     private async void BtnInitiate_Click(object sender, RoutedEventArgs e)
@@ -109,15 +260,26 @@ public partial class ApplyView : UserControl
             return;
         }
 
+        // A manual re-tailor of the SAME discovery posting keeps the fast
+        // (no-scrape) path; any other URL is a hand-entered posting.
+        if (_discoveryPosting != null
+            && !string.Equals(_discoveryPosting.JobUrl, jobUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            _discoveryPosting = null;
+        }
+
+        var scraping = _discoveryPosting is null;
         BtnInitiate.IsEnabled = false;
         var token = BeginFlow();
-        StatusText.Text = "Reading the posting and tailoring your resume...";
+        StatusText.Text = scraping
+            ? "Reading the posting and tailoring your resume..."
+            : "Tailoring your resume for this posting...";
         StatusText.Foreground = Cyan;
         ResultPanel.Visibility = Visibility.Collapsed;
 
         try
         {
-            var prepared = await _orchestrator.PrepareApplicationAsync(_profileId, jobUrl, token);
+            var prepared = await _orchestrator.PrepareApplicationAsync(_profileId, jobUrl, _discoveryPosting, token);
             _tailored = prepared.Tailored;
             _jobDescription = prepared.JobDescription;
             ShowResult();
@@ -160,20 +322,7 @@ public partial class ApplyView : UserControl
             // Held so the score in front of the user travels with the submit;
             // the log and the ledger record what the decision was made against.
             _ghostScore = score;
-
-            var (badge, label) = score.Band switch
-            {
-                RiskBand.High => (Red, "HIGH"),
-                RiskBand.Elevated => (Yellow, "ELEVATED"),
-                _ => (Green, "OK")
-            };
-
-            GhostBadge.Background = badge;
-            GhostBandText.Text = score.Band == RiskBand.Neutral ? "OK" : $"{label}  ·  {score.RiskScore:0}";
-            GhostEvidenceText.Text = score.TopEvidence.Length > 0
-                ? string.Join("\n", score.TopEvidence.Select(ev => "- " + ev))
-                : "No ghost-risk signals detected on this posting.";
-            GhostRiskPanel.Visibility = Visibility.Visible;
+            ShowGhostSnapshot(score);
         }
         catch
         {

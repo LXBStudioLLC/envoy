@@ -84,66 +84,28 @@ public class ApplicationOrchestrator
     /// Used on the captcha hand-off, where the user must keep that page open.</summary>
     private void ForgetPreparedPage() => _preparedPage = null;
 
-    public async Task<PreparedApplication> PrepareApplicationAsync(Guid masterProfileId, string jobUrl, CancellationToken ct = default)
+    public async Task<PreparedApplication> PrepareApplicationAsync(Guid masterProfileId, string jobUrl, KnownPosting? knownPosting = null, CancellationToken ct = default)
     {
         var master = await _profileRepo.GetByIdAsync(masterProfileId, ct)
             ?? throw new InvalidOperationException("Master profile not found");
 
-        // Ensure browser is running with debugging
-        var browserType = _browserLauncher.GetSelectedBrowserType() ?? BrowserType.Chrome;
-        if (!await _browserLauncher.IsRunningWithDebuggingAsync(browserType))
-        {
-            var launched = await _browserLauncher.LaunchAsync(browserType);
-            if (!launched)
-            {
-                throw new InvalidOperationException("Could not launch browser. Please ensure a supported browser is installed and try again.");
-            }
-        }
+        // ── APP-02 fast path: the posting already came from discovery with its
+        // description in hand — no scrape needed. One click → LLM tailoring,
+        // no browser navigation at all in the prepare phase.
+        var hasKnownJd = !string.IsNullOrWhiteSpace(knownPosting?.DescriptionText)
+            && knownPosting!.DescriptionText.Length >= 120;
 
-        // Step 1: Extract job description via CDP
-        string jobDescription = "";
-        var connected = await _browser.ConnectAsync(ct: ct);
+        // APP-03: the tailoring run is bound to the flow's cancel token.
+        // local + cloud both observe it (linked CTS handles the timeout).
+        string jobDescription;
 
-        if (!connected)
+        if (hasKnownJd)
         {
-            _log.LogWarning("Could not connect to browser for {JobUrl}; tailoring will run with empty job description", jobUrl);
+            jobDescription = knownPosting!.DescriptionText;
         }
         else
         {
-            string? targetId = null;
-            try
-            {
-                targetId = await _browser.CreatePageAsync(ct);
-                if (targetId != null)
-                {
-                    await _browser.AttachToPageAsync(targetId, ct);
-                    await _browser.NavigateAsync(jobUrl, ct);
-                    jobDescription = await _browser.GetPageTextAsync(ct);
-
-                    // APP-03: keep the page + the connection for the submit
-                    // phase. This saves a second full page navigation per
-                    // application; the page is consumed or cleaned up there.
-                    _preparedPage = new PreparedPage(CanonicalFor(jobUrl), targetId);
-                }
-                else
-                {
-                    _log.LogWarning("Failed to create CDP page for {JobUrl}; tailoring will run with empty job description", jobUrl);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                // User cancel mid-navigation: mirror the WS-close behavior the
-                // old flow had, but still avoid leaving an orphan page behind.
-                if (targetId != null)
-                    await _browser.ClosePageAsync(targetId);
-                throw;
-            }
-            catch (Exception ex)
-            {
-                _log.LogWarning(ex, "Failed to fetch job description from {JobUrl}; tailoring will run with empty job description", jobUrl);
-                if (targetId != null && _browser.IsConnected)
-                    await _browser.ClosePageAsync(targetId); // half-fetched page: don't hold it open
-            }
+            jobDescription = await ScrapeJobDescriptionAsync(jobUrl, ct);
         }
 
         // Step 2: Tailor resume
@@ -159,6 +121,17 @@ public class ApplicationOrchestrator
             throw;
         }
 
+        // APP-02: discovery already knows the company/title; the heuristic
+        // extraction inside the tailor step is a fallback for postings we
+        // surfaced ourselves.
+        if (knownPosting is not null)
+        {
+            if (string.IsNullOrWhiteSpace(tailored.Company))
+                tailored.Company = knownPosting.Company;
+            if (string.IsNullOrWhiteSpace(tailored.JobTitle))
+                tailored.JobTitle = knownPosting.JobTitle;
+        }
+
         // Step 3: Generate PDF
         if (tailored.SafetyResult.Passed)
         {
@@ -171,6 +144,71 @@ public class ApplicationOrchestrator
         }
 
         return new PreparedApplication(tailored, jobDescription);
+    }
+
+    /// <summary>
+    /// Extracted from PrepareApplicationAsync: scrape a JD through the CDP
+    /// browser (with the session-continuity guarantees of APP-03), returning
+    /// "" on failure instead of failing the whole flow.
+    /// </summary>
+    private async Task<string> ScrapeJobDescriptionAsync(string jobUrl, CancellationToken ct)
+    {
+        var browserType = _browserLauncher.GetSelectedBrowserType() ?? BrowserType.Chrome;
+        if (!await _browserLauncher.IsRunningWithDebuggingAsync(browserType))
+        {
+            var launched = await _browserLauncher.LaunchAsync(browserType);
+            if (!launched)
+            {
+                throw new InvalidOperationException("Could not launch browser. Please ensure a supported browser is installed and try again.");
+            }
+        }
+
+        string jobDescription = "";
+        var connected = await _browser.ConnectAsync(ct: ct);
+
+        if (!connected)
+        {
+            _log.LogWarning("Could not connect to browser for {JobUrl}; tailoring will run with empty job description", jobUrl);
+            return jobDescription;
+        }
+
+        string? targetId = null;
+        try
+        {
+            targetId = await _browser.CreatePageAsync(ct);
+            if (targetId != null)
+            {
+                await _browser.AttachToPageAsync(targetId, ct);
+                await _browser.NavigateAsync(jobUrl, ct);
+                jobDescription = await _browser.GetPageTextAsync(ct);
+
+                // APP-03: keep the page + the connection for the submit
+                // phase. This saves a second full page navigation per
+                // application; the page is consumed or cleaned up there.
+                _preparedPage = new PreparedPage(CanonicalFor(jobUrl), targetId);
+            }
+            else
+            {
+                _log.LogWarning("Failed to create CDP page for {JobUrl}; tailoring will run with empty job description", jobUrl);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // User cancel mid-navigation: mirror the WS-close behavior the
+            // old flow had, but still avoid leaving an orphan page behind.
+            if (targetId != null)
+                await _browser.ClosePageAsync(targetId);
+            await _browser.CloseAsync(CancellationToken.None);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Failed to fetch job description from {JobUrl}; tailoring will run with empty job description", jobUrl);
+            if (targetId != null && _browser.IsConnected)
+                await _browser.ClosePageAsync(targetId); // half-fetched page: don't hold it open
+        }
+
+        return jobDescription;
     }
 
     public async Task<ApplicationLog> SubmitApplicationAsync(
