@@ -53,31 +53,21 @@ public partial class VaultView : UserControl
             TxtSummary.Text = _profile.Summary ?? "";
             TxtSkills.Text = string.Join(", ", _profile.Skills);
 
-            var expPanel = new StackPanel();
-            foreach (var exp in _profile.Experience)
-            {
-                var border = new Border
-                {
-                    Background = CardSurface,
-                    CornerRadius = new CornerRadius(3),
-                    BorderBrush = BorderColor,
-                    BorderThickness = new Thickness(1),
-                    Padding = new Thickness(12),
-                    Margin = new Thickness(0, 0, 0, 8),
-                    Effect = new DropShadowEffect { Color = Color.FromRgb(0x00, 0xF0, 0xFF), BlurRadius = 6, ShadowDepth = 0, Opacity = 0.08 }
-                };
-                var sp = new StackPanel();
-                sp.Children.Add(new TextBlock { Text = $"{exp.JobTitle} at {exp.Company}", Foreground = TextFg, FontWeight = FontWeights.Bold, FontSize = 13, FontFamily = BodyFont });
-                sp.Children.Add(new TextBlock { Text = $"{exp.StartDate} to {exp.EndDate ?? "present"}", Foreground = Muted, FontSize = 11, FontFamily = BodyFont });
-                foreach (var bullet in exp.Bullets)
-                    sp.Children.Add(new TextBlock { Text = $"  - {bullet}", Foreground = Muted, FontSize = 11, FontFamily = BodyFont, TextWrapping = TextWrapping.Wrap });
-                border.Child = sp;
-                expPanel.Children.Add(border);
-            }
-            ExperienceList.ItemsSource = null;
-            ExperienceList.Items.Clear();
-            foreach (UIElement child in expPanel.Children)
-                ExperienceList.Items.Add(child);
+            ExperienceList.ItemsSource = _profile.Experience
+                .Select(x => new VaultEntryRow(x.JobTitle + " at " + x.Company,
+                    $"{x.StartDate} to {x.EndDate ?? (x.IsCurrent ? "present" : "?")}",
+                    x.Bullets.Select(b => "  - " + b).ToList(),
+                    EditKind.Experience, x)).ToList();
+
+            EducationList.ItemsSource = _profile.Education
+                .Select(e => new VaultEntryRow(e.Degree + " — " + e.Institution,
+                    e.GraduationDate ?? string.Empty, new List<string>(), EditKind.Education, e)).ToList();
+
+            ProjectsList.ItemsSource = _profile.Projects
+                .Select(p => new VaultEntryRow(p.Name, string.Join(", ", p.Technologies),
+                    (p.Description ?? string.Empty).Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(l => "  " + l).Take(3).ToList(),
+                    EditKind.Project, p)).ToList();
 
             AnomaliesText.Text = _profile.Anomalies.Any()
                 ? string.Join("\n", _profile.Anomalies.Select(a => $"- {a.Field}: {a.Message} ({a.Severity})"))
@@ -93,6 +83,163 @@ public partial class VaultView : UserControl
             NoProfileLabel.Visibility = Visibility.Visible;
             ProfilePanel.Visibility = Visibility.Collapsed;
         }
+    }
+
+    private sealed record VaultEntryRow(string Heading, string Meta, List<string> Lines, EditKind Kind, object Entry);
+
+    private enum EditKind { Experience, Education, Project }
+
+    private async void VaultItem_EditDelete_Click(object sender, RoutedEventArgs e)
+    {
+        if (_profile is null) return;
+        if (sender is not Button btn || btn.Tag is not VaultEntryRow row) return;
+
+        try
+        {
+            bool editedSomething;
+
+            if (btn.Content?.ToString() == "DELETE")
+            {
+                var confirm = MessageBox.Show(
+                    "Remove this entry from your profile?",
+                    "Envoy: remove " + row.Kind,
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question,
+                    MessageBoxResult.No);
+                if (confirm != MessageBoxResult.Yes) return;
+
+                Remove(row.Entry);
+                editedSomething = false;
+            }
+            else
+            {
+                editedSomething = row.Kind switch
+                {
+                    EditKind.Experience => ApplyExperience((ExperienceEntry)row.Entry, VaultEntryEditor.ShowExperience((ExperienceEntry)row.Entry)),
+                    EditKind.Education => ApplyEducation((EducationEntry)row.Entry, VaultEntryEditor.ShowEducation((EducationEntry)row.Entry)),
+                    EditKind.Project => ApplyProject((ProjectEntry)row.Entry, VaultEntryEditor.ShowProject((ProjectEntry)row.Entry)),
+                    _ => false
+                };
+                if (!editedSomething) return; // user cancelled
+            }
+
+            await PersistAsync();
+        }
+        catch (Exception ex)
+        {
+            SaveStatus.Text = $"Couldn't apply edit: {ex.Message}";
+            SaveStatus.Foreground = Red;
+        }
+    }
+
+    private void Remove(object entry)
+    {
+        if (entry is null) return;
+        switch (entry)
+        {
+            case ExperienceEntry x: _profile!.Experience.Remove(x); break;
+            case EducationEntry e2: _profile!.Education.Remove(e2); break;
+            case ProjectEntry p: _profile!.Projects.Remove(p); break;
+        }
+    }
+
+    private async Task<bool> BeginEntryEdit(VaultEntryRow row)
+    {
+        switch (row.Kind)
+        {
+            case EditKind.Experience:
+                {
+                    var entry = (ExperienceEntry)row.Entry;
+                    var edited = VaultEntryEditor.ShowExperience(entry);
+                    return edited is null ? false : (ApplyExperience(entry, edited), true).Item1;
+                }
+            case EditKind.Education:
+                {
+                    var entry = (EducationEntry)row.Entry;
+                    var edited = VaultEntryEditor.ShowEducation(entry);
+                    return edited is null ? false : (ApplyEducation(entry, edited), true).Item1;
+                }
+            case EditKind.Project:
+                {
+                    var entry = (ProjectEntry)row.Entry;
+                    var edited = VaultEntryEditor.ShowProject(entry);
+                    return edited is null ? false : (ApplyProject(entry, edited), true).Item1;
+                }
+            default:
+                return false;
+        }
+    }
+
+    private bool ApplyExperience(ExperienceEntry target, ExperienceEntry? edited)
+    {
+        if (edited is null) return false;
+        target.JobTitle = edited.JobTitle;
+        target.Company = edited.Company;
+        target.Location = edited.Location;
+        target.StartDate = edited.StartDate;
+        target.EndDate = edited.IsCurrent ? null : edited.EndDate;
+        target.IsCurrent = edited.IsCurrent;
+        target.Bullets = edited.Bullets;
+        return true;
+    }
+
+    private bool ApplyEducation(EducationEntry target, EducationEntry? edited)
+    {
+        if (edited is null) return false;
+        target.Degree = edited.Degree;
+        target.Institution = edited.Institution;
+        target.GraduationDate = edited.GraduationDate;
+        target.Location = edited.Location;
+        return true;
+    }
+
+    private bool ApplyProject(ProjectEntry target, ProjectEntry? edited)
+    {
+        if (edited is null) return false;
+        target.Name = edited.Name;
+        target.Description = edited.Description;
+        target.Technologies = edited.Technologies;
+        return true;
+    }
+
+    private async void BtnAddExperience_Click(object sender, RoutedEventArgs e)
+    {
+        if (_profile is null) return;
+        var entry = VaultEntryEditor.ShowExperience(new ExperienceEntry());
+        if (entry is null) return;
+
+        _profile.Experience.Add(entry);
+        await PersistAsync(entry.JobTitle + " at " + entry.Company);
+    }
+
+    private async void BtnAddEducation_Click(object sender, RoutedEventArgs e)
+    {
+        if (_profile is null) return;
+        var entry = VaultEntryEditor.ShowEducation(new EducationEntry());
+        if (entry is null) return;
+
+        _profile.Education.Add(entry);
+        await PersistAsync((entry.Degree ?? "") + " — " + (entry.Institution ?? ""));
+    }
+
+    private async void BtnAddProject_Click(object sender, RoutedEventArgs e)
+    {
+        if (_profile is null) return;
+        var entry = VaultEntryEditor.ShowProject(new ProjectEntry());
+        if (entry is null) return;
+
+        _profile.Projects.Add(entry);
+        await PersistAsync(entry.Name);
+    }
+
+    private async Task PersistAsync(string? justAdded = null)
+    {
+        await _profileRepo.UpdateAsync(_profile!);
+        SaveStatus.Text = string.IsNullOrWhiteSpace(justAdded)
+            ? "Saved."
+            : $"Saved: {justAdded}.";
+        SaveStatus.Foreground = Green;
+        await SetProfileId(_profile!.Id);
     }
 
     private async void BtnSave_Click(object sender, RoutedEventArgs e)
