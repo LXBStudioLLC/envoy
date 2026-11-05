@@ -48,7 +48,7 @@ public partial class MainWindow : Window
 
         // APP-02: route the Find Jobs APPLY action straight into the Apply
         // view, carrying the posting + ghost snapshot so nothing re-scrapes.
-        find.ApplyRequested += item => NavigateToApplyFromDiscovery(item);
+        find.ApplyRequested += item => NavigateToApplyFromDiscovery(item, find.ResolveApplyProfileId());
 
         // APP-07: route ready-to-fill queue items into a pre-tailored session.
         find.PreparedApplyRequested += item => NavigateToApplyPrepared(item);
@@ -367,9 +367,14 @@ public partial class MainWindow : Window
 
     /// <summary>APP-02: one click from a Find Jobs result to a prepared
     /// application. The carried posting + ghost snapshot travel intact; the
-    /// Apply view handles profile selection (auto-select for single profiles).</summary>
-    public void NavigateToApplyFromDiscovery(DiscoveredJobItem item)
+    /// Find Jobs APPLY WITH choice (multi-profile) arms the Apply view: a
+    /// Guid.Empty means no profile is picked — the Apply view then does its
+    /// own selection/auto-select.</summary>
+    public void NavigateToApplyFromDiscovery(DiscoveredJobItem item, Guid applyProfileId = default)
     {
+        if (applyProfileId != Guid.Empty)
+            _apply.SetProfileId(applyProfileId);
+
         NavigateTo(_apply);
         UpdateNavButtons("Apply");
         _apply.LoadFromDiscovery(item.Posting!, item.Snapshot);

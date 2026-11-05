@@ -25,6 +25,7 @@ public partial class FindJobsView : UserControl
     private readonly IProfileRepository _profileRepo;
     private List<AtsBoardRef> _boards = new();
     private List<DiscoveredJobItem> _lastItems = new();
+    private List<MasterProfile> _applyProfiles = new();
 
     /// <summary>APP-02: raised when the user hits APPLY on a result row; the
     /// MainWindow routes the carried posting + score into the Apply view.</summary>
@@ -76,23 +77,15 @@ public partial class FindJobsView : UserControl
         var enqueued = 0;
         var skipped = new List<string>();
 
-        // APP-11 audit fix: the queue worker needs a profile — resolve here
-        // (auto-select single profile; block 0/2+ honestly).
-        var profiles = await _profileRepo.GetAllAsync();
-        Guid masterProfileId;
-        if (profiles.Count == 0)
+        // APP-11 audit fix / multi-profile: the batch uses the APPLY WITH
+        // selection (one click can mix postings but one resume family).
+        var masterProfileId = ResolveApplyProfileId();
+        if (masterProfileId == Guid.Empty)
         {
-            StatusText.Text = "No profile yet. Import a resume on the Dashboard, then batch QUEUE works in one click.";
+            StatusText.Text = "No profile yet. Import a resume on the Dashboard, then batch QUEUE works in one click (and pick it in APPLY WITH).";
             StatusText.Foreground = Yellow;
             return;
         }
-        if (profiles.Count > 1)
-        {
-            StatusText.Text = $"You have {profiles.Count} profiles — pick one on the Dashboard first, then batch QUEUE.";
-            StatusText.Foreground = Yellow;
-            return;
-        }
-        masterProfileId = profiles[0].Id;
 
         foreach (var item in targets)
         {
@@ -143,9 +136,35 @@ public partial class FindJobsView : UserControl
         Loaded += FindJobsView_Loaded;
     }
 
+    // ── Multi-profile: which resume the QUEUE/APPLY buttons use ──────────
+
+    /// <summary>Fills the apply-with combo from the profile store; keeps the
+    /// user's choice when it survives a refresh (a profile may have been
+    /// deleted in the Vault — fall back to the first one).</summary>
+    private async Task RefreshProfileChoicesAsync()
+    {
+        _applyProfiles = await _profileRepo.GetAllAsync();
+        CmbApplyProfile.ItemsSource = _applyProfiles;
+        CmbApplyProfile.DisplayMemberPath = nameof(MasterProfile.Name);
+        CmbApplyProfile.SelectedValuePath = nameof(MasterProfile.Id);
+
+        var current = ResolveApplyProfileId();
+        if (current == Guid.Empty || _applyProfiles.All(p => p.Id != current))
+            CmbApplyProfile.SelectedValue = _applyProfiles.Count > 0 ? _applyProfiles[0].Id : null;
+    }
+
+    /// <summary>The selected profile id (Guid.Empty when there is none, or the
+    /// saved choice no longer exists). MainWindow also reads this when routing
+    /// an APPLY row so the discovery flow carries the same choice.</summary>
+    public Guid ResolveApplyProfileId()
+        => CmbApplyProfile?.SelectedValue is Guid id && _applyProfiles.Any(p => p.Id == id)
+            ? id
+            : Guid.Empty;
+
     private void FindJobsView_Loaded(object sender, RoutedEventArgs e)
     {
         _ = RenderQueuePanelAsync(); // subscription lives in the ctor (once per lifetime)
+        _ = RefreshProfileChoicesAsync(); // multi-profile: which resume QUEUE/APPLY uses
         if (!string.IsNullOrEmpty(_settings.BraveSearchApiKeyEncrypted))
         {
             StatusText.Text = "Brave key saved. Leave the box blank to keep using it, or type a new one to replace it.";
@@ -462,23 +481,16 @@ public partial class FindJobsView : UserControl
             return;
         }
 
-        // APP-11 audit fix: the queue worker needs a profile to tailor for —
-        // resolve one here (auto-select single profile; block 0/2+ honestly).
-        var profileCount = await _profileRepo.GetAllAsync();
-        Guid masterProfileId;
-        if (profileCount.Count == 0)
+        // APP-11 audit fix: the queue worker needs a profile to tailor for.
+        // Multi-profile: use the APPLY WITH selection (the combo refreshes on
+        // every Loaded; no profile → a message, never a silent no-op).
+        var masterProfileId = ResolveApplyProfileId();
+        if (masterProfileId == Guid.Empty)
         {
-            StatusText.Text = "No profile yet. Import a resume on the Dashboard, then QUEUE works in one click.";
+            StatusText.Text = "No profile yet. Import a resume on the Dashboard, then QUEUE works in one click (and pick it in APPLY WITH).";
             StatusText.Foreground = Yellow;
             return;
         }
-        if (profileCount.Count > 1)
-        {
-            StatusText.Text = $"You have {profileCount.Count} profiles — pick one on the Dashboard first, then QUEUE.";
-            StatusText.Foreground = Yellow;
-            return;
-        }
-        masterProfileId = profileCount[0].Id;
 
         var (enqueued, reason) = await _queue.EnqueueAsync(
             new QueuedApplication

@@ -122,6 +122,32 @@ public sealed class ApplicationQueueRepositoryTests : IDisposable
         await _repo.RemoveAsync(stored.Id);
         Assert.Empty(await _repo.GetAllAsync());
     }
+
+    [Fact]
+    public async Task GetNextQueuedAnyProfile_FifoAcrossProfiles_IgnoresProfileAndPreparing()
+    {
+        var profileB = Guid.NewGuid();
+
+        var rowB = Item("k-b1", "https://x.com/b1");
+        rowB.MasterProfileId = profileB;
+        await _repo.AddAsync(rowB);
+        await Task.Delay(20); // distinct CreatedAt
+
+        var rowA = Item("k-a1", "https://x.com/a1"); // different profile, newer
+        await _repo.AddAsync(rowA);
+        await Task.Delay(20);
+
+        var preparing = Item("k-p", "https://x.com/p");
+        preparing.Status = QueueItemStatus.Preparing;
+        await _repo.AddAsync(preparing);
+
+        // Oldest-first across ALL profiles, not per-profile: profileA's row
+        // (newer) must not jump ahead of profileB's (older), and Preparing
+        // rows are never handed out again.
+        var next = await _repo.GetNextQueuedAnyProfileAsync();
+        Assert.Equal("k-b1", next!.PostingKey);
+        Assert.Equal(profileB, next.MasterProfileId);
+    }
 }
 
 /// <summary>
@@ -309,6 +335,59 @@ public sealed class ApplicationQueueServiceTests : IDisposable
         Assert.False(ok3);
         Assert.Contains("Daily cap reached (2", reason3);
         capped.Dispose();
+    }
+
+    [Fact]
+    public async Task WorkerDrainsRowsAcrossProfiles_OldestFirst()
+    {
+        // Row for profile A enqueued first, then a row for a DIFFERENT profile.
+        // The old single-profile worker processed only the first row's profile;
+        // now both rows drain, oldest first, each tailored for its own profile.
+        var preparedOrder = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        _preparer.Handler = item =>
+        {
+            preparedOrder.Enqueue(item.PostingKey);
+            return Task.FromResult(Guid.NewGuid());
+        };
+
+        var a = Item("k-prof-a", "https://boards.greenhouse.io/acme/jobs/101", "Acme");
+        await _service.EnqueueAsync(a);
+        await Task.Delay(20); // distinct CreatedAt — B is strictly newer
+        var b = Item("k-prof-b", "https://boards.greenhouse.io/lumon/jobs/202", "Lumon");
+        b.MasterProfileId = Guid.NewGuid();
+        await _service.EnqueueAsync(b);
+
+        await WaitUntilAsync(
+            async () => (await _repo.GetAllAsync()).Count(r => r.Status == QueueItemStatus.AppReady) == 2,
+            TimeSpan.FromSeconds(10));
+
+        // B's row was not starved by A's profile, and order is oldest-first.
+        var drained = preparedOrder.ToList();
+        Assert.Equal("k-prof-a", drained[0]);
+        Assert.Equal("k-prof-b", drained[1]);
+    }
+
+    [Fact]
+    public async Task LegacyUnstampedRow_BindsToStampedProfileAndRuns()
+    {
+        // Rows persisted before per-row stamping exist on upgraded machines.
+        // They still run: the worker binds them to the first stamped row's
+        // profile (the old single-profile resolution) instead of starving.
+        var legacy = Item("k-legacy", "https://boards.greenhouse.io/acme/jobs/301", "Acme");
+        legacy.MasterProfileId = Guid.Empty;
+        await _repo.AddAsync(legacy);
+        await Task.Delay(20);
+
+        _preparer.Handler = _ => Task.FromResult(Guid.NewGuid());
+        await _service.EnqueueAsync(Item("k-stamped", "https://boards.greenhouse.io/lumon/jobs/302", "Lumon"));
+
+        await WaitUntilAsync(
+            async () => (await _repo.GetAllAsync()).Count(r => r.Status == QueueItemStatus.AppReady) >= 2,
+            TimeSpan.FromSeconds(10));
+
+        var all = await _repo.GetAllAsync();
+        Assert.DoesNotContain(all, r => r.Status == QueueItemStatus.Queued);
+        Assert.DoesNotContain(all, r => r.Status == QueueItemStatus.Failed);
     }
 
     [Theory]
