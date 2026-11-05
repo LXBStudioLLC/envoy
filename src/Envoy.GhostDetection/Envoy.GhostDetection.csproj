@@ -10,5 +10,10 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
     <ProjectReference Include="..\Envoy.Core\Envoy.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="warn-notices.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
 </Project>

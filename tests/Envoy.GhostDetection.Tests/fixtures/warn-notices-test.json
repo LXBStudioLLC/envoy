@@ -1,0 +1,8 @@
+[
+  { "Employer": "Acme Widgets Inc.", "State": "WA", "Location": "Sumner", "NoticeDate": "2026-10-02", "AffectedCount": 95 },
+  { "Employer": "Acme Widgets Inc.", "State": "WA", "Location": "Moses Lake", "NoticeDate": "2026-09-18", "AffectedCount": 439 },
+  { "Employer": "Pied Piper LLC", "State": "CA", "Location": "Menlo Park", "NoticeDate": "2026-08-20", "AffectedCount": 120 },
+  { "Employer": "Stale Corp", "State": "TX", "Location": "Dallas", "NoticeDate": "2026-06-01", "AffectedCount": 500 },
+  { "Employer": "Tiny Shoe Company", "State": "OR", "Location": "Portland", "NoticeDate": "2026-09-25", "AffectedCount": 9 },
+  { "Employer": "Grrêts Çörp", "State": "WA", "Location": "Redmond", "NoticeDate": "2026-10-15", "AffectedCount": 0 }
+]
