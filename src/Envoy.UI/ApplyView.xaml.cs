@@ -187,11 +187,13 @@ public partial class ApplyView : UserControl
                 : new GhostScoreSnapshot(_ghostScore.RiskScore, _ghostScore.Band.ToString(), _ghostScore.TopEvidence);
 
             var log = await _orchestrator.SubmitApplicationAsync(
-                _tailored.Id, mode, RequestSubmitConfirmationAsync, snapshot);
+                _tailored.Id, mode, RequestSubmitConfirmationAsync, snapshot,
+                onDuplicateDetected: RequestDuplicateOverrideAsync);
 
             StatusText.Text = log.Status switch
             {
                 ApplicationStatus.Completed => "Application submitted.",
+                ApplicationStatus.DuplicateSkipped => log.ErrorMessage ?? "Already applied — nothing was sent.",
                 ApplicationStatus.DeclinedByUser => "You said no. Nothing was sent.",
                 ApplicationStatus.SafeModeStopped => "Held for your review. Nothing was sent.",
                 ApplicationStatus.RequiresCaptcha => "There's a CAPTCHA. Solve it in the browser, then run this again.",
@@ -202,6 +204,7 @@ public partial class ApplyView : UserControl
             StatusText.Foreground = log.Status switch
             {
                 ApplicationStatus.Completed => Green,
+                ApplicationStatus.DuplicateSkipped => Yellow,
                 ApplicationStatus.DeclinedByUser => Yellow,
                 _ => Red
             };
@@ -234,6 +237,29 @@ public partial class ApplyView : UserControl
             StatusText.Text = "Waiting on you. Confirm or cancel below.";
             StatusText.Foreground = Yellow;
             _confirmTcs = tcs;
+        });
+        return tcs.Task;
+    }
+
+    // The duplicate guard (APP-04) found a completed submission for this
+    // posting. Defaulting to NO is deliberate: a re-apply must be a conscious,
+    // one-keystroke-away decision, never an accident. Same marshalling rules
+    // as the submit gate.
+    private Task<bool> RequestDuplicateOverrideAsync(string message)
+    {
+        var tcs = new TaskCompletionSource<bool>();
+        Dispatcher.Invoke(() =>
+        {
+            StatusText.Text = message;
+            StatusText.Foreground = Yellow;
+            var choice = MessageBox.Show(
+                message + Environment.NewLine + Environment.NewLine +
+                "Apply again anyway?",
+                "Envoy: already applied here",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question,
+                MessageBoxResult.No);
+            tcs.TrySetResult(choice == MessageBoxResult.Yes);
         });
         return tcs.Task;
     }
