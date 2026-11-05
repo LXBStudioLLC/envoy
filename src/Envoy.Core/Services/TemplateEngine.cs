@@ -371,10 +371,19 @@ public class TemplateEngine
             case "phone": return data.Phone ?? "";
             case "location": return data.Location ?? "";
             case "linkedin": return data.LinkedIn ?? "";
+            case "linkedin_url": return data.LinkedIn ?? "";
             case "website": return data.Website ?? "";
+            case "portfolio_url": return data.Website ?? "";
             case "summary": return data.Summary ?? "";
             case "org":
-            case "company": return data.Experience.FirstOrDefault()?.Company ?? "";
+            case "company":
+            case "current_company": return data.Experience.FirstOrDefault()?.Company ?? "";
+            case "current_title": return data.Experience.FirstOrDefault()?.JobTitle ?? "";
+            case "years_experience": return FormProfileCatalog.Resolve("years_experience", data) ?? "";
+            case "city": return ParseLocation(data.Location, "city") ?? "";
+            case "state": return ParseLocation(data.Location, "state") ?? "";
+            case "zip": return ""; // no postal-code data in the model yet; falls to the human
+            case "cover_letter": return profile.CoverLetterText ?? "";
             case "resume_file":
             case "generated_pdf_path":
                 // Same sanitized path the PDF was written to, so the upload always finds
@@ -389,6 +398,17 @@ public class TemplateEngine
             "Unknown profile field '{Field}' requested by template; the fill is skipped and counted as missing",
             field);
         return "";
+    }
+
+    /// <summary>Splits classic "City, ST" location strings (APP-10, documented field ids).</summary>
+    internal static string? ParseLocation(string? location, string want)
+    {
+        if (string.IsNullOrWhiteSpace(location)) return null;
+        var parts = location.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0) return null;
+        if (parts.Length >= 2)
+            return want == "city" ? parts[0] : parts[^1];
+        return want == "city" ? parts[0] : null;
     }
 
     private static async Task UploadFileAsync(IPageInteractor browser, string nodeId, string filePath, CancellationToken ct)

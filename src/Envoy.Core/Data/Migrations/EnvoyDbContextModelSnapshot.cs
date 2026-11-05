@@ -265,6 +265,9 @@ namespace Envoy.Core.Data.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("CoverLetterText")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Company")
                         .IsRequired()
                         .HasColumnType("TEXT");

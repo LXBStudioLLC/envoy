@@ -11,15 +11,20 @@ namespace Envoy.UI;
 public partial class VaultView : UserControl
 {
     private readonly IProfileRepository _profileRepo;
+    private readonly IAnswerBankRepository _answers;
     private MasterProfile? _profile;
 
     private static readonly FontFamily BodyFont = new("pack://application:,,,/Fonts/#JetBrains Mono");
 
-    public VaultView(IProfileRepository profileRepo)
+    public VaultView(IProfileRepository profileRepo, IAnswerBankRepository answers)
     {
         _profileRepo = profileRepo;
+        _answers = answers;
         InitializeComponent();
+        Loaded += VaultView_Loaded;
     }
+
+    private async void VaultView_Loaded(object sender, RoutedEventArgs e) => await RenderAnswerBankAsync();
 
     public async Task SetProfileId(Guid profileId)
     {
@@ -87,12 +92,18 @@ public partial class VaultView : UserControl
 
     private sealed record VaultEntryRow(string Heading, string Meta, List<string> Lines, EditKind Kind, object Entry);
 
-    private enum EditKind { Experience, Education, Project }
+    private enum EditKind { Experience, Education, Project, Answer }
 
     private async void VaultItem_EditDelete_Click(object sender, RoutedEventArgs e)
     {
         if (_profile is null) return;
         if (sender is not Button btn || btn.Tag is not VaultEntryRow row) return;
+
+        if (row.Kind == EditKind.Answer)
+        {
+            BtnAnswerBankCRUD_Click(sender, e);
+            return;
+        }
 
         try
         {
@@ -118,6 +129,7 @@ public partial class VaultView : UserControl
                     EditKind.Experience => ApplyExperience((ExperienceEntry)row.Entry, VaultEntryEditor.ShowExperience((ExperienceEntry)row.Entry)),
                     EditKind.Education => ApplyEducation((EducationEntry)row.Entry, VaultEntryEditor.ShowEducation((EducationEntry)row.Entry)),
                     EditKind.Project => ApplyProject((ProjectEntry)row.Entry, VaultEntryEditor.ShowProject((ProjectEntry)row.Entry)),
+                    EditKind.Answer => false, // the answer bank routes through its own handler
                     _ => false
                 };
                 if (!editedSomething) return; // user cancelled
@@ -240,6 +252,57 @@ public partial class VaultView : UserControl
             : $"Saved: {justAdded}.";
         SaveStatus.Foreground = Green;
         await SetProfileId(_profile!.Id);
+    }
+
+    // ── APP-10: the answer bank (Q&A bank) UI ─────────────────────────────
+
+    private async void BtnAddAnswer_Click(object sender, RoutedEventArgs e)
+    {
+        var (question, answer) = VaultEntryEditor.ShowAnswer(null, null);
+        if (question is null || answer is null) return;
+
+        await _answers.AddOrUpdateAsync(question, answer);
+        SaveStatus.Text = $"Saved answer: {question}";
+        SaveStatus.Foreground = Green;
+        await RenderAnswerBankAsync();
+    }
+
+    private async void BtnAnswerBankCRUD_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not AnswerBankEntry entry) return;
+
+        if (btn.Content?.ToString() == "DELETE")
+        {
+            var confirm = MessageBox.Show(
+                "Remove this stored answer?",
+                "Envoy: remove answer",
+                MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+            if (confirm != MessageBoxResult.Yes) return;
+
+            await _answers.RemoveAsync(entry.Id);
+        }
+        else
+        {
+            var (question, answer) = VaultEntryEditor.ShowAnswer(entry.Question, entry.Answer);
+            if (question is null || answer is null) return;
+            await _answers.AddOrUpdateAsync(question, answer);
+        }
+
+        SaveStatus.Text = "Answer bank updated.";
+        SaveStatus.Foreground = Green;
+        await RenderAnswerBankAsync();
+    }
+
+    private async Task RenderAnswerBankAsync()
+    {
+        var entries = await _answers.GetAllAsync();
+        AnswerList.ItemsSource = entries
+            .OrderBy(e => e.Question, StringComparer.OrdinalIgnoreCase)
+            .Select(e => new VaultEntryRow(
+                e.Question.Length > 90 ? e.Question[..90] + "…" : e.Question,
+                (e.Answer.Length > 120 ? e.Answer[..120] + "…" : e.Answer),
+                new List<string>(), EditKind.Answer, e))
+            .ToList();
     }
 
     private async void BtnSave_Click(object sender, RoutedEventArgs e)

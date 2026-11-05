@@ -114,6 +114,37 @@ public class TailoringEngine
             result.Company = ExtractCompany(jobDescription);
         }
 
+        // APP-10: cover letter from the SAME facts. A failure or timeout here
+        // must never fail the tailoring — the letter is optional garnish and
+        // the user reads/edits it at the gate.
+        try
+        {
+            using var letterCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            letterCts.CancelAfter(TimeSpan.FromSeconds(_completionTimeoutSeconds));
+            result.CoverLetterText = null;
+
+            var letter = await _ollama.CompleteAsync(
+                FormFieldPrompts.BuildCoverLetterPrompt(result.JobTitle, result.Company, jobDescription, master, tailored),
+                "You write concise, factual cover letters. Use ONLY facts present in the resume. " +
+                "No invented achievements, no flattering filler, 150-220 words, plain paragraphs, no headers.",
+                letterCts.Token);
+
+            if (!string.IsNullOrWhiteSpace(letter))
+                result.CoverLetterText = letter.Trim();
+
+            if (completionCapHit(letterCts, ct))
+                _log.LogWarning("Cover letter generation timed out after {Seconds}s; continuing without it", _completionTimeoutSeconds);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            _log.LogWarning("Cover letter generation timed out after {Seconds}s; continuing without it", _completionTimeoutSeconds);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Cover letter generation failed; continuing without it");
+            result.CoverLetterText = null;
+        }
+
         _log.LogInformation("Tailoring complete: Safety={Passed}, Match={Score:F1}%, Changes={ChangeCount}",
             safetyResult.Passed ? "PASSED" : "FAILED", result.MatchScore, result.ChangesMade.Count);
 
@@ -122,6 +153,9 @@ public class TailoringEngine
 
         return result;
     }
+
+    private static bool completionCapHit(CancellationTokenSource letterCts, CancellationToken userCt) =>
+        letterCts.IsCancellationRequested && !userCt.IsCancellationRequested;
 
     private string BuildTailoringSystemPrompt()
     {
