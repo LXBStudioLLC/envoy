@@ -15,17 +15,19 @@ public partial class DashboardView : UserControl
     private readonly ApplicationOrchestrator _orchestrator;
     private readonly IProfileRepository _profileRepo;
     private readonly IBrowserLauncher _browserLauncher;
+    private readonly IApplicationLogRepository _appLogs;
     private readonly EnvoySettings _settings;
     private List<MasterProfile> _profiles = new();
     private bool _browserAutoLaunched;
 
     public DashboardView(ApplicationOrchestrator orchestrator, IProfileRepository profileRepo,
-        IBrowserLauncher browserLauncher, EnvoySettings settings)
+        IBrowserLauncher browserLauncher, EnvoySettings settings, IApplicationLogRepository appLogs)
     {
         _orchestrator = orchestrator;
         _profileRepo = profileRepo;
         _browserLauncher = browserLauncher;
         _settings = settings;
+        _appLogs = appLogs;
         InitializeComponent();
         Loaded += DashboardView_Loaded;
     }
@@ -37,7 +39,6 @@ public partial class DashboardView : UserControl
             var llmConnected = false;
             try
             {
-                var detection = _orchestrator.GetType().Name; // LLMDetection is reachable through DI in App; probe cheaply via settings
                 llmConnected = !string.IsNullOrEmpty(_settings.ActiveLLMProvider)
                     || !string.IsNullOrEmpty(_settings.OpenAIApiKeyEncrypted)
                     || !string.IsNullOrEmpty(_settings.AnthropicApiKeyEncrypted)
@@ -48,21 +49,98 @@ public partial class DashboardView : UserControl
             var browserType = _browserLauncher.GetSelectedBrowserType() ?? BrowserType.Chrome;
             var browserDebug = await _browserLauncher.IsRunningWithDebuggingAsync(browserType, DebugPortOrDefault());
 
-            var report = EnvoyReadiness.Compute(profileCount, llmConnected, browserDebug, _settings);
+            var completedApplications = 0;
+            try
+            {
+                var logs = await _appLogs.GetAllWithoutScreenshotsAsync();
+                completedApplications = logs.Count(l =>
+                    l.Status is ApplicationStatus.Completed or ApplicationStatus.NeedsUserSubmit);
+            }
+            catch { /* the ledger probe must never break the dashboard */ }
 
-            var rows = report.Steps.Select(s => new ReadinessStripRow
+            var report = EnvoyReadiness.Compute(
+                profileCount, llmConnected, browserDebug, completedApplications, _settings);
+
+            var rows = report.Steps.Select((s, i) => new ReadinessStripRow
             {
                 Marker = s.Complete ? "✓" : "·",
                 MarkerBrush = s.Complete ? Brushes.SpringGreen : Brushes.Goldenrod,
                 Step = s.Complete
                     ? $"{s.Name} — {s.Status}"
-                    : $"{s.Name} — not ready. {s.Fix}"
+                    : $"{s.Name} — not ready. {s.Fix}",
+                FixLabel = s.Complete ? "" : FixLabelFor(i),
+                FixVisibility = s.Complete ? Visibility.Collapsed : Visibility.Visible,
+                ActionKey = i
             }).ToList();
 
             ReadinessList.ItemsSource = rows;
-            ReadinessPanel.Visibility = Visibility.Visible;
+
+            // #92: auto-hide when complete — the real wizard is a working
+            // setup, not a perpetually open list. (A state the user reached
+            // should stay reached, visibly absent.)
+            ReadinessPanel.Visibility = report.AllComplete
+                ? Visibility.Collapsed
+                : Visibility.Visible;
         }
         catch { /* the strip is best-effort: never crash the dashboard */ }
+    }
+
+    private static string FixLabelFor(int step) => step switch
+    {
+        0 => "IMPORT PDF",
+        1 => "SET UP AI",
+        2 => "LAUNCH BROWSER",
+        3 => "SHOW FOLDER",
+        4 => "SHOW SETTINGS",
+        5 => "FIND JOBS",
+        _ => "FIX"
+    };
+
+    /// <summary>#92: the per-step jump — each incomplete row carries exactly
+    /// one action, the same screen the step's Fix line points at.</summary>
+    private void ReadinessFix_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not int step) return;
+
+        try
+        {
+            switch (step)
+            {
+                case 0: // profile
+                    BtnImport_Click(BtnImport, new RoutedEventArgs());
+                    break;
+                case 1: // LLM provider
+                    if (Window.GetWindow(this) is MainWindow main) main.NavigateToLLM();
+                    break;
+                case 2: // browser bridge
+                    BtnLaunchChrome_Click(BtnLaunchChrome, new RoutedEventArgs());
+                    break;
+                case 3: // templates
+                case 4: // debug port
+                {
+                    var dir = System.IO.Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Envoy");
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(dir) { UseShellExecute = true });
+                    StatusOrInfo(step == 3
+                        ? "Templates bundle with every build. If this folder has no Templates\\*.json, reinstall Envoy or set TemplatesPath."
+                        : $"Edit ChromeDebuggingPort in {dir}\\settings.json (or remove the line for the default 9222).");
+                    break;
+                }
+                case 5: // first application
+                    if (Window.GetWindow(this) is MainWindow main2) main2.NavigateToFindJobs();
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusOrInfo($"Something went wrong: {ex.Message}");
+        }
+    }
+
+    private void StatusOrInfo(string message)
+    {
+        ImportStatus.Text = message;
+        ImportStatus.Foreground = Yellow;
     }
 
     private sealed class ReadinessStripRow
@@ -70,6 +148,9 @@ public partial class DashboardView : UserControl
         public string Marker { get; set; } = "";
         public System.Windows.Media.Brush MarkerBrush { get; set; } = System.Windows.Media.Brushes.Gray;
         public string Step { get; set; } = "";
+        public string FixLabel { get; set; } = "";
+        public Visibility FixVisibility { get; set; } = Visibility.Collapsed;
+        public int ActionKey { get; set; }
     }
 
     /// <summary>APP-16: honored here as well as in Core (UI probes + auto-launch).</summary>

@@ -19,6 +19,15 @@ public static class ScoreboardCalculator
     // Below this many completed submits a percentage is noise, not a stat.
     private const int MinSubmitsForRate = 5;
 
+    /// <summary>How far back tap telemetry folds into the average (days).</summary>
+    internal const int TapWindowDays = 30;
+
+    /// <summary>Ledger types that count as a user journey tap (#92).</summary>
+    internal static readonly JobEventType[] TapTypes =
+    {
+        JobEventType.TapQueued, JobEventType.TapOpened, JobEventType.TapFilled, JobEventType.TapConfirmed
+    };
+
     public static ScoreboardStats Compute(
         IReadOnlyList<JobEvent> events,
         IReadOnlyList<ApplicationLog> submits,
@@ -67,6 +76,27 @@ public static class ScoreboardCalculator
         var thisWeek = completedList.Count(s =>
             s.VerifiedSubmission == true && (s.CompletedAt ?? s.StartedAt) >= weekAgo);
 
+        // ── taps per application (#92) ───────────────────────────────────
+        // Recorded user journey interactions (queued → opened → filled →
+        // confirm) averaged over applications that finished in the window,
+        // joined by posting identity. A batch queue click records one row per
+        // job it committed, so the amortizing is visible in the number — the
+        // honest middle ground between counting every mousemove and none.
+        var tapCutoff = nowUtc.AddDays(-TapWindowDays);
+        var tapsByKey = events
+            .Where(e => TapTypes.Contains(e.Type) && e.OccurredAt >= tapCutoff)
+            .GroupBy(e => e.PostingKey)
+            .ToDictionary(g => g.Key, g => g.Count());
+        var finished = submits
+            .Where(s => s.Status is ApplicationStatus.Completed or ApplicationStatus.NeedsUserSubmit)
+            .Where(s => (s.CompletedAt ?? s.StartedAt) >= tapCutoff)
+            .ToList();
+        double? tapsPerApplication = finished.Count == 0
+            ? null
+            : Math.Round(
+                finished.Average(s => tapsByKey.GetValueOrDefault(
+                    PostingKey.For(s.JobUrl, s.Company, s.JobTitle))), 1);
+
         return new ScoreboardStats(
             GhostsDodged: dodges.Count,
             HoursSaved: Math.Round(dodges.Count * minutesPerApplication / 60.0, 1),
@@ -84,7 +114,8 @@ public static class ScoreboardCalculator
             SubmissionsVerified: verified,
             SubmissionsUnverified: unverified,
             SubmissionsThisWeek: thisWeek,
-            VerifiedPerDay: verifiedByUtcDay);
+            VerifiedPerDay: verifiedByUtcDay,
+            TapsPerApplication: tapsPerApplication);
     }
 
     private static bool IsFlagged(JobEvent e) => e.RiskBand is BandElevated or BandHigh;

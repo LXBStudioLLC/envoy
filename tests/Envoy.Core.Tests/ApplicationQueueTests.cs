@@ -390,6 +390,107 @@ public sealed class ApplicationQueueServiceTests : IDisposable
         Assert.DoesNotContain(all, r => r.Status == QueueItemStatus.Failed);
     }
 
+    // ── #92: the Night-Owl drain ─────────────────────────────────────────
+
+    [Fact]
+    public async Task NightOwl_ParkedRowsDrainOnlyWhenTheWindowOpens()
+    {
+        // The REAL policy gate with a UTC window 22→06, and a REAL submitter.
+        // No worker: autoStart=false keeps the queue dormant so the drain's
+        // contract is testable with an injected "now" — no polling, no flakes.
+        var settings = new EnvoySettings
+        {
+            FullAutoEnabled = true,
+            FullAutoWindowStartHour = 22,
+            FullAutoWindowEndHour = 6,
+            FullAutoTrustedHosts = { "boards.greenhouse.io" }
+        };
+        var gate = new QueueFullAutoGate(
+            new ApplicationLogRepository(_factory, Mock.Of<ILogger<ApplicationLogRepository>>()), () => settings);
+        var submitCalls = 0;
+        var submitter = new StubSubmitter((_, log) =>
+        {
+            Interlocked.Increment(ref submitCalls);
+            log.VerifiedSubmission = true;
+            return (log, null, false);
+        });
+        var auto = new ApplicationQueueService(_repo, _preparer, Mock.Of<ILogger<ApplicationQueueService>>(),
+            () => settings, submitter, gate);
+
+        var preparedCalls = 0;
+        var tailored = Guid.NewGuid();
+        _preparer.Handler = _ =>
+        {
+            Interlocked.Increment(ref preparedCalls);
+            return Task.FromResult(tailored);
+        };
+
+        await auto.EnqueueAsync(Item("k-no", "https://boards.greenhouse.io/acme/jobs/901", "Acme"), autoStart: false);
+        var item = (await _repo.GetAllAsync()).Single();
+        var noon = new DateTime(2026, 11, 5, 12, 0, 0, DateTimeKind.Utc);
+
+        // Prepare outside the window: the drain consult at noon denies, so the
+        // row parks AppReady (the old behavior — with the FIX: nothing is lost).
+        await auto.ProcessItemAsync(item, noon, CancellationToken.None);
+        Assert.Equal(1, Interlocked.CompareExchange(ref preparedCalls, 0, 0));
+
+        // Noon drain: the window denies — the row stays parked, nothing submits.
+        Assert.Null(await auto.DrainDueAsync(noon, CancellationToken.None));
+        Assert.Equal(QueueItemStatus.AppReady, (await _repo.GetAllAsync()).Single().Status);
+        Assert.Equal(0, Interlocked.CompareExchange(ref submitCalls, 0, 0));
+
+        // The window opens: the drain submits the parked row WITHOUT re-preparing.
+        var drained = await auto.DrainDueAsync(new DateTime(2026, 11, 5, 23, 0, 0, DateTimeKind.Utc), CancellationToken.None);
+        Assert.NotNull(drained);
+        var row = (await _repo.GetAllAsync()).Single();
+        Assert.Equal(QueueItemStatus.Submitted, row.Status);
+        Assert.Contains("verified", row.Note);
+        Assert.Equal(1, Interlocked.CompareExchange(ref submitCalls, 0, 0));
+        Assert.Equal(1, Interlocked.CompareExchange(ref preparedCalls, 0, 0)); // never re-prepared
+    }
+
+    [Fact]
+    public void HostOf_ParsesBareHostTrustEntries()
+    {
+        // The settings example writes trust entries as bare hosts; a regression
+        // that required a URL scheme made explicit trust lists silently dead
+        // (diagnosed while wiring the Night-Owl drain).
+        Assert.Equal("boards.greenhouse.io", FullAutoPolicy.HostOf("boards.greenhouse.io"));
+        Assert.Equal("boards.greenhouse.io", FullAutoPolicy.HostOf("HTTPS://BOARDS.GREENHOUSE.IO/jobs/1"));
+        Assert.Equal("boards.greenhouse.io", FullAutoPolicy.HostOf("www.boards.greenhouse.io"));
+        Assert.Equal("", FullAutoPolicy.HostOf("not a url at all"));
+        Assert.Equal("", FullAutoPolicy.HostOf(null));
+    }
+
+    [Fact]
+    public async Task NightOwl_TrustedHostWithoutFullAutoEnabled_DoesNotDrain()
+    {
+        // The master switch is off: a parked row must never be released, hour
+        // or no hour — the drain respects the same policy the gate does.
+        var settings = new EnvoySettings
+        {
+            FullAutoEnabled = false,
+            FullAutoTrustedHosts = { "boards.greenhouse.io" }
+        };
+        var gate = new QueueFullAutoGate(
+            new ApplicationLogRepository(_factory, Mock.Of<ILogger<ApplicationLogRepository>>()), () => settings);
+        var submitter = new StubSubmitter((_, log) =>
+        {
+            log.VerifiedSubmission = true;
+            return (log, null, false);
+        });
+        var auto = new ApplicationQueueService(_repo, _preparer, Mock.Of<ILogger<ApplicationQueueService>>(),
+            () => settings, submitter, gate);
+
+        _preparer.Handler = _ => Task.FromResult(Guid.NewGuid());
+        await auto.EnqueueAsync(Item("k-off", "https://boards.greenhouse.io/acme/jobs/902", "Acme"), autoStart: false);
+        var item = (await _repo.GetAllAsync()).Single();
+        await auto.ProcessItemAsync(item, DateTime.UtcNow, CancellationToken.None);
+
+        Assert.Null(await auto.DrainDueAsync(new DateTime(2026, 11, 5, 23, 0, 0, DateTimeKind.Utc), CancellationToken.None));
+        Assert.Equal(QueueItemStatus.AppReady, (await _repo.GetAllAsync()).Single().Status);
+    }
+
     [Theory]
     [InlineData(2, null, null)]      // no window: any hour
     [InlineData(2, 22, 6)]           // overnight wrap: 02:00 inside 22→06

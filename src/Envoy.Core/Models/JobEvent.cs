@@ -125,5 +125,23 @@ public enum JobEventType
     Applied,
 
     /// <summary>User logged what came back for a submitted application.</summary>
-    Outcome
+    Outcome,
+
+    /// <summary>Tap telemetry (issue #92 stats): recorded user journey
+    /// interactions, one ledger row per committed action. The family powers
+    /// the "taps per application" stat — the honest middle ground between
+    /// pretending to count every mouse move and pretending taps don't exist.
+    /// Appended members, never reordered.</summary>
+
+    /// <summary>User queued the posting from a results list (one per enqueued job).</summary>
+    TapQueued,
+
+    /// <summary>User carried the posting into the Apply view (row APPLY / queue APPLY NOW).</summary>
+    TapOpened,
+
+    /// <summary>User pressed FILL on a prepared application.</summary>
+    TapFilled,
+
+    /// <summary>User accepted the submit-gate confirm for this application.</summary>
+    TapConfirmed
 }

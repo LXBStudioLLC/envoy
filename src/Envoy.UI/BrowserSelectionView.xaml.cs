@@ -48,6 +48,7 @@ public partial class BrowserSelectionView : UserControl
         RefreshStealthStatus();
         RefreshScreenshotStatus();
         RefreshFullAutoStatus();
+        RefreshDrainWindow();
         try
         {
             await ScanBrowsersAsync();
@@ -257,5 +258,56 @@ public partial class BrowserSelectionView : UserControl
             MessageBox.Show("Couldn't save the setting. settings.json may be locked, so the change was not stored.",
                 "Save failed", MessageBoxButton.OK, MessageBoxImage.Warning);
         RefreshFullAutoStatus();
+    }
+
+    // ── #92: Night Owl — the Full-Auto drain window ──────────────────────
+
+    private void RefreshDrainWindow()
+    {
+        TxtDrainWindowStart.Text = _settings.FullAutoWindowStartHour?.ToString() ?? "";
+        TxtDrainWindowEnd.Text = _settings.FullAutoWindowEndHour?.ToString() ?? "";
+        DrainWindowStatusText.Foreground = Gray;
+
+        DrainWindowStatusText.Text = (_settings.FullAutoWindowStartHour, _settings.FullAutoWindowEndHour) switch
+        {
+            (null, null) => "No window — prepared rows drain at any hour (the worker polls every few seconds).",
+            ({ } s, null) => $"Drains again each hour at or after {s:00} UTC.",
+            (null, { } e) => $"Drains until {e:00} UTC; other hours stay dormant.",
+            ({ } s, { } e) => $"Drains inside {s:00}–{e:00} UTC (end exclusive, wraps midnight). Rows prepared outside the window wait and drain the moment it opens — no manual nudge."
+        };
+    }
+
+    private bool SaveDrainWindowResult(string successMessage)
+    {
+        var saved = _settings.Save();
+        DrainWindowStatusText.Foreground = saved ? Green : Yellow;
+        RefreshDrainWindow();
+        if (!saved)
+            DrainWindowStatusText.Text = "Applied for this session — settings.json was locked, so the change was not stored.";
+        else
+            DrainWindowStatusText.Text = successMessage;
+        return saved;
+    }
+
+    private void BtnSaveDrainWindow_Click(object sender, RoutedEventArgs e)
+    {
+        if (!int.TryParse(TxtDrainWindowStart.Text.Trim(), out var start) || start is < 0 or > 23
+            || !int.TryParse(TxtDrainWindowEnd.Text.Trim(), out var end) || end is < 0 or > 23)
+        {
+            DrainWindowStatusText.Text = "Hours must be 0–23 (UTC). Nothing was saved.";
+            DrainWindowStatusText.Foreground = Yellow;
+            return;
+        }
+
+        _settings.FullAutoWindowStartHour = start;
+        _settings.FullAutoWindowEndHour = end;
+        SaveDrainWindowResult($"Saved — the queue drains inside {start:00}–{end:00} UTC and wakes on it.");
+    }
+
+    private void BtnClearDrainWindow_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.FullAutoWindowStartHour = null;
+        _settings.FullAutoWindowEndHour = null;
+        SaveDrainWindowResult("Cleared — prepared rows drain at any hour.");
     }
 }

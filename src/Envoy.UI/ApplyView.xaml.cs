@@ -16,6 +16,7 @@ public partial class ApplyView : UserControl
     private readonly EnvoySettings _settings;
     private readonly IProfileRepository _profiles;
     private readonly ITailoredProfileRepository _tailoredRepo;
+    private readonly IJobEventRepository _jobEvents;
     private Guid _profileId;
     private TailoredProfile? _tailored;
     private string _jobDescription = "";
@@ -30,13 +31,14 @@ public partial class ApplyView : UserControl
     private KnownPosting? _discoveryPosting;
 
     public ApplyView(ApplicationOrchestrator orchestrator, GhostScorer ghostScorer, EnvoySettings settings,
-        IProfileRepository profiles, ITailoredProfileRepository tailoredRepo)
+        IProfileRepository profiles, ITailoredProfileRepository tailoredRepo, IJobEventRepository jobEvents)
     {
         _orchestrator = orchestrator;
         _ghostScorer = ghostScorer;
         _settings = settings;
         _profiles = profiles;
         _tailoredRepo = tailoredRepo;
+        _jobEvents = jobEvents;
         InitializeComponent();
         Loaded += (_, _) => RefreshModeOptions();
     }
@@ -461,6 +463,7 @@ public partial class ApplyView : UserControl
         BtnExecute.IsEnabled = false;
         BtnInitiate.IsEnabled = false;
         var token = BeginFlow();
+        RecordTapEvent(JobEventType.TapFilled); // #92: the FILL press is a journey tap
 
         var modeLabel = (CmbMode.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "Safe";
         var mode = modeLabel switch
@@ -577,7 +580,28 @@ public partial class ApplyView : UserControl
         ConfirmPanel.Visibility = Visibility.Collapsed;
         BtnConfirmSubmit.IsEnabled = false;
         BtnCancelSubmit.IsEnabled = false;
+        if (approved)
+            RecordTapEvent(JobEventType.TapConfirmed); // #92: accepting the human gate is a journey tap
         _confirmTcs?.TrySetResult(approved);
         _confirmTcs = null;
+    }
+
+    /// <summary>#92 tap telemetry: one ledger row per recorded journey action,
+    /// joined to the scoreboard's applications by posting identity. The tailoring
+    /// profile in view supplies that identity; bookkeeping, never a crash path.</summary>
+    private void RecordTapEvent(JobEventType type)
+    {
+        if (_tailored is null) return;
+        var snapshot = _ghostScore is null
+            ? null
+            : new GhostScoreSnapshot(_ghostScore.RiskScore, _ghostScore.Band.ToString(), _ghostScore.TopEvidence);
+        var jobEvent = JobEvent.ForPosting(
+            type, _tailored.JobUrl, _tailored.JobTitle, _tailored.Company, source: "", snapshot);
+
+        _ = Task.Run(async () =>
+        {
+            try { await _jobEvents.AddAsync(jobEvent); }
+            catch { /* bookkeeping only */ }
+        });
     }
 }

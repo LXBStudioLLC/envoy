@@ -17,7 +17,8 @@
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,3">
                                     <TextBlock Text="{Binding Marker}" Foreground="{Binding MarkerBrush}" FontSize="11" FontFamily="{StaticResource CyberFontBody}" Width="16" VerticalAlignment="Top"/>
-                                    <TextBlock Text="{Binding Step}" Foreground="#8892A4" FontSize="11" FontFamily="{StaticResource CyberFontBody}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding Step}" Foreground="#8892A4" FontSize="11" FontFamily="{StaticResource CyberFontBody}" TextWrapping="Wrap" MaxWidth="360"/>
+                                    <Button Content="{Binding FixLabel}" Visibility="{Binding FixVisibility}" Tag="{Binding ActionKey}" Click="ReadinessFix_Click" Style="{StaticResource CyberButton}" Padding="12,3" FontSize="10" Margin="10,0,0,0" AutomationProperties.Name="Fix this readiness step"/>
                                 </StackPanel>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

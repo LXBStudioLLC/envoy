@@ -16,9 +16,10 @@
 >
 > **Status:** ALL 17 items shipped 2026-11-05 (P0: #72/#76/#74/#73/#75/#77;
 > P1: #79/#82/#83/#84; P2: #85/#86/#87/#88/#89; P3: #90/#91), each behind a
-> green CI PR. Issues #55–#71 closed. One slice re-opened as its own item:
-> the first-run wizard + tray + notifications now live at #92
-> (the settings-side debt APP-16 targeted is fully paid in #90).
+> green CI PR. Issues #55–#71 closed. The #92 remainder (first-run checklist
+> with per-step actions + auto-hide, tray presence, notifications, Night-Owl
+> drain window) and honest taps-per-application telemetry shipped 2026-11-05 —
+> nothing shelfed; the Follow-up Items section below describes the current state.
 
 ## The ladder (current behavior)
 
@@ -50,3 +51,21 @@ time), so multiple resumes coexist honestly:
   profile (the old behavior), so upgraded machines keep working.
 - **Dashboard** remains the explicit per-profile start (each card's APPLY
   buttons route that profile into the Apply view).
+
+## #92 remainder + taps telemetry (shipped 2026-11-05)
+
+- **First-run checklist** on the Dashboard ends with the "first application"
+  step (finished attempts in the ledger); every incomplete row carries one
+  action button, and the strip auto-hides when complete.
+- **Tray presence**: queue counts in the tooltip, restore-on-click, EXIT menu;
+  closing the window minimizes to the tray so a draining queue keeps running.
+- **Notifications**: ready-to-fill, captcha hand-off, needs-your-send, failed
+  rows, queue finished (sent/failed counts), WARN/PERM refresh completion.
+- **Night Owl**: the Full-Auto drain window hours are settable on the Browser
+  page; the worker re-consults parked rows the moment the window opens —
+  no manual nudge, never a re-prepare. Trust-list entries parse as bare hosts.
+- **Taps per application**: TapQueued / TapOpened / TapFilled / TapConfirmed
+  journey events (one ledger row per committed action) feed the Scoreboard's
+  "taps per application" — average over applications finished in the last 30
+  days, joined by posting identity, formula on screen. Batch queueing records
+  one row per committed job, so the amortization stays visible.

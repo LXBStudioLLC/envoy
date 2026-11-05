@@ -29,12 +29,14 @@ public static class EnvoyReadiness
     /// profileCount — MasterProfiles in the store;
     /// llmConnected — any provider reachable (cloud key or local Ollama/LM Studio);
     /// browserDebug — a browser is running with the debug port open;
+    /// completedApplicationCount — logs that finished (Completed / NeedsUserSubmit);
     /// settings — for the templates-path + debug-port checks.
     /// </summary>
     public static ReadinessReport Compute(
         int profileCount,
         bool llmConnected,
         bool browserDebug,
+        int completedApplicationCount,
         EnvoySettings settings)
     {
         var steps = new List<ReadinessStep>();
@@ -71,6 +73,11 @@ public static class EnvoyReadiness
             ? new ReadinessStep("Debug port setting", true, $"port {normalizedPort}", "")
             : new ReadinessStep("Debug port setting", false, "invalid — defaulting to 9222",
                 "Fix ChromeDebuggingPort in settings.json (or remove it for the default)."));
+
+        steps.Add(completedApplicationCount > 0
+            ? new ReadinessStep("First application", true, $"{completedApplicationCount} in the ledger", "")
+            : new ReadinessStep("First application", false, "none yet",
+                "One click ends this: pick a posting in FIND JOBS and hit APPLY."));
 
         return new ReadinessReport(steps, steps.All(s => s.Complete));
     }
