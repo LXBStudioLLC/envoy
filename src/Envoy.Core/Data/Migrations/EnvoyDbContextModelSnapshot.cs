@@ -145,6 +145,64 @@ namespace Envoy.Core.Data.Migrations
                     b.ToTable("JobEvents");
                 });
 
+            modelBuilder.Entity("Envoy.Core.Models.QueuedApplication", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Company")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DescriptionText")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GhostRiskBand")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("GhostRiskScore")
+                        .HasColumnType("REAL");
+
+                    b.Property<Guid>("MasterProfileId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PostingKey")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("TailoredProfileId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("JobUrl")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("JobTitle")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PostingKey");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("QueuedApplications");
+                });
+
             modelBuilder.Entity("Envoy.Core.Models.MasterProfile", b =>
                 {
                     b.Property<Guid>("Id")

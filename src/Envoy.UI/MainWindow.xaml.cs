@@ -1,4 +1,5 @@
 ﻿using Envoy.Core.Configuration;
+using Envoy.Core.Models;
 using Envoy.Core.Services;
 using System.Diagnostics;
 using System.Reflection;
@@ -48,6 +49,9 @@ public partial class MainWindow : Window
         // APP-02: route the Find Jobs APPLY action straight into the Apply
         // view, carrying the posting + ghost snapshot so nothing re-scrapes.
         find.ApplyRequested += item => NavigateToApplyFromDiscovery(item);
+
+        // APP-07: route ready-to-fill queue items into a pre-tailored session.
+        find.PreparedApplyRequested += item => NavigateToApplyPrepared(item);
 
         InitializeComponent();
 
@@ -369,6 +373,19 @@ public partial class MainWindow : Window
         NavigateTo(_apply);
         UpdateNavButtons("Apply");
         _apply.LoadFromDiscovery(item.Posting!, item.Snapshot);
+    }
+
+    /// <summary>APP-07: open an AppReady queue item review-ready from the Find
+    /// Jobs queue panel.</summary>
+    public void NavigateToApplyPrepared(QueuedApplication item)
+    {
+        NavigateTo(_apply);
+        UpdateNavButtons("Apply");
+
+        var snapshot = item.GhostRiskScore is null
+            ? null
+            : new GhostScoreSnapshot(item.GhostRiskScore.Value, item.GhostRiskBand ?? "Neutral", Array.Empty<string>());
+        _apply.LoadPreparedApplication(item.TailoredProfileId!.Value, snapshot);
     }
 
     public async Task NavigateToVault(Guid profileId)

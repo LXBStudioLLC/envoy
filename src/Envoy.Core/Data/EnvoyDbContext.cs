@@ -10,6 +10,7 @@ public class EnvoyDbContext : DbContext
     public DbSet<TailoredProfile> TailoredProfiles { get; set; } = null!;
     public DbSet<ApplicationLog> ApplicationLogs { get; set; } = null!;
     public DbSet<JobEvent> JobEvents { get; set; } = null!;
+    public DbSet<QueuedApplication> QueuedApplications { get; set; } = null!;
 
     public string DbPath { get; }
 
@@ -133,6 +134,16 @@ public class EnvoyDbContext : DbContext
             // receipts, repost detection) and "recent activity" (scoreboard).
             entity.HasIndex(e => e.PostingKey);
             entity.HasIndex(e => e.OccurredAt);
+        });
+
+        modelBuilder.Entity<QueuedApplication>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.PostingKey).IsRequired();
+            entity.Property(e => e.JobUrl).IsRequired();
+            // The queue is read as "what's next" and "everything, by posting" (dedupe).
+            entity.HasIndex(e => e.PostingKey);
+            entity.HasIndex(e => e.Status);
         });
     }
 

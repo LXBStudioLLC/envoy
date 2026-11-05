@@ -1,0 +1,215 @@
+using Envoy.Core.Configuration;
+using Envoy.Core.Models;
+using Microsoft.Extensions.Logging;
+
+namespace Envoy.Core.Services;
+
+/// <summary>
+/// Prepares one queued posting (implementable by the ApplicationOrchestrator;
+/// testable with a stub so queue tests need no browser).
+/// </summary>
+public interface IApplicationPreparer
+{
+    /// <summary>Runs the no-scrape prepare for a queued item; returns the new TailoredProfile's id.</summary>
+    Task<Guid> PrepareAsync(QueuedApplication item, CancellationToken ct);
+}
+
+/// <summary>
+/// The application queue worker (APP-07): drains the PREPARE stage in the
+/// background — tailoring + PDF for every Queued item that arrived from
+/// discovery, with no browser usage at all — and marks each item AppReady for
+/// the user's one-click fill. The fill itself stays human-gated exactly like
+/// the single-apply flow (APP-11 wires the rapid review stream, APP-12 the
+/// unattended mode; both build on this worker, not beside it).
+///
+/// <para>Single-flight by design: exactly one worker loop exists for the
+/// process, started lazily on the first enqueue. The orchestrator it calls is
+/// therefore never asked to run two flows at once, which is what makes the
+/// shared CDP session safe.</para>
+/// </summary>
+public sealed class ApplicationQueueService : IDisposable
+{
+    private readonly IApplicationQueueRepository _queue;
+    private readonly IApplicationPreparer _preparer;
+    private readonly Func<EnvoySettings>? _settings;
+    private readonly ILogger<ApplicationQueueService> _log;
+
+    private CancellationTokenSource? _workerCts;
+    private volatile bool _running;
+
+    private static readonly SemaphoreSlim PrepareSingleFlight = new(1, 1);
+
+    /// <summary>Raised after the queue changes (enqueue, status transitions). UI subscribes and re-renders.</summary>
+    public event Action? QueueChanged;
+
+    public bool IsRunning => _running;
+
+    public ApplicationQueueService(IApplicationQueueRepository queue, IApplicationPreparer preparer,
+        ILogger<ApplicationQueueService> log, Func<EnvoySettings>? settings = null)
+    {
+        _queue = queue;
+        _preparer = preparer;
+        _log = log;
+        _settings = settings;
+    }
+
+    /// <summary>
+    /// Adds a posting to the queue. The duplicate guard runs at enqueue time
+    /// via <paramref name="duplicateCheck"/> (e.g. the completed-apply check
+    /// from APP-04) and inside the queue itself (one active row per posting
+    /// key). Returns false + a reason when blocked.
+    /// </summary>
+    public async Task<(bool Enqueued, string Reason)> EnqueueAsync(
+        QueuedApplication item,
+        Func<QueuedApplication, Task<string?>>? duplicateCheck = null,
+        bool autoStart = true,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(item.PostingKey) || string.IsNullOrWhiteSpace(item.JobUrl))
+            return (false, "The posting is missing its URL; this row cannot be queued.");
+
+        if (!string.IsNullOrWhiteSpace(item.DescriptionText) && item.DescriptionText.Length < 120)
+            return (false, "The posting's description is too short to tailor reliably; open it and apply manually.");
+
+        if (duplicateCheck is not null)
+        {
+            var blockReason = await duplicateCheck(item);
+            if (blockReason is not null)
+            {
+                item.Status = QueueItemStatus.BlockedDuplicate;
+                item.Note = blockReason;
+                await _queue.AddAsync(item, ct);
+                Notify();
+                return (false, blockReason);
+            }
+        }
+
+        if (!await _queue.AddAsync(item, ct))
+            return (false, "This posting is already in the queue.");
+
+        Notify();
+
+        if (autoStart)
+            EnsureStarted();
+
+        return (true, "Queued.");
+    }
+
+    /// <summary>Lazily starts the single worker loop; safe to call repeatedly.</summary>
+    public void EnsureStarted()
+    {
+        if (_running) return;
+
+        _running = true;
+        _workerCts = new CancellationTokenSource();
+        _ = WorkerLoopAsync(_workerCts.Token);
+        _log.LogInformation("Application queue worker started");
+    }
+
+    private async Task WorkerLoopAsync(CancellationToken ct)
+    {
+        try
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                var settings = _settings?.Invoke();
+                var profileId = await ResolveProfileIdAsync();
+                if (profileId is null)
+                {
+                    await WaitAsync(TimeSpan.FromSeconds(5), ct);
+                    continue; // no profile yet; queue keeps its Queued rows
+                }
+
+                var item = await _queue.GetNextQueuedAsync(profileId.Value, ct);
+                if (item is null)
+                {
+                    await WaitAsync(TimeSpan.FromSeconds(5), ct);
+                    continue;
+                }
+
+                await PrepareSingleFlight.WaitAsync(ct);
+                try
+                {
+                    item.Status = QueueItemStatus.Preparing;
+                    await _queue.UpdateAsync(item, ct);
+                    Notify();
+
+                    try
+                    {
+                        item.TailoredProfileId = await _preparer.PrepareAsync(item, ct);
+                        item.Status = QueueItemStatus.AppReady;
+                        item.Note = null;
+                    }
+                    catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+                    {
+                        // Per-item cap (preparer's own timeout): honest failure.
+                        item.Status = QueueItemStatus.Failed;
+                        item.Note = "Tailoring timed out.";
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        item.Status = QueueItemStatus.Failed;
+                        item.Note = ex.Message;
+                        _log.LogWarning(ex, "Queue prepare failed for {Url}", item.JobUrl);
+                    }
+
+                    await _queue.UpdateAsync(item, ct);
+                    Notify();
+                }
+                finally
+                {
+                    PrepareSingleFlight.Release();
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // shutdown: normal
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "Application queue worker crashed and stopped");
+        }
+        finally
+        {
+            _running = false;
+            _log.LogInformation("Application queue worker stopped");
+        }
+    }
+
+    /// <summary>Profile choice for the whole queue: the worker prepares for the
+    /// profile of the first Queued item it sees (batch is single-profile;
+    /// multi-profile is an explicit future decision).</summary>
+    private async Task<Guid?> ResolveProfileIdAsync()
+    {
+        var all = await _queue.GetAllAsync();
+        var queued = all.FirstOrDefault(q => q.Status == QueueItemStatus.Queued)
+            ?? all.FirstOrDefault(q => q.Status == QueueItemStatus.Preparing);
+        return queued?.MasterProfileId is var id && id != Guid.Empty ? id : null;
+    }
+
+    private static async Task WaitAsync(TimeSpan delay, CancellationToken ct)
+    {
+        try
+        {
+            await Task.Delay(delay, ct);
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private void Notify() => QueueChanged?.Invoke();
+
+    public void Dispose()
+    {
+        try
+        {
+            _workerCts?.Cancel();
+            _workerCts?.Dispose();
+        }
+        catch { }
+    }
+}
