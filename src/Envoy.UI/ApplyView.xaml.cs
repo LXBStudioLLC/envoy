@@ -85,15 +85,29 @@ public partial class ApplyView : UserControl
     }
 
     // Only offers the Stealth execution mode when stealth input is enabled (the guarded
-    // opt-in from the Browser view); otherwise Safe is the only option.
+    // opt-in from the Browser view); otherwise Safe is the only option. APP-16:
+    // DefaultMode is now actually honored — the selected default moves the combo.
     private void RefreshModeOptions()
     {
         CmbMode.Items.Clear();
-        CmbMode.Items.Add(new ComboBoxItem { Content = "Safe", IsSelected = true });
+        CmbMode.Items.Add(new ComboBoxItem { Content = "Safe" });
         if (_settings.StealthModeEnabled)
             CmbMode.Items.Add(new ComboBoxItem { Content = "Stealth" });
         if (_settings.FullAutoEnabled)
             CmbMode.Items.Add(new ComboBoxItem { Content = "Full-Auto" });
+
+        var wanted = _settings.DefaultMode switch
+        {
+            ExecutionMode.Stealth when _settings.StealthModeEnabled => "Stealth",
+            ExecutionMode.FullAuto when _settings.FullAutoEnabled => "Full-Auto",
+            _ => "Safe"
+        };
+
+        var match = CmbMode.Items.Cast<ComboBoxItem>().FirstOrDefault(i => i.Content?.ToString() == wanted);
+        if (match is not null)
+        {
+            CmbMode.SelectedItem = match;
+        }
     }
 
     public void SetProfileId(Guid profileId)

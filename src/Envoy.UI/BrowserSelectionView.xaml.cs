@@ -47,6 +47,7 @@ public partial class BrowserSelectionView : UserControl
     {
         RefreshStealthStatus();
         RefreshScreenshotStatus();
+        RefreshFullAutoStatus();
         try
         {
             await ScanBrowsersAsync();
@@ -208,5 +209,53 @@ public partial class BrowserSelectionView : UserControl
             MessageBox.Show("Couldn't save the setting. settings.json may be locked, so the change was not stored.",
                 "Save failed", MessageBoxButton.OK, MessageBoxImage.Warning);
         RefreshScreenshotStatus();
+    }
+
+    // ── APP-12: Full-Auto guarded toggle ─────────────────────────────────
+
+    private void RefreshFullAutoStatus()
+    {
+        if (_settings.FullAutoEnabled)
+        {
+            FullAutoStatusText.Text = "ENABLED (trusted sites only)";
+            FullAutoStatusText.Foreground = Green;
+            BtnToggleFullAuto.Content = "DISABLE FULL-AUTO";
+        }
+        else
+        {
+            FullAutoStatusText.Text = "DISABLED";
+            FullAutoStatusText.Foreground = Gray;
+            BtnToggleFullAuto.Content = "ENABLE FULL-AUTO";
+        }
+    }
+
+    private void BtnToggleFullAuto_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_settings.FullAutoEnabled)
+        {
+            // Guarded enable mirroring the stealth acknowledgement: a deliberate
+            // act, with the boundary spelled out BEFORE anything turns on.
+            var result = MessageBox.Show(
+                "Enable Full-Auto submission?\n\n" +
+                "Envoy fills and submits prepared applications WITHOUT asking per site — but ONLY on:\n" +
+                " • the company's own ATS boards (classified in code),\n" +
+                " • hosts that are trusted: 3 verified submissions, or added to FullAutoTrustedHosts in settings.json.\n\n" +
+                "LinkedIn, Indeed, ZipRecruiter, and every aggregator are structurally excluded. " +
+                "CAPTCHAs hand off to you; nothing is solved. Unknown domains fail closed.\n\n" +
+                "Enable Full-Auto?",
+                "Envoy: enable Full-Auto", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+
+            if (result != MessageBoxResult.Yes) return;
+            _settings.FullAutoEnabled = true;
+        }
+        else
+        {
+            _settings.FullAutoEnabled = false;
+        }
+
+        if (!_settings.Save())
+            MessageBox.Show("Couldn't save the setting. settings.json may be locked, so the change was not stored.",
+                "Save failed", MessageBoxButton.OK, MessageBoxImage.Warning);
+        RefreshFullAutoStatus();
     }
 }
