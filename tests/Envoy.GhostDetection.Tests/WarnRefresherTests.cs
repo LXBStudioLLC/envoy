@@ -292,7 +292,7 @@ public sealed class WarnRefresherTests : IDisposable
         var result = await new WarnRefresher(new HttpClient(handler)) { CachePath = _cachePath }.RefreshAsync();
 
         Assert.False(result.Success);
-        Assert.NotEmpty(result.Error);
+        Assert.False(string.IsNullOrWhiteSpace(result.Error));
     }
 
     [Fact]
