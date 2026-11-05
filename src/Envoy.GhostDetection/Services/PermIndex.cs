@@ -73,6 +73,25 @@ public static class PermIndex
         }
     }
 
+    /// <summary>
+    /// Replaces the in-memory index after a <see cref="PermIndexBuilder"/> run
+    /// (the builder writes the cache file; this keeps the live process in step
+    /// so the next posting scores with fresh data). Passing <c>null</c> is
+    /// allowed and resets to an empty index. Mirrors <c>WarnDataset.Replace</c>.
+    /// </summary>
+    public static void Replace(IReadOnlyList<PermFiling>? filings)
+    {
+        Gate.Wait();
+        try
+        {
+            _cached = (IReadOnlyList<PermFiling>)(filings ?? new List<PermFiling>());
+        }
+        finally
+        {
+            Gate.Release();
+        }
+    }
+
     private static IReadOnlyList<PermFiling> LoadFromDisk()
     {
         try

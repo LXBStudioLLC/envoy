@@ -65,13 +65,16 @@
                 </StackPanel>
             </Border>
 
-            <!-- Public dataset refresh (WARN Act notices behind Hiring Freeze) -->
+            <!-- Public dataset refresh (WARN Act notices + PERM filings) -->
             <Border Background="#0D1117" CornerRadius="3" BorderBrush="#1A3A4A" BorderThickness="1" Padding="16,12" Margin="0,0,0,16">
                 <StackPanel>
                     <TextBlock Text="PUBLIC DATA" Foreground="#39FF14" FontSize="12" FontWeight="Bold" FontFamily="{StaticResource CyberFontHeading}" Margin="0,0,0,2"/>
-                    <TextBlock Text="Fetch the latest public WARN Act layoff notices (Washington and New York state agencies) that the Hiring Freeze ghost signal scores against. Read-only public pages; nothing is posted or automated." Foreground="#5A6678" FontSize="10" FontFamily="{StaticResource CyberFontBody}" TextWrapping="Wrap" Margin="0,0,0,8"/>
-                    <Button x:Name="BtnRefreshWarn" Content="REFRESH WARN DATA" Click="BtnRefreshWarn_Click" Style="{StaticResource CyberButton}" Padding="14,5" HorizontalAlignment="Left" AutomationProperties.Name="Refresh public WARN layoff notices"/>
-                    <TextBlock x:Name="WarnRefreshStatus" Text="" Foreground="#8892A4" FontSize="10" FontFamily="{StaticResource CyberFontBody}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                    <TextBlock Text="Refresh the public datasets behind the Hiring Freeze and PERM Cross-Check ghost signals. Read-only public agency pages, nothing automated. WARN is quick; the PERM refresh downloads the latest public DOL disclosure file (about 150 MB) and is best on metered patience." Foreground="#5A6678" FontSize="10" FontFamily="{StaticResource CyberFontBody}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Button x:Name="BtnRefreshWarn" Content="REFRESH WARN DATA" Click="BtnRefreshWarn_Click" Style="{StaticResource CyberButton}" Padding="14,5" AutomationProperties.Name="Refresh public WARN layoff notices"/>
+                        <Button x:Name="BtnRefreshPerm" Content="REFRESH PERM INDEX" Click="BtnRefreshPerm_Click" Style="{StaticResource CyberButton}" Padding="14,5" Margin="10,0,0,0" AutomationProperties.Name="Refresh index of DOL PERM labor-certification filings"/>
+                    </StackPanel>
+                    <TextBlock x:Name="DataRefreshStatus" Text="" Foreground="#8892A4" FontSize="10" FontFamily="{StaticResource CyberFontBody}" TextWrapping="Wrap" Margin="0,6,0,0"/>
                 </StackPanel>
             </Border>
 
