@@ -161,19 +161,30 @@ public sealed class ApplicationQueueService : IDisposable
         {
             while (!ct.IsCancellationRequested)
             {
-                var settings = _settings?.Invoke();
-                var profileId = await ResolveProfileIdAsync();
-                if (profileId is null)
-                {
-                    await WaitAsync(TimeSpan.FromSeconds(5), ct);
-                    continue; // no profile yet; queue keeps its Queued rows
-                }
-
-                var item = await _queue.GetNextQueuedAsync(profileId.Value, ct);
+                // Multi-profile (APP-11 follow-up): rows carry their own
+                // MasterProfileId stamp, so the worker tailors whichever row is
+                // oldest — different profiles interleave instead of the first
+                // profile's rows starving everyone else. The single-flight
+                // prepare keeps the shared browser safe despite that.
+                var item = await _queue.GetNextQueuedAnyProfileAsync(ct);
                 if (item is null)
                 {
                     await WaitAsync(TimeSpan.FromSeconds(5), ct);
                     continue;
+                }
+
+                // Legacy rows queued before per-row stamping keep the old
+                // behavior: bind to the first stamped row's profile. With no
+                // stamped row to bind to, keep waiting (previous contract).
+                if (item.MasterProfileId == Guid.Empty)
+                {
+                    var fallback = await ResolveProfileIdAsync();
+                    if (fallback is null)
+                    {
+                        await WaitAsync(TimeSpan.FromSeconds(5), ct);
+                        continue;
+                    }
+                    item.MasterProfileId = fallback.Value;
                 }
 
                 await ProcessItemAsync(item, DateTime.UtcNow, ct);
@@ -194,14 +205,14 @@ public sealed class ApplicationQueueService : IDisposable
         }
     }
 
-    /// <summary>Profile choice for the whole queue: the worker prepares for the
-    /// profile of the first Queued item it sees (batch is single-profile;
-    /// multi-profile is an explicit future decision).</summary>
+    /// <summary>Fallback for legacy unstamped rows: the profile of the first
+    /// stamp-carrying row in the queue (empty stamps are skipped — otherwise an
+    /// old row first in line would block every new stamped row again).</summary>
     private async Task<Guid?> ResolveProfileIdAsync()
     {
         var all = await _queue.GetAllAsync();
-        var queued = all.FirstOrDefault(q => q.Status == QueueItemStatus.Queued)
-            ?? all.FirstOrDefault(q => q.Status == QueueItemStatus.Preparing);
+        var queued = all.FirstOrDefault(q => q.Status == QueueItemStatus.Queued && q.MasterProfileId != Guid.Empty)
+            ?? all.FirstOrDefault(q => q.Status == QueueItemStatus.Preparing && q.MasterProfileId != Guid.Empty);
         return queued?.MasterProfileId is var id && id != Guid.Empty ? id : null;
     }
 

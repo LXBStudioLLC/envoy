@@ -44,7 +44,9 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="SCAN BOARDS reads public company ATS feeds (no key). WEB SEARCH uses your Brave Search API key." Foreground="#5A6678" FontSize="10" FontFamily="{StaticResource CyberFontBody}" TextWrapping="Wrap" Grid.Column="0"/>
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top" Margin="12,0,0,0">
-                            <TextBlock Text="SORT: " Foreground="#5A6678" FontSize="10" FontFamily="{StaticResource CyberFontBody}" VerticalAlignment="Center"/>
+                            <TextBlock Text="APPLY WITH: " Foreground="#5A6678" FontSize="10" FontFamily="{StaticResource CyberFontBody}" VerticalAlignment="Center"/>
+                            <ComboBox x:Name="CmbApplyProfile" Style="{StaticResource CyberComboBox}" MinWidth="150" AutomationProperties.Name="Profile to apply with" ToolTip="Which resume profile QUEUE / APPLY uses — pick the one this job should fit"/>
+                            <TextBlock Text="SORT: " Foreground="#5A6678" FontSize="10" FontFamily="{StaticResource CyberFontBody}" VerticalAlignment="Center" Margin="14,0,0,0"/>
                             <ComboBox x:Name="CmbSort" Style="{StaticResource CyberComboBox}" SelectionChanged="CmbSort_SelectionChanged" AutomationProperties.Name="Sort results">
                                 <ComboBoxItem Content="Newest first" IsSelected="True"/>
                                 <ComboBoxItem Content="Ghost score (high to low)"/>

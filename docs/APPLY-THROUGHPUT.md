@@ -33,3 +33,20 @@
    host trust (3 verified submissions or explicit list) + optional UTC window;
    the queue drains prepared items on trusted company/ATS boards only.
    Aggregators and unknowns are structurally excluded.
+
+## Profiles (multi-resume, shipped after the 17)
+
+The queue still reads "one profile" per user intent, but each queue row now
+carries the profile it was queued for (`MasterProfileId` stamped at click
+time), so multiple resumes coexist honestly:
+
+- **Find Jobs** has an `APPLY WITH` selector; `QUEUE` / `QUEUE SELECTED` and
+  the per-row `APPLY` route the chosen profile through (per-row apply carries
+  it into the Apply view). One profile per click family; no dialogs.
+- **The worker drains rows across profiles** oldest-first — a second resume's
+  rows no longer starve behind the first profile's batch. Rows still carry
+  their stamp; the single-flight prepare keeps the shared browser safe.
+- **Legacy rows** persisted before stamping bind to the first stamped row's
+  profile (the old behavior), so upgraded machines keep working.
+- **Dashboard** remains the explicit per-profile start (each card's APPLY
+  buttons route that profile into the Apply view).

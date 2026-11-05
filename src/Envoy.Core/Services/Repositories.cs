@@ -288,6 +288,8 @@ public interface IApplicationQueueRepository
     Task<bool> AddAsync(QueuedApplication item, CancellationToken ct = default);
     Task<List<QueuedApplication>> GetAllAsync(CancellationToken ct = default);
     Task<QueuedApplication?> GetNextQueuedAsync(Guid masterProfileId, CancellationToken ct = default);
+    /// <summary>APP-11: next Queued row regardless of owning profile (rows carry their own stamp; different profiles interleave oldest-first instead of starving).</summary>
+    Task<QueuedApplication?> GetNextQueuedAnyProfileAsync(CancellationToken ct = default);
     Task UpdateAsync(QueuedApplication item, CancellationToken ct = default);
     Task RemoveAsync(Guid id, CancellationToken ct = default);
     Task<bool> HasActiveKeyAsync(string postingKey, CancellationToken ct = default);
@@ -342,6 +344,17 @@ public class ApplicationQueueRepository : IApplicationQueueRepository
         using var db = _factory.CreateDbContext();
         return await db.QueuedApplications
             .Where(q => q.MasterProfileId == masterProfileId && q.Status == QueueItemStatus.Queued)
+            .OrderBy(q => q.CreatedAt)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    /// <summary>Next Queued row for any profile — the stamps travel with the rows,
+    /// so one worker tailors for whichever profile each row was queued with.</summary>
+    public async Task<QueuedApplication?> GetNextQueuedAnyProfileAsync(CancellationToken ct = default)
+    {
+        using var db = _factory.CreateDbContext();
+        return await db.QueuedApplications
+            .Where(q => q.Status == QueueItemStatus.Queued)
             .OrderBy(q => q.CreatedAt)
             .FirstOrDefaultAsync(ct);
     }
