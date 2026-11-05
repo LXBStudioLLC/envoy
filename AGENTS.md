@@ -89,6 +89,28 @@ docs/
   ADAPTIVE_PARSER.md
   TEMPLATE_AUTHORING.md
   SETUP.md
+  APPLY-THROUGHPUT.md           — the apply-throughput plan (Applications Escalator) and its constraints
+  WARN-NOTICES.md
+  PERM-INDEX.md
+```
+
+### Apply-throughput services (the Escalator)
+
+```
+src/Envoy.Core/Services/
+  ApplicationOrchestrator.cs     — prepare/tailor + submit state machine (all modes)
+  KnownPosting.cs                — discovery-carried posting for no-scrape tailoring
+  DuplicateApplyCheck.cs         — completed-application guard (PostingKey identity)
+  SiteClassifier.cs              — company ATS vs aggregator vs unknown (enforced in code)
+  FullAutoPolicy.cs              — the Full-Auto gate: master switch + host trust + window
+  ApplicationQueueService.cs     — background prepare/submit worker (single-flight)
+  KnownPosting/FormTypes…        — GenericFill: FormFieldsScript + CdpFormFieldEnumerator
+  GenericFill/FormFieldMapper.cs — strict plan validation (values only pf: or #bank)
+  GenericFill/GenericFormFiller.cs — enumerate → map → actuate (needs-human leftovers)
+  SubmitGate… see SafetyService  — the human gate wraps every submit path
+  TemplateEngine.cs              — template runs + post-submit verification
+  CdpBrowserService.cs / CdpPageSession.cs — browser bridge (single + per-page sessions)
+  EnvoyReadiness.cs              — first-run readiness strip computation
 ```
 
 ## How to Add a Ghost Signal

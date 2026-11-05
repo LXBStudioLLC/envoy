@@ -4,6 +4,33 @@ All notable changes to Envoy are documented in this file. Format is based on [Ke
 
 ## [Unreleased]
 
+### Added — the Applications Escalator (apply-throughput)
+
+The apply flow is now a queue, not a form wizard. One profile, one queue, maximum honest applications; ghost detection stays the quality rail. Docs: [docs/APPLY-THROUGHPUT.md](docs/APPLY-THROUGHPUT.md).
+
+- **One-click apply from Find Jobs.** Every result row carries an APPLY button; the posting and its ghost score travel with the click, tailoring runs without re-scraping, and the result panel is ready immediately. A QUEUE button adds the posting to the background queue instead.
+- **The application queue.** A SQLite-backed queue tailors every queued posting in the background with no browser use at all, then waits for your one-click fill. A live YOUR QUEUE panel shows counts by status (QUEUED → TAILORING… → READY TO FILL → …), with APPLY NOW on each ready item. One active application per company; a daily cap protects against velocity flags (default 25/day, `QueueDailyCap`).
+- **Duplicate prevention.** Submitting to a posting already completed is blocked with its prior date (canonicalized by URL, tolerant of mirror boards and tracking parameters). Re-apply is possible, but only after an explicit prompt that defaults to no.
+- **Honest completion.** A template run counts what it actually filled; required fields that came back unfilled fail the run with the real numbers. After a submission, a verify block records whether the delivery could be confirmed. Per-application evidence: required/filled counts, verified flag, verification note.
+- **The Scoreboard tracks verified delivery.** Verified sends vs sends the delivery check couldn't confirm — stated separately, never folded. A per-day verified distribution feeds the weekly view. Failed captchas and duplicate blocks are not submissions.
+- **Retries without waste.** Preparing the same posting twice reuses the tailored profile: no LLM re-run, no duplicate rows.
+- **Full-Auto mode (off by default).** A guarded toggle. The queue can submit prepared applications without asking per site — only on the company's own ATS boards, and only for trusted hosts: three verified submissions, or an explicit list. Aggregators are structurally excluded (a SiteClassifier decides in code; unknown domains fail closed). An optional UTC hour window gates the drain. CAPTCHAs hand off to you, never solved.
+- **Generic form auto-fill (LLM field mapper).** When no template matches, Envoy enumerates the visible widgets (main document, same-origin iframes, open shadow roots) and maps them with strict rules: values only from a whitelisted profile field or a stored answer; selects must match an option exactly; anything unmapped is NEEDS-HUMAN. Inventions are rejected structurally. Stored answers live in a local Q&A bank managed in the Vault.
+- **Cover letters.** Tailoring also writes a 150-220 word cover letter from the resume's facts only (a timeout never breaks the run), stored with the tailored profile and as plain text beside the resume PDF.
+- **Documented template field IDs now all resolve:** linkedin_url, portfolio_url, current_company, current_title, years_experience, city/state, cover_letter — previously ten documented IDs silently filled nothing.
+- **Cancellable runs + session continuity.** TAILOR and FILL gain a working CANCEL; the LLM completion is bounded (default 180 s); the page opened while preparing is reused at submit.
+- **Readiness strip on the Dashboard.** A per-step READY TO RUN checklist with a plain-language fix for the one step that is not ready.
+- **Per-page browser sessions.** Independent per-tab CDP sessions (command routing, events, captcha sniff per page) lay the ground for parallel workers.
+
+### Fixed
+- Templates ship with every build: a plain dotnet run previously failed every application with "No template found for this job board".
+- Settings knobs that loaded but did nothing are now wired (or honest): TypingSpeedVariance/MousePathSteps feed the human-cadence emulator, ChromeDebuggingPort is used by the bridge, TemplatesPath relocates the template folder, DefaultMode pre-selects the run mode.
+- The Lever template's LinkedIn field resolved to nothing (wrong field id); it now fills.
+- Ghost-detection suites no longer race on shared dataset hooks; ghost signals evaluate in parallel (nine checks cost the slowest, not the sum).
+
+### Changed
+- README/AGENTS/CONTRIBUTING synced: nine shipped signals, all starter signal issues closed, roadmap updated (Full-Auto implemented behind the guarded toggle). `docs/APPLY-THROUGHPUT.md` records the architecture and the constraint boundary (aggregators copilot-only in code, CAPTCHAs hand off, human gates everywhere Full-Auto doesn't reach).
+
 ## [1.1.0] - 2026-07-18
 
 ### Changed
