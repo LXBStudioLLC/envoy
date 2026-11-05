@@ -45,6 +45,32 @@ public sealed class ApplicationOrchestratorDuplicateTests : IDisposable
 
     public void Dispose() => _connection.Dispose();
 
+    private static GenericFormFiller GenericFixedFiller() =>
+        new(new FakeEnumerator(), new FakeActuator(), new FormFieldMapper(
+            new OllamaService(Mock.Of<ILLMProvider>()), new TestBank()), null);
+
+    private sealed class FakeEnumerator : IFormFieldEnumerator
+    {
+        public Task<List<FormFieldInfo>> EnumerateAsync(CancellationToken ct = default)
+            => Task.FromResult(new List<FormFieldInfo>());
+    }
+
+    private sealed class FakeActuator : IFormFieldActuator
+    {
+        public Task<bool> FillTextAsync(string selector, string value, CancellationToken ct = default) => Task.FromResult(true);
+        public Task<bool> SelectOptionAsync(string selector, string optionText, CancellationToken ct = default) => Task.FromResult(true);
+        public Task<bool> SetCheckedAsync(string selector, bool isChecked, CancellationToken ct = default) => Task.FromResult(true);
+        public Task<bool> UploadFileAsync(string selector, string filePath, CancellationToken ct = default) => Task.FromResult(true);
+        public Task<bool> ExistsAsync(string selector, CancellationToken ct = default) => Task.FromResult(true);
+    }
+
+    private sealed class TestBank : IAnswerBankRepository
+    {
+        public Task<List<AnswerBankEntry>> GetAllAsync(CancellationToken ct = default) => Task.FromResult(new List<AnswerBankEntry>());
+        public Task AddOrUpdateAsync(string question, string answer, CancellationToken ct = default) => Task.CompletedTask;
+        public Task RemoveAsync(Guid id, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
     private ApplicationOrchestrator BuildOrchestrator(out ApplicationLogRepository logs,
         out TailoredProfileRepository tailored, out Mock<IBrowserLauncher> launcher)
     {
@@ -59,6 +85,7 @@ public sealed class ApplicationOrchestratorDuplicateTests : IDisposable
             new TailoringEngine(ollama, new SafetyService(Mock.Of<ILogger<SafetyService>>()), factory, Mock.Of<ILogger<TailoringEngine>>()),
             new CdpBrowserService(new HumanizationService(), _settings, Mock.Of<ILogger<CdpBrowserService>>()),
             new TemplateEngine(Path.Combine(AppContext.BaseDirectory, "Templates")),
+            GenericFixedFiller(),
             Mock.Of<IResumePdfGenerator>(),
             new ProfileRepository(factory, Mock.Of<ILogger<ProfileRepository>>()),
             tailored, logs,

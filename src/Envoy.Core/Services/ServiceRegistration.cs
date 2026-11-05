@@ -54,6 +54,15 @@ public static class ServiceRegistration
         services.AddSingleton<TailoringEngine>();
         services.AddSingleton<ApplicationOrchestrator>();
 
+        // APP-09: generic field mapping — the no-template fallback for any ATS.
+        services.AddSingleton<IFormFieldEnumerator>(sp => new CdpFormFieldEnumerator(
+            new CdpBrowserQueryAdapter(sp.GetRequiredService<CdpBrowserService>())));
+        services.AddSingleton<IFormFieldActuator, CdpFormFieldActuator>();
+        services.AddSingleton<IAnswerBankRepository>(sp => new AnswerBankRepository(
+            AnswerBankRepository.DefaultPath));
+        services.AddSingleton<GenericFormFiller>();
+        services.AddSingleton<FormFieldMapper>();
+
         // APP-07: the application queue — repo, orchestrator-backed preparer,
         // and the single-flight worker (started lazily on first enqueue).
         services.AddSingleton<IApplicationQueueRepository, ApplicationQueueRepository>();

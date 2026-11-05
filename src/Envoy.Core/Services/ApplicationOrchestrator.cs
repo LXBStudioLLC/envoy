@@ -10,6 +10,7 @@ public class ApplicationOrchestrator
     private readonly TailoringEngine _tailoring;
     private readonly CdpBrowserService _browser;
     private readonly TemplateEngine _templates;
+    private readonly GenericFormFiller _genericFiller;
     private readonly IResumePdfGenerator _pdfGenerator;
     private readonly IProfileRepository _profileRepo;
     private readonly ITailoredProfileRepository _tailoredRepo;
@@ -24,6 +25,7 @@ public class ApplicationOrchestrator
         TailoringEngine tailoring,
         CdpBrowserService browser,
         TemplateEngine templates,
+        GenericFormFiller genericFiller,
         IResumePdfGenerator pdfGenerator,
         IProfileRepository profileRepo,
         ITailoredProfileRepository tailoredRepo,
@@ -37,6 +39,7 @@ public class ApplicationOrchestrator
         _tailoring = tailoring;
         _browser = browser;
         _templates = templates;
+        _genericFiller = genericFiller;
         _pdfGenerator = pdfGenerator;
         _profileRepo = profileRepo;
         _tailoredRepo = tailoredRepo;
@@ -352,9 +355,29 @@ public class ApplicationOrchestrator
             var template = _templates.MatchTemplate(tailored.JobUrl);
             if (template == null)
             {
-                log.Status = ApplicationStatus.Failed;
-                log.ErrorMessage = "No template found for this job board.";
+                // APP-09: no hand template → the generic field mapper covers the
+                // page. Envoy fills what it safely can; the human completes the
+                // rest and SENDS. Never invented values, never auto-submit.
+                var generic = await _genericFiller.FillAsync(tailored, tailored.TailoredData, ct);
+
+                log.SiteTemplateId = "generic-fill";
+                log.RequiredFieldCount = generic.FieldCount;
+                log.FilledFieldCount = generic.FilledCount;
+                log.VerificationNote = generic.NeedsHuman.Count > 0
+                    ? "needs human: " + string.Join("; ", generic.NeedsHuman.Take(8))
+                    : "generic fill complete";
+
+                log.Status = ApplicationStatus.NeedsUserSubmit;
                 await _logRepo.UpdateAsync(log, ct);
+
+                var summary = $"Auto-fill done: {generic.FilledCount} of {generic.FieldCount} fields filled." +
+                    (generic.NeedsHuman.Count > 0
+                        ? $" Finish these by hand: {string.Join(", ", generic.NeedsHuman.Take(6))}" +
+                          (generic.NeedsHuman.Count > 6 ? $" (+{generic.NeedsHuman.Count - 6} more)" : "") + "."
+                        : "") +
+                    " Review the form in the browser and click the site's Submit yourself; nothing is sent by Envoy here.";
+                await onConfirmationRequired(summary);
+
                 return log;
             }
 

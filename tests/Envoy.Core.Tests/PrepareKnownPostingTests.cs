@@ -59,6 +59,21 @@ public sealed class PrepareKnownPostingTests : IDisposable
 
     public void Dispose() => _connection.Dispose();
 
+    private sealed class EmptyEnumerator : IFormFieldEnumerator
+    {
+        public Task<List<FormFieldInfo>> EnumerateAsync(CancellationToken ct = default)
+            => Task.FromResult(new List<FormFieldInfo>());
+    }
+
+    private sealed class YesActuator : IFormFieldActuator
+    {
+        public Task<bool> FillTextAsync(string selector, string value, CancellationToken ct = default) => Task.FromResult(true);
+        public Task<bool> SelectOptionAsync(string selector, string optionText, CancellationToken ct = default) => Task.FromResult(true);
+        public Task<bool> SetCheckedAsync(string selector, bool isChecked, CancellationToken ct = default) => Task.FromResult(true);
+        public Task<bool> UploadFileAsync(string selector, string filePath, CancellationToken ct = default) => Task.FromResult(true);
+        public Task<bool> ExistsAsync(string selector, CancellationToken ct = default) => Task.FromResult(true);
+    }
+
     private ApplicationOrchestrator BuildOrchestrator()
     {
         _launcher.Setup(l => l.IsRunningWithDebuggingAsync(It.IsAny<BrowserType>(), It.IsAny<int>()))
@@ -74,6 +89,11 @@ public sealed class PrepareKnownPostingTests : IDisposable
             new TailoringEngine(ollama, new SafetyService(Mock.Of<ILogger<SafetyService>>()), _factory, Mock.Of<ILogger<TailoringEngine>>(), settings),
             new CdpBrowserService(new HumanizationService(), settings, Mock.Of<ILogger<CdpBrowserService>>()),
             new TemplateEngine(Path.Combine(AppContext.BaseDirectory, "Templates")),
+            new GenericFormFiller(
+                new EmptyEnumerator(),
+                new YesActuator(),
+                new FormFieldMapper(ollama, new AnswerBankRepository(Path.Combine(Path.GetTempPath(), "envoy-mapper-tests", Guid.NewGuid() + ".json"))),
+                Mock.Of<ILogger<GenericFormFiller>>()),
             Mock.Of<IResumePdfGenerator>(),
             new ProfileRepository(_factory, Mock.Of<ILogger<ProfileRepository>>()),
             new TailoredProfileRepository(_factory, Mock.Of<ILogger<TailoredProfileRepository>>()),
