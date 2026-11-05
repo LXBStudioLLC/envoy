@@ -67,6 +67,8 @@ src/
         EmployerNormalizer.cs        — shared company-name normalization
         LocationStateMatcher.cs      — shared posting-vs-state matching
         WarnDataset.cs / PermIndex.cs — dataset loaders (cache → bundled seed → empty)
+        WarnRefresher.cs             — WARN dataset refresher (WA WebForms + NY; Scoreboard button)
+        PermIndexBuilder.cs          — PERM index refresher (streaming XLSX reader; Scoreboard button)
       warn-notices.json / perm-index.json — bundled real-data seeds (see docs/WARN-NOTICES.md, docs/PERM-INDEX.md)
     IGhostSignal.cs                  — Name, Tier, RequiresNetwork, EvaluateAsync
     GhostScorer.cs                   — aggregates signals → Neutral / Elevated / High
