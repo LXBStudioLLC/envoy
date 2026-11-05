@@ -45,6 +45,7 @@
             </UniformGrid>
 
             <TextBlock x:Name="ContextLine" Text="" Foreground="#5A6678" FontSize="10" FontFamily="{StaticResource CyberFontBody}" Margin="2,6,0,4"/>
+            <TextBlock x:Name="QueueLine" Text="" Foreground="#39FF14" FontSize="10" FontFamily="{StaticResource CyberFontBody}" Margin="2,0,0,4" TextWrapping="Wrap" Visibility="Collapsed"/>
             <TextBlock x:Name="DeliveryLine" Text="" Foreground="#8892A4" FontSize="10" FontFamily="{StaticResource CyberFontBody}" Margin="2,0,0,4" TextWrapping="Wrap"/>
             <TextBlock x:Name="ResponseLine" Text="" Foreground="#8892A4" FontSize="10" FontFamily="{StaticResource CyberFontBody}" Visibility="Collapsed" Margin="2,0,0,16"/>
 
