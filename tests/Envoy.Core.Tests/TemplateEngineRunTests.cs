@@ -73,7 +73,7 @@ public sealed class TemplateEngineRunTests
     }
 
     [Fact]
-    public void MissingElement_OnOptional_DoesNotFailIntegrity()
+    public async Task MissingElement_OnOptional_DoesNotFailIntegrity()
     {
         var browser = new TemplateEngineGateTests.FakePageInteractor { MissingElement = true };
         var template = new SiteTemplate
@@ -82,8 +82,7 @@ public sealed class TemplateEngineRunTests
             Steps = { Fill("summary", "#summary", required: false) }
         };
 
-        var graceful = Task.Run(async () => await Engine().ExecuteTemplateAsync(template, browser, Profile(), _ => Task.FromResult(true)));
-        var result = graceful.GetAwaiter().GetResult();
+        var result = await Engine().ExecuteTemplateAsync(template, browser, Profile(), _ => Task.FromResult(true));
 
         Assert.Equal(0, result.RequiredMissing);
         Assert.Equal(1, result.SkippedCount);
