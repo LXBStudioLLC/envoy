@@ -105,6 +105,28 @@ public class CdpBrowserService : ICdpCommandExecutor, IPageInteractor, IBrowserL
         }
     }
 
+    /// <summary>
+    /// Closes one page target and detaches from it, keeping the browser and
+    /// the CDP connection alive (APP-03). Used after a prepared page has been
+    /// consumed or abandoned; never on a captcha hand-off, where the user
+    /// needs the live page.
+    /// </summary>
+    public async Task ClosePageAsync(string targetId, CancellationToken ct = default)
+    {
+        try
+        {
+            await SendCommandAsync("Target.closeTarget", new { targetId }, ct);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(ex, "Failed to close CDP page {TargetId}", targetId);
+        }
+        finally
+        {
+            _sessionId = null;
+        }
+    }
+
     public async Task NavigateAsync(string url, CancellationToken ct = default)
     {
         // Register the load-event waiter BEFORE navigating so a fast page load can't

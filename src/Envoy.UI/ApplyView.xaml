@@ -22,7 +22,10 @@
                         <ComboBoxItem Content="Stealth"/>
                     </ComboBox>
 
-                    <Button x:Name="BtnInitiate" Content="TAILOR RESUME" Click="BtnInitiate_Click" Style="{StaticResource CyberButton}" HorizontalAlignment="Left" Padding="24,10"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Button x:Name="BtnInitiate" Content="TAILOR RESUME" Click="BtnInitiate_Click" Style="{StaticResource CyberButton}" HorizontalAlignment="Left" Padding="24,10" AutomationProperties.Name="Tailor the resume for this job"/>
+                        <Button x:Name="BtnCancelFlow" Content="CANCEL" Click="BtnCancelFlow_Click" Style="{StaticResource CyberButton}" HorizontalAlignment="Left" Padding="16,10" Margin="10,0,0,0" IsEnabled="False" Visibility="Collapsed" AutomationProperties.Name="Cancel the running tailoring or fill"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 

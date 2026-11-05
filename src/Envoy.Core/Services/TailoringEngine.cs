@@ -1,3 +1,4 @@
+using Envoy.Core.Configuration;
 using Envoy.Core.Data;
 using Envoy.Core.Models;
 using Microsoft.EntityFrameworkCore;
@@ -11,13 +12,16 @@ public class TailoringEngine
     private readonly SafetyService _safety;
     private readonly IDbContextFactory<EnvoyDbContext> _factory;
     private readonly ILogger<TailoringEngine> _log;
+    private readonly int _completionTimeoutSeconds;
 
-    public TailoringEngine(OllamaService ollama, SafetyService safety, IDbContextFactory<EnvoyDbContext> dbFactory, ILogger<TailoringEngine> log)
+    public TailoringEngine(OllamaService ollama, SafetyService safety, IDbContextFactory<EnvoyDbContext> dbFactory,
+        ILogger<TailoringEngine> log, EnvoySettings? settings = null)
     {
         _ollama = ollama;
         _safety = safety;
         _factory = dbFactory;
         _log = log;
+        _completionTimeoutSeconds = Math.Clamp(settings?.LLMCompletionTimeoutSeconds ?? 180, 10, 3600);
     }
 
     public async Task<TailoredProfile> TailorAsync(Guid masterProfileId, string jobUrl, string jobDescription, CancellationToken ct = default)
@@ -32,10 +36,28 @@ public class TailoringEngine
 
         _log.LogInformation("Tailoring profile {ProfileId} for job: {JobUrl}", masterProfileId, jobUrl);
 
-        var tailoredJson = await _ollama.CompleteJsonAsync<MasterProfile>(
-            BuildTailoringPrompt(master, jobDescription),
-            BuildTailoringSystemPrompt(),
-            ct);
+        // APP-03: local providers have no completion timeout of their own. A
+        // hung model must degrade to the fallback resume, and a user-initiated
+        // cancel (ct) must abort immediately — both via one linked token.
+        using var completionCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        completionCts.CancelAfter(TimeSpan.FromSeconds(_completionTimeoutSeconds));
+
+        MasterProfile? tailoredJson;
+        var completionTimedOut = false;
+        try
+        {
+            tailoredJson = await _ollama.CompleteJsonAsync<MasterProfile>(
+                BuildTailoringPrompt(master, jobDescription),
+                BuildTailoringSystemPrompt(),
+                completionCts.Token);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            // The completion cap fired: this is a timeout, not a user cancel.
+            tailoredJson = null;
+            completionTimedOut = true;
+            _log.LogWarning("LLM completion timed out after {Seconds}s for profile {ProfileId}; using fallback", _completionTimeoutSeconds, masterProfileId);
+        }
 
         if (tailoredJson == null)
         {
@@ -51,11 +73,21 @@ public class TailoringEngine
                     Passed = false,
                     Violations = new List<SafetyViolation>
                     {
-                        new() { Type = "LowConfidence", Description = "LLM tailoring failed; original profile returned unchanged", Field = "Global" }
+                        new()
+                        {
+                            Type = "LowConfidence",
+                            Description = completionTimedOut
+                                ? $"LLM tailoring timed out after {_completionTimeoutSeconds}s; original profile returned unchanged"
+                                : "LLM tailoring failed; original profile returned unchanged",
+                            Field = "Global"
+                        }
                     }
                 },
                 MatchScore = 0,
-                ChangesMade = new List<string> { "Original profile returned (LLM tailoring failed)" }
+                ChangesMade = new List<string>
+                {
+                    completionTimedOut ? "Original profile returned (LLM timed out)" : "Original profile returned (LLM tailoring failed)"
+                }
             };
             db.TailoredProfiles.Add(failedResult);
             await db.SaveChangesAsync(ct);

@@ -48,6 +48,14 @@ public class OllamaService
         {
             return await provider.CompleteJsonAsync<T>(prompt, systemPrompt, null, ct);
         }
+        catch (OperationCanceledException)
+        {
+            // Cancellation (APP-03: the completion cap or a user cancel) is a
+            // control signal, not a bad LLM output. The caller decides what to
+            // do with it; swallow-reporting `null` turned timeouts into
+            // "tailoring failed" and killed the timeout distinction.
+            throw;
+        }
         catch (Exception ex)
         {
             _log.LogError(ex, "LLM JSON completion failed via {Provider}", provider.DisplayName);
