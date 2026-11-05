@@ -19,6 +19,7 @@ public interface IPageInteractor
     Task ClickAsync(string nodeId, CancellationToken ct = default);
     Task SetFileInputAsync(string nodeId, string filePath, CancellationToken ct = default);
     Task<string> GetPageTextAsync(CancellationToken ct = default);
+    Task<string?> GetPageUrlAsync(CancellationToken ct = default);
     Task<byte[]> CaptureScreenshotAsync(CancellationToken ct = default);
     Task<bool> DetectCaptchaAsync(CancellationToken ct = default);
     Task NavigateAsync(string url, CancellationToken ct = default);

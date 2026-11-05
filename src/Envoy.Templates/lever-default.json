@@ -20,9 +20,13 @@
           "name": "name"
         },
         "label_text": "Full Name",
-        "ancestor_chain": ["div.application-form", "div.field-row"],
+        "ancestor_chain": [
+          "div.application-form",
+          "div.field-row"
+        ],
         "position_index": 0
-      }
+      },
+      "required": true
     },
     {
       "action": "fill",
@@ -35,10 +39,16 @@
           "name": "email"
         },
         "label_text": "Email Address",
-        "ancestor_chain": ["div.application-form", "div.field-row"],
-        "siblings_before": ["Full Name"],
+        "ancestor_chain": [
+          "div.application-form",
+          "div.field-row"
+        ],
+        "siblings_before": [
+          "Full Name"
+        ],
         "position_index": 1
-      }
+      },
+      "required": true
     },
     {
       "action": "fill",
@@ -51,10 +61,17 @@
           "name": "phone"
         },
         "label_text": "Phone",
-        "ancestor_chain": ["div.application-form", "div.field-row"],
-        "siblings_before": ["Full Name", "Email Address"],
+        "ancestor_chain": [
+          "div.application-form",
+          "div.field-row"
+        ],
+        "siblings_before": [
+          "Full Name",
+          "Email Address"
+        ],
         "position_index": 2
-      }
+      },
+      "required": true
     },
     {
       "action": "fill",
@@ -68,27 +85,44 @@
           "name": "org"
         },
         "label_text": "Company",
-        "ancestor_chain": ["div.application-form", "div.field-row"],
-        "siblings_before": ["Full Name", "Email Address", "Phone"],
+        "ancestor_chain": [
+          "div.application-form",
+          "div.field-row"
+        ],
+        "siblings_before": [
+          "Full Name",
+          "Email Address",
+          "Phone"
+        ],
         "position_index": 3
-      }
+      },
+      "required": true
     },
     {
       "action": "fill",
-      "field_id": "urls[LinkedIn]",
-      "selector": "input[name='urls[LinkedIn]']",
+      "field_id": "linkedin",
+      "selector": "input[name='linkedin']",
       "fallback_selector": "input[placeholder*='LinkedIn']",
       "fingerprint": {
         "tag": "input",
         "attributes": {
           "type": "url",
-          "name": "urls[LinkedIn]"
+          "name": "linkedin"
         },
         "label_text": "LinkedIn",
-        "ancestor_chain": ["div.application-form", "div.field-row"],
-        "siblings_before": ["Full Name", "Email Address", "Phone", "Company"],
+        "ancestor_chain": [
+          "div.application-form",
+          "div.field-row"
+        ],
+        "siblings_before": [
+          "Full Name",
+          "Email Address",
+          "Phone",
+          "Company"
+        ],
         "position_index": 4
-      }
+      },
+      "required": true
     },
     {
       "action": "upload",
@@ -102,9 +136,13 @@
           "name": "resume"
         },
         "label_text": "Resume",
-        "ancestor_chain": ["div.application-form", "div.field-row"],
+        "ancestor_chain": [
+          "div.application-form",
+          "div.field-row"
+        ],
         "position_index": 5
-      }
+      },
+      "required": true
     },
     {
       "action": "conditional_click",
@@ -118,8 +156,17 @@
         },
         "label_text": "Submit Application",
         "text_content": "Submit Application",
-        "ancestor_chain": ["div.application-form"],
-        "siblings_before": ["Full Name", "Email Address", "Phone", "Company", "LinkedIn", "Resume"],
+        "ancestor_chain": [
+          "div.application-form"
+        ],
+        "siblings_before": [
+          "Full Name",
+          "Email Address",
+          "Phone",
+          "Company",
+          "LinkedIn",
+          "Resume"
+        ],
         "position_index": 6
       }
     }

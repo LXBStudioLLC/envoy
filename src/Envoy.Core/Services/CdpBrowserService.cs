@@ -317,6 +317,20 @@ public class CdpBrowserService : ICdpCommandExecutor, IPageInteractor, IBrowserL
         return "";
     }
 
+    public async Task<string?> GetPageUrlAsync(CancellationToken ct = default)
+    {
+        var result = await SendCommandAsync("Runtime.evaluate", new
+        {
+            expression = "location.href",
+            returnByValue = true
+        }, ct);
+
+        if (result.TryGetProperty("result", out var res) && res.TryGetProperty("value", out var val))
+            return val.GetString();
+
+        return null;
+    }
+
     public async Task<byte[]> CaptureScreenshotAsync(CancellationToken ct = default)
     {
         var result = await SendCommandAsync("Page.captureScreenshot", new { format = "png" }, ct);

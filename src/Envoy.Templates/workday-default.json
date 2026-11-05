@@ -19,7 +19,9 @@
         },
         "label_text": "Apply Now",
         "text_content": "Apply Now",
-        "ancestor_chain": ["div.css-1ww19nr"],
+        "ancestor_chain": [
+          "div.css-1ww19nr"
+        ],
         "position_index": 0
       }
     },
@@ -40,9 +42,13 @@
           "data-automation-id": "email"
         },
         "label_text": "Email Address",
-        "ancestor_chain": ["div.css-1v6ruqj", "div.css-1wiiz1n"],
+        "ancestor_chain": [
+          "div.css-1v6ruqj",
+          "div.css-1wiiz1n"
+        ],
         "position_index": 0
-      }
+      },
+      "required": true
     },
     {
       "action": "fill",
@@ -57,10 +63,16 @@
           "name": "firstName"
         },
         "label_text": "First Name",
-        "ancestor_chain": ["div.css-1v6ruqj", "div.css-1wiiz1n"],
-        "siblings_before": ["Email Address"],
+        "ancestor_chain": [
+          "div.css-1v6ruqj",
+          "div.css-1wiiz1n"
+        ],
+        "siblings_before": [
+          "Email Address"
+        ],
         "position_index": 1
-      }
+      },
+      "required": true
     },
     {
       "action": "fill",
@@ -75,10 +87,17 @@
           "name": "lastName"
         },
         "label_text": "Last Name",
-        "ancestor_chain": ["div.css-1v6ruqj", "div.css-1wiiz1n"],
-        "siblings_before": ["Email Address", "First Name"],
+        "ancestor_chain": [
+          "div.css-1v6ruqj",
+          "div.css-1wiiz1n"
+        ],
+        "siblings_before": [
+          "Email Address",
+          "First Name"
+        ],
         "position_index": 2
-      }
+      },
+      "required": true
     },
     {
       "action": "upload",
@@ -93,10 +112,18 @@
           "data-automation-id": "file-upload-input"
         },
         "label_text": "Resume",
-        "ancestor_chain": ["div.css-1v6ruqj", "div.css-1wiiz1n"],
-        "siblings_before": ["Email Address", "First Name", "Last Name"],
+        "ancestor_chain": [
+          "div.css-1v6ruqj",
+          "div.css-1wiiz1n"
+        ],
+        "siblings_before": [
+          "Email Address",
+          "First Name",
+          "Last Name"
+        ],
         "position_index": 3
-      }
+      },
+      "required": true
     },
     {
       "action": "conditional_click",
@@ -112,8 +139,15 @@
         },
         "label_text": "Submit",
         "text_content": "Submit Application",
-        "ancestor_chain": ["div.css-1v6ruqj"],
-        "siblings_before": ["Email Address", "First Name", "Last Name", "Resume"],
+        "ancestor_chain": [
+          "div.css-1v6ruqj"
+        ],
+        "siblings_before": [
+          "Email Address",
+          "First Name",
+          "Last Name",
+          "Resume"
+        ],
         "position_index": 4
       }
     }

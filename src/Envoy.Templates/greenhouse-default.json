@@ -21,9 +21,13 @@
           "id": "first_name"
         },
         "label_text": "First Name",
-        "ancestor_chain": ["form#new_application", "div.field"],
+        "ancestor_chain": [
+          "form#new_application",
+          "div.field"
+        ],
         "position_index": 0
-      }
+      },
+      "required": true
     },
     {
       "action": "fill",
@@ -37,10 +41,16 @@
           "id": "last_name"
         },
         "label_text": "Last Name",
-        "ancestor_chain": ["form#new_application", "div.field"],
-        "siblings_before": ["First Name"],
+        "ancestor_chain": [
+          "form#new_application",
+          "div.field"
+        ],
+        "siblings_before": [
+          "First Name"
+        ],
         "position_index": 1
-      }
+      },
+      "required": true
     },
     {
       "action": "fill",
@@ -54,10 +64,17 @@
           "id": "email"
         },
         "label_text": "Email Address",
-        "ancestor_chain": ["form#new_application", "div.field"],
-        "siblings_before": ["First Name", "Last Name"],
+        "ancestor_chain": [
+          "form#new_application",
+          "div.field"
+        ],
+        "siblings_before": [
+          "First Name",
+          "Last Name"
+        ],
         "position_index": 2
-      }
+      },
+      "required": true
     },
     {
       "action": "fill",
@@ -71,10 +88,18 @@
           "id": "phone"
         },
         "label_text": "Phone",
-        "ancestor_chain": ["form#new_application", "div.field"],
-        "siblings_before": ["First Name", "Last Name", "Email Address"],
+        "ancestor_chain": [
+          "form#new_application",
+          "div.field"
+        ],
+        "siblings_before": [
+          "First Name",
+          "Last Name",
+          "Email Address"
+        ],
         "position_index": 3
-      }
+      },
+      "required": true
     },
     {
       "action": "upload",
@@ -88,9 +113,13 @@
           "name": "resume"
         },
         "label_text": "Resume",
-        "ancestor_chain": ["form#new_application", "div.field"],
+        "ancestor_chain": [
+          "form#new_application",
+          "div.field"
+        ],
         "position_index": 4
-      }
+      },
+      "required": true
     },
     {
       "action": "conditional_click",
@@ -105,8 +134,15 @@
         },
         "label_text": "Submit Application",
         "text_content": "Submit Application",
-        "ancestor_chain": ["form#new_application"],
-        "siblings_before": ["First Name", "Last Name", "Email Address", "Phone"],
+        "ancestor_chain": [
+          "form#new_application"
+        ],
+        "siblings_before": [
+          "First Name",
+          "Last Name",
+          "Email Address",
+          "Phone"
+        ],
         "position_index": 5
       }
     }

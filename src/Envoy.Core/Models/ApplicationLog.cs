@@ -23,6 +23,19 @@ public class ApplicationLog
 
     /// <summary>What came back from the employer, logged by the user. Feeds the response rate.</summary>
     public ResponseOutcome Outcome { get; set; } = ResponseOutcome.None;
+
+    // ── APP-05 honest-completion evidence ─────────────────────────────
+    /// <summary>Required fill/upload steps in the executed template (null when no template ran).</summary>
+    public int? RequiredFieldCount { get; set; }
+
+    /// <summary>How many of those required steps the engine actually carried out.</summary>
+    public int? FilledFieldCount { get; set; }
+
+    /// <summary>Post-submit verification (APP-05): null when the template has no verify block.</summary>
+    public bool? VerifiedSubmission { get; set; }
+
+    /// <summary>What the verification (or the fill-integrity failure) actually observed.</summary>
+    public string? VerificationNote { get; set; }
 }
 
 // Persisted as integers in envoy.db. Append new members at the end, never reorder.
